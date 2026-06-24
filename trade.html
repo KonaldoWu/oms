@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交易管理 - 投资计划书</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .filter-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; text-align: center; cursor: pointer; transition: all 0.15s; }
+        .filter-card:hover { border-color: var(--primary); }
+        .filter-card.active { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+        .filter-card .stat-label { font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 2px; }
+        .filter-card .stat-value { font-size: var(--font-size-lg); font-weight: 700; color: var(--text-primary); font-family: var(--font-mono); }
+        .data-table tr.plan-row { cursor: pointer; }
+        .data-table tr.plan-row:hover td { background: var(--info-bg); }
+        .plan-details td { padding: 0; }
+        .plan-detail-inner { padding: 14px; background: var(--border-light); border-radius: var(--radius); }
+        .plan-detail-inner h4 { font-size: var(--font-size-md); font-weight: 600; color: var(--text-primary); margin-bottom: 10px; }
+        .file-upload { border: 1px dashed var(--border); border-radius: var(--radius); padding: 14px; text-align: center; margin-bottom: 12px; }
+        .file-upload input { display: none; }
+        .file-upload label { display: inline-block; padding: 5px 12px; background: var(--primary); color: white; border-radius: var(--radius-sm); cursor: pointer; font-size: var(--font-size-sm); font-weight: 500; }
+        .file-upload label:hover { background: var(--primary-dark); }
+        .file-upload p { margin-top: 8px; font-size: var(--font-size-xs); color: var(--text-muted); }
+        .tab-bar { display: flex; gap: 0; margin-bottom: 14px; border-bottom: 2px solid var(--border); }
+        .tab-item { padding: 8px 20px; font-size: var(--font-size-sm); font-weight: 500; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
+        .tab-item:hover { color: var(--primary); }
+        .tab-item.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .product-checkbox-list { max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); padding: 8px; }
+        .product-checkbox-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: var(--font-size-sm); }
+        .product-checkbox-item input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+        .expand-icon { display: inline-block; transition: transform 0.2s; font-size: 10px; color: var(--text-muted); margin-right: 4px; }
+        .expand-icon.expanded { transform: rotate(90deg); }
+        .amount-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 4px; }
+        .amount-bar-fill { height: 100%; border-radius: 2px; background: var(--primary); transition: width 0.3s; }
+        .amount-bar-fill.warning { background: var(--warning); }
+        .amount-bar-fill.danger { background: var(--danger); }
+        .product-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+        .product-row select { flex: 1; }
+        .product-row input { flex: 0 0 150px; }
+        .product-amount-total { text-align: right; font-weight: 600; margin-top: 8px; padding: 6px 0; border-top: 1px solid var(--border); }
+        .validation-tip { background: #fffbeb; border: 1px solid #f59e0b; border-radius: var(--radius); padding: 10px 12px; margin-bottom: 12px; font-size: var(--font-size-sm); }
+        .validation-tip .tip-item { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+        .validation-tip .tip-icon { color: #f59e0b; font-weight: 600; }
+        .validation-tip .tip-pass { color: #10b981; }
+        .validation-tip .tip-fail { color: var(--danger); }
+        .add-product-btn { display: inline-flex; align-items: center; gap: 4px; font-size: var(--font-size-sm); color: var(--primary); cursor: pointer; font-weight: 500; margin-bottom: 8px; }
+        .add-product-btn:hover { text-decoration: underline; }
+        .contract-section { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+        .contract-section-title { font-size: var(--font-size-md); font-weight: 600; color: var(--text-primary); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+        .contract-row { display: grid; grid-template-columns: 1fr 1fr 0.8fr 1fr auto auto; gap: 8px; align-items: center; margin-bottom: 8px; padding: 8px; background: var(--border-light); border-radius: var(--radius); }
+        .contract-row label { display: none; }
+        .contract-row select, .contract-row input[type="text"], .contract-row input[type="number"] { width: 100%; font-size: var(--font-size-sm); }
+        .contract-row .file-upload { margin-bottom: 0; padding: 6px 8px; }
+        .contract-row .file-upload label { padding: 3px 8px; font-size: var(--font-size-xs); }
+        .contract-row .file-upload p { display: none; }
+        .contract-info-card { background: var(--border-light); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 8px; }
+        .contract-info-card .contract-info-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .contract-info-card .contract-info-header .contract-id { font-weight: 600; color: var(--primary); font-size: var(--font-size-sm); }
+        .contract-info-card .contract-info-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 12px; font-size: var(--font-size-xs); }
+        .contract-info-card .contract-info-grid .info-label { color: var(--text-muted); }
+        .contract-info-card .contract-info-grid .info-val { color: var(--text-primary); }
+        [data-logic-id] { position: relative; transition: outline 0.15s; }
+        [data-logic-id]:hover { outline: 2px dashed rgba(59,130,246,0.35); outline-offset: 2px; border-radius: 4px; cursor: context-menu; }
+        #logic-context-menu { position: fixed; z-index: 10000; background: #fff; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); padding: 6px 0; min-width: 160px; display: none; }
+        #logic-context-menu .menu-item { padding: 8px 16px; cursor: pointer; font-size: 14px; color: #333; display: flex; align-items: center; gap: 8px; transition: background 0.15s; }
+        #logic-context-menu .menu-item:hover { background: #f5f5f5; }
+        #logic-context-menu .menu-item .icon { font-size: 16px; }
+        #logic-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 10001; display: none; justify-content: center; align-items: center; }
+        #logic-modal-overlay.show { display: flex; }
+        #logic-modal { background: #fff; border-radius: 12px; width: 90%; max-width: 680px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,0.2); }
+        #logic-modal-header { padding: 20px 24px 16px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        #logic-modal-header h3 { font-size: 16px; font-weight: 600; color: #1a1a1a; }
+        #logic-modal-close { width: 32px; height: 32px; border-radius: 50%; border: none; background: #f5f5f5; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; color: #999; transition: 0.2s; }
+        #logic-modal-close:hover { background: #e8e8e8; color: #333; }
+        #logic-modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+        #logic-modal-body h1,#logic-modal-body h2,#logic-modal-body h3,#logic-modal-body h4 { margin: 16px 0 8px; color: #1a1a1a; }
+        #logic-modal-body h1 { font-size: 18px; } #logic-modal-body h2 { font-size: 16px; } #logic-modal-body h3 { font-size: 15px; }
+        #logic-modal-body p { margin: 8px 0; font-size: 14px; color: #555; line-height: 1.8; }
+        #logic-modal-body ul, #logic-modal-body ol { margin: 8px 0; padding-left: 20px; font-size: 14px; color: #555; }
+        #logic-modal-body li { margin: 4px 0; line-height: 1.8; }
+        #logic-modal-body strong { color: #1a1a1a; }
+        #logic-modal-body code { background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 13px; }
+        #logic-modal-body .logic-flow { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 16px; margin: 12px 0; font-family: 'SF Mono','Cascadia Code','Consolas',monospace; font-size: 13px; line-height: 1.8; white-space: pre-wrap; color: #334155; }
+        #logic-modal-body .logic-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-right: 4px; }
+        #logic-modal-body .logic-tag.rule { background: #fef3c7; color: #92400e; }
+        #logic-modal-body .logic-tag.condition { background: #dbeafe; color: #1e40af; }
+        #logic-modal-body .logic-tag.action { background: #dcfce7; color: #166534; }
+        #logic-modal-footer { padding: 12px 24px; border-top: 1px solid #f0f0f0; display: flex; justify-content: flex-end; gap: 8px; }
+        #logic-modal-footer .source-link { font-size: 12px; color: #999; align-self: center; }
+        .logic-help-tip { position: fixed; bottom: 20px; right: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); padding: 10px 14px; font-size: 12px; color: #666; z-index: 9999; display: flex; align-items: center; gap: 8px; }
+        .logic-help-tip .key { background: #f0f0f0; padding: 2px 8px; border-radius: 4px; font-size: 11px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <nav class="sidebar"></nav>
+        <div class="main-area">
+            <div class="topbar"></div>
+            <div class="content">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <span class="page-title">交易管理</span>
+                        <span class="page-subtitle">投资计划书</span>
+                    </div>
+                    <div class="page-actions">
+                        <button class="btn btn-primary" id="btnNewPlan" onclick="openPlanForm()" data-logic-id="btn_new_plan">新建计划书</button>
+                    </div>
+                </div>
+
+                <div class="stats-row" id="statsRow" data-logic-id="stats_filter">
+                    <div class="filter-card active" onclick="filterByStatus('')">
+                        <div class="stat-label">全部</div>
+                        <div class="stat-value" id="statAll">0</div>
+                    </div>
+                    <div class="filter-card" onclick="filterByStatus('草稿')">
+                        <div class="stat-label">草稿</div>
+                        <div class="stat-value" id="statDraft">0</div>
+                    </div>
+                    <div class="filter-card" onclick="filterByStatus('待审批')">
+                        <div class="stat-label">待审批</div>
+                        <div class="stat-value" id="statPending">0</div>
+                    </div>
+                    <div class="filter-card" onclick="filterByStatus('已通过')">
+                        <div class="stat-label">已通过</div>
+                        <div class="stat-value" id="statApproved">0</div>
+                    </div>
+                    <div class="filter-card" onclick="filterByStatus('已驳回')">
+                        <div class="stat-label">已驳回</div>
+                        <div class="stat-value" id="statRejected">0</div>
+                    </div>
+                    <div class="filter-card" onclick="filterByStatus('已终止')">
+                        <div class="stat-label">已终止</div>
+                        <div class="stat-value" id="statTerminated">0</div>
+                    </div>
+                </div>
+
+                <div class="card" data-logic-id="plan_list">
+                    <div class="card-body">
+                        <div class="search-bar">
+                            <input type="text" placeholder="搜索计划书编号、名称或产品" class="search-input" id="searchInput" onkeyup="if(event.key==='Enter')renderTable()">
+                            <select class="search-input" id="statusFilter" style="flex: 0 0 120px;" onchange="renderTable()">
+                                <option value="">所有状态</option>
+                                <option value="草稿">草稿</option>
+                                <option value="待审批">待审批</option>
+                                <option value="已通过">已通过</option>
+                                <option value="已驳回">已驳回</option>
+                                <option value="已终止">已终止</option>
+                            </select>
+                            <input type="month" class="search-input" id="monthFilter" style="flex: 0 0 150px;" onchange="renderTable()" title="按提交月份筛选">
+                            <button class="btn btn-primary btn-sm" onclick="renderTable()">搜索</button>
+                            <button class="btn btn-ghost btn-sm" onclick="resetFilters()">重置</button>
+                        </div>
+                    </div>
+                    <div class="card-body-p0">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:30px;"></th>
+                                    <th>编号</th>
+                                    <th>名称</th>
+                                    <th>业务部门</th>
+                                    <th>投资组</th>
+                                    <th>总额度</th>
+                                    <th>已用额度</th>
+                                    <th>状态</th>
+                                    <th>创建人</th>
+                                    <th>交易员</th>
+                                    <th>提交时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="planTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="planFormModal" class="modal" data-logic-id="plan_form">
+        <div class="modal-content" style="width: 700px;">
+            <div class="modal-header">
+                <h3>新建计划书</h3>
+                <button class="btn btn-ghost btn-sm" onclick="closePlanForm()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>计划书名称 *</label>
+                    <input type="text" id="planName" placeholder="请输入计划书名称">
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>业务部门 *</label>
+                        <select id="planDept" onchange="onDeptChange()">
+                            <option value="">请选择部门</option>
+                            <option value="创新金融业务总部">创新金融业务总部</option>
+                            <option value="FICC固定收益业务总部">FICC固定收益业务总部</option>
+                            <option value="证券投资部">证券投资部</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>投资组 *</label>
+                        <select id="planGroup">
+                            <option value="">请先选择部门</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>交易员 *</label>
+                        <select id="planTrader">
+                            <option value="">请选择交易员</option>
+                            <option value="李华">李华</option>
+                            <option value="赵丽">赵丽</option>
+                            <option value="陈芳">陈芳</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>总额度(元) *</label>
+                        <input type="number" id="planTotalAmount" placeholder="请输入总额度">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>上传计划书文件</label>
+                    <div class="file-upload">
+                        <input type="file" id="planFileInput" accept=".pdf,.doc,.docx">
+                        <label for="planFileInput">选择文件</label>
+                        <p>支持 PDF、Word 格式</p>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>关联产品</label>
+                    <div id="productRowsContainer"></div>
+                    <div class="product-amount-total" id="productAmountTotal">产品额度合计：¥0.00</div>
+                </div>
+                <div class="form-group">
+                    <label>备注</label>
+                    <textarea id="planRemark" rows="2" placeholder="请输入备注信息"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closePlanForm()">取消</button>
+                <button class="btn btn-ghost" onclick="savePlanDraft()">保存草稿</button>
+                <button class="btn btn-primary" onclick="submitPlanApproval()">提交审批</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="tradeFormModal" class="modal" data-logic-id="trade_form">
+        <div class="modal-content" style="width: 520px;">
+            <div class="modal-header">
+                <h3>发起交易</h3>
+                <button class="btn btn-ghost btn-sm" onclick="closeTradeForm()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="validation-tip" id="tradeValidationTip" style="display:none;"></div>
+                <div class="form-group">
+                    <label>关联计划书</label>
+                    <input type="text" id="tradePlanName" readonly style="background:var(--border-light);">
+                </div>
+                <div class="form-group">
+                    <label>产品名称</label>
+                    <input type="text" id="tradeProductName" readonly style="background:var(--border-light);">
+                </div>
+                <div class="form-group">
+                    <label>选择管理人</label>
+                    <select id="tradeCounterparty">
+                        <option value="">请选择管理人（选填）</option>
+                    </select>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>交易类型 *</label>
+                        <select id="tradeType" onchange="onTradeTypeChange()">
+                            <option value="买入(开仓)">买入(开仓)</option>
+                            <option value="赎回">赎回</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>优先级</label>
+                        <select id="tradePriority">
+                            <option value="">请选择（选填）</option>
+                            <option value="优先级">优先级</option>
+                            <option value="次级">次级</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>交易金额(元) *</label>
+                        <input type="number" id="tradeAmount" placeholder="请输入交易金额" oninput="validateTradeForm()">
+                    </div>
+                    <div class="form-group">
+                        <label>申报份额</label>
+                        <input type="number" id="tradeShares" placeholder="请输入申报份额">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>预计执行时间</label>
+                        <input type="date" id="tradeExpectedDate">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>备注</label>
+                    <textarea id="tradeRemark" rows="2" placeholder="请输入备注"></textarea>
+                </div>
+                <div class="contract-section">
+                    <div class="contract-section-title">
+                        <span>合同附件上传（可选）</span>
+                        <button type="button" class="btn btn-info btn-sm" onclick="addContractRow()">+ 添加合同</button>
+                    </div>
+                    <div id="contractRowsContainer"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeTradeForm()">取消</button>
+                <button class="btn btn-primary" onclick="submitTrade()">提交交易</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="tradeRecordModal" class="modal" data-logic-id="trade_record">
+        <div class="modal-content" style="width: 750px;">
+            <div class="modal-header">
+                <h3 id="tradeRecordTitle">交易记录</h3>
+                <button class="btn btn-ghost btn-sm" onclick="closeTradeRecordModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="tradeRecordContent"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeTradeRecordModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="planDetailModal" class="modal" data-logic-id="plan_detail">
+        <div class="modal-content" style="width: 750px;">
+            <div class="modal-header">
+                <h3 id="planDetailTitle">计划书详情</h3>
+                <button class="btn btn-ghost btn-sm" onclick="closePlanDetailModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="tab-bar" id="detailTabBar">
+                    <div class="tab-item active" onclick="switchDetailTab('basic')">基础信息</div>
+                    <div class="tab-item" onclick="switchDetailTab('products')">关联产品</div>
+                    <div class="tab-item" onclick="switchDetailTab('trades')">交易记录</div>
+                    <div class="tab-item" onclick="switchDetailTab('approval')">审批流程</div>
+                </div>
+                <div id="detailTabBasic" class="tab-content active"></div>
+                <div id="detailTabProducts" class="tab-content"></div>
+                <div id="detailTabTrades" class="tab-content"></div>
+                <div id="detailTabApproval" class="tab-content"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closePlanDetailModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="uploadSealModal" class="modal" data-logic-id="upload_seal">
+        <div class="modal-content" style="width: 500px;">
+            <div class="modal-header">
+                <h3>上传用印版合同</h3>
+                <button class="btn btn-ghost btn-sm" onclick="closeUploadSealModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:14px;" id="sealContractInfo"></div>
+                <div class="form-group">
+                    <label>用印版合同文件 *</label>
+                    <div class="file-upload">
+                        <input type="file" id="sealFileInput" accept=".pdf,.doc,.docx">
+                        <label for="sealFileInput">选择文件</label>
+                        <p>支持 PDF、Word 格式</p>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>签署日期 *</label>
+                        <input type="date" id="sealSignDate">
+                    </div>
+                    <div class="form-group">
+                        <label>到期日期</label>
+                        <input type="date" id="sealExpireDate">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeUploadSealModal()">取消</button>
+                <button class="btn btn-primary" onclick="confirmUploadSeal()">确认上传</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+<div id="logic-context-menu">
+  <div class="menu-item" id="menu-view-logic">
+    <span class="icon">📋</span>查看PRD逻辑
+  </div>
+</div>
+<div id="logic-modal-overlay">
+  <div id="logic-modal">
+    <div id="logic-modal-header">
+      <h3 id="logic-modal-title">逻辑详情</h3>
+      <button id="logic-modal-close">✕</button>
+    </div>
+    <div id="logic-modal-body"></div>
+    <div id="logic-modal-footer">
+      <span class="source-link">来源：场外簿记OMS系统-产品功能设计文档</span>
+    </div>
+  </div>
+</div>
+<div class="logic-help-tip">
+  <span class="key">右键</span>点击功能元素查看PRD逻辑
+</div>
+    <script>
+        initLayout('trade.html', '交易管理');
+
+        var _isReadOnly = isReadOnly();
+        var _canUploadPlan = hasPermission('uploadPlan');
+        var _canCreateTrade = hasPermission('createTrade');
+        if (_isReadOnly || !_canUploadPlan) {
+            var btnNewPlan = document.getElementById('btnNewPlan');
+            if (btnNewPlan) btnNewPlan.style.display = 'none';
+        }
+
+        var currentStatusFilter = '';
+        var currentDetailPlanId = '';
+
+        function updateStats() {
+            document.getElementById('statAll').textContent = PLANS.length;
+            document.getElementById('statDraft').textContent = PLANS.filter(function(p) { return p.status === '草稿'; }).length;
+            document.getElementById('statPending').textContent = PLANS.filter(function(p) { return p.status === '待审批'; }).length;
+            document.getElementById('statApproved').textContent = PLANS.filter(function(p) { return p.status === '已通过'; }).length;
+            document.getElementById('statRejected').textContent = PLANS.filter(function(p) { return p.status === '已驳回'; }).length;
+            document.getElementById('statTerminated').textContent = PLANS.filter(function(p) { return p.status === '已终止'; }).length;
+        }
+
+        function filterByStatus(status) {
+            currentStatusFilter = status;
+            document.getElementById('statusFilter').value = status;
+            document.querySelectorAll('#statsRow .filter-card').forEach(function(c) { c.classList.remove('active'); });
+            if (!status) {
+                document.querySelectorAll('#statsRow .filter-card')[0].classList.add('active');
+            } else {
+                var idx = ['草稿', '待审批', '已通过', '已驳回', '已终止'].indexOf(status) + 1;
+                document.querySelectorAll('#statsRow .filter-card')[idx].classList.add('active');
+            }
+            renderTable();
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('monthFilter').value = '';
+            currentStatusFilter = '';
+            document.querySelectorAll('#statsRow .filter-card').forEach(function(c) { c.classList.remove('active'); });
+            document.querySelectorAll('#statsRow .filter-card')[0].classList.add('active');
+            renderTable();
+        }
+
+        function getProductById(pid) {
+            return PRODUCTS.find(function(p) { return p.id === pid; });
+        }
+
+        function renderTable() {
+            var keyword = document.getElementById('searchInput').value.toLowerCase();
+            var statusVal = document.getElementById('statusFilter').value;
+            var monthVal = document.getElementById('monthFilter').value;
+            var filtered = PLANS.filter(function(plan) {
+                var matchStatus = !statusVal || plan.status === statusVal;
+                var productNames = plan.products.map(function(pid) {
+                    var p = getProductById(pid);
+                    return p ? p.shortName : '';
+                }).join(' ');
+                var matchKeyword = !keyword || plan.id.toLowerCase().indexOf(keyword) >= 0 || plan.name.toLowerCase().indexOf(keyword) >= 0 || productNames.toLowerCase().indexOf(keyword) >= 0;
+                var matchMonth = true;
+                if (monthVal) {
+                    var submitMonth = plan.submitTime ? plan.submitTime.slice(0, 7) : '';
+                    matchMonth = submitMonth === monthVal;
+                }
+                return matchStatus && matchKeyword && matchMonth;
+            });
+            var tbody = document.getElementById('planTableBody');
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:40px;">暂无计划书记录</td></tr>';
+                return;
+            }
+            var html = '';
+            filtered.forEach(function(plan) {
+                var usageRate = plan.totalAmount > 0 ? (plan.usedAmount / plan.totalAmount * 100) : 0;
+                var barClass = usageRate >= 90 ? 'danger' : usageRate >= 70 ? 'warning' : '';
+                html += '<tr class="plan-row" data-plan-id="' + plan.id + '">';
+                html += '<td><span class="expand-icon" id="icon-' + plan.id + '">▶</span></td>';
+                html += '<td class="text-mono" style="font-size:var(--font-size-xs);">' + plan.id + '</td>';
+                html += '<td style="font-weight:500;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + plan.name + '">' + plan.name + '</td>';
+                html += '<td style="font-size:var(--font-size-sm);">' + (plan.dept || '-') + '</td>';
+                html += '<td style="font-size:var(--font-size-sm);">' + (plan.group || '-') + '</td>';
+                html += '<td class="text-mono">' + formatMoney(plan.totalAmount) + '</td>';
+                html += '<td class="text-mono">' + formatMoney(plan.usedAmount) + '<div class="amount-bar"><div class="amount-bar-fill ' + barClass + '" style="width:' + Math.min(usageRate, 100) + '%;"></div></div></td>';
+                html += '<td><span class="status-badge ' + getStatusClass(plan.status) + '">' + plan.status + '</span></td>';
+                html += '<td>' + plan.creator + '</td>';
+                html += '<td>' + plan.trader + '</td>';
+                html += '<td style="font-size:var(--font-size-xs);">' + (plan.submitTime || '-') + '</td>';
+                html += '<td>' + renderActions(plan) + '</td>';
+                html += '</tr>';
+                html += '<tr class="plan-details" id="detail-' + plan.id + '" style="display:none;"><td colspan="12"><div class="plan-detail-inner">';
+                html += renderProductDetail(plan);
+                html += '</div></td></tr>';
+            });
+            tbody.innerHTML = html;
+            bindRowClick();
+        }
+
+        function renderActions(plan) {
+            var html = '';
+            html += '<button class="btn btn-info btn-sm" data-logic-id="btn_plan_detail" onclick="event.stopPropagation();openPlanDetail(\'' + plan.id + '\')">详情</button> ';
+            if (_isReadOnly) return html;
+            if (_canUploadPlan) {
+                if (plan.status === '草稿') {
+                    html += '<button class="btn btn-info btn-sm" data-logic-id="btn_edit_plan" onclick="event.stopPropagation();editPlan(\'' + plan.id + '\')">编辑</button> ';
+                    html += '<button class="btn btn-danger btn-sm" data-logic-id="btn_delete_plan" onclick="event.stopPropagation();deletePlan(\'' + plan.id + '\')">删除</button> ';
+                    html += '<button class="btn btn-primary btn-sm" data-logic-id="btn_submit_approval" onclick="event.stopPropagation();submitPlanForApproval(\'' + plan.id + '\')">提交审批</button>';
+                } else if (plan.status === '待审批') {
+                    html += '<button class="btn btn-withdraw btn-sm" data-logic-id="btn_withdraw" onclick="event.stopPropagation();withdrawPlan(\'' + plan.id + '\')">撤回</button> ';
+                    html += '<button class="btn btn-ghost btn-sm" data-logic-id="btn_terminate" onclick="event.stopPropagation();terminatePlan(\'' + plan.id + '\')">终止</button>';
+                }
+            }
+            return html;
+        }
+
+        function renderProductDetail(plan) {
+            var html = '<h4>关联产品</h4>';
+            if (plan.products.length === 0) {
+                html += '<div style="color:var(--text-muted);text-align:center;padding:20px;">暂无关联产品</div>';
+                return html;
+            }
+            html += '<table class="data-table"><thead><tr><th>产品ID</th><th>产品简称</th><th>恒泰代码</th><th>产品类型</th><th>计划额度</th><th>已用额度</th><th>操作</th></tr></thead><tbody>';
+            plan.products.forEach(function(pid) {
+                var p = getProductById(pid);
+                if (!p) return;
+                html += '<tr>';
+                html += '<td>' + p.id + '</td>';
+                html += '<td style="font-weight:500;color:var(--primary);">' + p.shortName + '</td>';
+                html += '<td class="text-mono">' + p.hengtaiCode + '</td>';
+                html += '<td>' + p.productType + '</td>';
+                html += '<td class="text-mono">' + formatMoney(p.planAmount) + '</td>';
+                html += '<td class="text-mono">' + formatMoney(p.usedAmount) + '</td>';
+                html += '<td>';
+                if (!_isReadOnly) {
+                    if (plan.status === '已通过' && _canCreateTrade) {
+                        html += '<button class="btn btn-primary btn-sm" data-logic-id="btn_initiate_trade" onclick="openTradeForm(\'' + plan.id + '\',\'' + p.id + '\')">发起交易</button> ';
+                    }
+                    if (_canUploadPlan) {
+                        html += '<button class="btn btn-info btn-sm" data-logic-id="btn_contract_entry" onclick="contractEntry(\'' + plan.id + '\',\'' + p.id + '\')">合同录入</button> ';
+                    }
+                }
+                html += '<button class="btn btn-info btn-sm" data-logic-id="btn_trade_record" onclick="openTradeRecordModal(\'' + plan.id + '\',\'' + p.shortName + '\')">交易记录</button>';
+                html += '</td></tr>';
+            });
+            html += '</tbody></table>';
+            return html;
+        }
+
+        function bindRowClick() {
+            document.querySelectorAll('.plan-row').forEach(function(row) {
+                row.addEventListener('click', function(e) {
+                    if (e.target.closest('button')) return;
+                    var planId = this.getAttribute('data-plan-id');
+                    var detailRow = document.getElementById('detail-' + planId);
+                    var icon = document.getElementById('icon-' + planId);
+                    if (detailRow) {
+                        var isHidden = detailRow.style.display === 'none';
+                        detailRow.style.display = isHidden ? 'table-row' : 'none';
+                        if (icon) icon.classList.toggle('expanded', isHidden);
+                    }
+                });
+            });
+        }
+
+        var DEPT_GROUP_MAP = {
+            '创新金融业务总部': ['专户投资组', 'xn账户', 'fb账户'],
+            'FICC固定收益业务总部': ['理财投资组'],
+            '证券投资部': ['权益投资组']
+        };
+
+        var productRowCount = 0;
+
+        function onDeptChange() {
+            var dept = document.getElementById('planDept').value;
+            var groupSelect = document.getElementById('planGroup');
+            groupSelect.innerHTML = '<option value="">请选择投资组</option>';
+            if (dept && DEPT_GROUP_MAP[dept]) {
+                DEPT_GROUP_MAP[dept].forEach(function(g) {
+                    groupSelect.innerHTML += '<option value="' + g + '">' + g + '</option>';
+                });
+            }
+        }
+
+        function addProductRow() {
+            productRowCount++;
+            var container = document.getElementById('productRowsContainer');
+            var row = document.createElement('div');
+            row.className = 'product-row';
+            row.id = 'productRow-' + productRowCount;
+            var selectHtml = '<select class="product-select" onchange="calcProductAmountTotal()" style="flex:1;">';
+            selectHtml += '<option value="">请选择产品</option>';
+            PRODUCTS.filter(function(p) { return p.status === '在投' || p.status === '无计划'; }).forEach(function(p) {
+                selectHtml += '<option value="' + p.id + '">' + p.shortName + ' (' + p.hengtaiCode + ')</option>';
+            });
+            selectHtml += '</select>';
+            row.innerHTML = selectHtml +
+                '<input type="number" class="product-amount-input" placeholder="计划额度" oninput="calcProductAmountTotal()" style="flex:0 0 150px;">' +
+                '<button class="btn btn-ghost btn-sm" onclick="removeProductRow(' + productRowCount + ')" style="flex:0 0 auto;">✕</button>';
+            container.appendChild(row);
+        }
+
+        function removeProductRow(id) {
+            var row = document.getElementById('productRow-' + id);
+            if (row) row.parentNode.removeChild(row);
+            calcProductAmountTotal();
+        }
+
+        function calcProductAmountTotal() {
+            var total = 0;
+            document.querySelectorAll('#productRowsContainer .product-amount-input').forEach(function(input) {
+                var val = parseFloat(input.value);
+                if (!isNaN(val)) total += val;
+            });
+            document.getElementById('productAmountTotal').textContent = '产品额度合计：¥' + total.toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+
+        function getFormProducts() {
+            var result = [];
+            document.querySelectorAll('#productRowsContainer .product-row').forEach(function(row) {
+                var pid = row.querySelector('.product-select').value;
+                var amt = parseFloat(row.querySelector('.product-amount-input').value);
+                if (pid) result.push({id: pid, amount: amt || 0});
+            });
+            return result;
+        }
+
+        function openPlanForm() {
+            productRowCount = 0;
+            document.getElementById('productRowsContainer').innerHTML = '';
+            document.getElementById('productAmountTotal').textContent = '产品额度合计：¥0.00';
+            document.getElementById('planName').value = '';
+            document.getElementById('planDept').value = '';
+            document.getElementById('planGroup').innerHTML = '<option value="">请先选择部门</option>';
+            document.getElementById('planTrader').value = '';
+            document.getElementById('planTotalAmount').value = '';
+            document.getElementById('planRemark').value = '';
+            document.getElementById('planFormModal').style.display = 'block';
+        }
+
+        function closePlanForm() { document.getElementById('planFormModal').style.display = 'none'; }
+
+        function savePlanDraft() {
+            var name = document.getElementById('planName').value;
+            if (!name) { alert('请输入计划书名称'); return; }
+            alert('草稿已保存');
+            closePlanForm();
+        }
+
+        function submitPlanApproval() {
+            var name = document.getElementById('planName').value;
+            var dept = document.getElementById('planDept').value;
+            var group = document.getElementById('planGroup').value;
+            var trader = document.getElementById('planTrader').value;
+            var amount = document.getElementById('planTotalAmount').value;
+            if (!name) { alert('请填写计划书名称'); return; }
+            if (!dept) { alert('请选择业务部门'); return; }
+            if (!group) { alert('请选择投资组'); return; }
+            if (!trader) { alert('请选择交易员'); return; }
+            if (!amount || parseFloat(amount) <= 0) { alert('请填写有效的总额度'); return; }
+            var formProducts = getFormProducts();
+            if (formProducts.length === 0) { alert('请至少添加一个关联产品'); return; }
+            var hasEmptyAmount = formProducts.some(function(fp) { return !fp.amount || fp.amount <= 0; });
+            if (hasEmptyAmount) { alert('请为每个关联产品填写计划额度'); return; }
+            alert('计划书已提交审批');
+            closePlanForm();
+        }
+
+        function editPlan(planId) {
+            var plan = PLANS.find(function(p) { return p.id === planId; });
+            if (!plan) return;
+            alert('编辑计划书: ' + plan.name);
+        }
+
+        function deletePlan(planId) {
+            if (!confirm('确认删除该计划书？')) return;
+            alert('计划书已删除');
+        }
+
+        function submitPlanForApproval(planId) {
+            if (!confirm('确认提交审批？')) return;
+            var plan = PLANS.find(function(p) { return p.id === planId; });
+            if (plan) {
+                plan.status = '待审批';
+                plan.submitTime = new Date().toISOString().slice(0, 16).replace('T', ' ');
+            }
+            updateStats();
+            renderTable();
+            alert('已提交审批');
+        }
+
+        function withdrawPlan(planId) {
+            if (!confirm('确认撤回该计划书？')) return;
+            var plan = PLANS.find(function(p) { return p.id === planId; });
+            if (plan) { plan.status = '草稿'; }
+            updateStats();
+            renderTable();
+            alert('已撤回');
+        }
+
+        function terminatePlan(planId) {
+            if (!confirm('确认终止该计划书？终止后不可恢复。')) return;
+            var plan = PLANS.find(function(p) { return p.id === planId; });
+            if (plan) { plan.status = '已终止'; }
+            updateStats();
+            renderTable();
+            alert('已终止');
+        }
+
+        var contractRowCount = 0;
+        var currentSealContractId = '';
+
+        function addContractRow() {
+            contractRowCount++;
+            var container = document.getElementById('contractRowsContainer');
+            var row = document.createElement('div');
+            row.className = 'contract-row';
+            row.id = 'contractRow-' + contractRowCount;
+            var counterpartyOptions = '<option value="">请选择对手方</option>';
+            COUNTERPARTIES.forEach(function(cp) {
+                counterpartyOptions += '<option value="' + cp.id + '">' + cp.shortName + '</option>';
+            });
+            row.innerHTML = '<div><label>合同类型</label><select class="contract-type"><option value="专户资管合同">专户资管合同</option><option value="FOF投资合同">FOF投资合同</option><option value="权益投资合同">权益投资合同</option><option value="信托投资合同">信托投资合同</option><option value="托管合同">托管合同</option><option value="补充协议">补充协议</option></select></div>' +
+                '<div><label>对手方</label><select class="contract-counterparty">' + counterpartyOptions + '</select></div>' +
+                '<div><label>管理人</label><input type="text" class="contract-manager" placeholder="管理人(选填)"></div>' +
+                '<div><label>合同金额</label><input type="number" class="contract-amount" placeholder="合同金额"></div>' +
+                '<div class="file-upload"><input type="file" class="contract-file" accept=".pdf,.doc,.docx" id="contractFile-' + contractRowCount + '"><label for="contractFile-' + contractRowCount + '">上传文件</label><p>合同文件</p></div>' +
+                '<button class="btn btn-danger btn-sm" onclick="removeContractRow(' + contractRowCount + ')" style="flex:0 0 auto;">删除</button>';
+            container.appendChild(row);
+        }
+
+        function removeContractRow(id) {
+            var row = document.getElementById('contractRow-' + id);
+            if (row) row.parentNode.removeChild(row);
+        }
+
+        function openTradeForm(planId, productId) {
+            var plan = PLANS.find(function(p) { return p.id === planId; });
+            var product = getProductById(productId);
+            if (!plan || !product) return;
+            document.getElementById('tradePlanName').value = plan.name;
+            document.getElementById('tradeProductName').value = product.shortName + ' (' + product.hengtaiCode + ')';
+            // 填充管理人下拉列表（仅显示已入池的管理人）
+            var cpSelect = document.getElementById('tradeCounterparty');
+            cpSelect.innerHTML = '<option value="">请选择管理人（选填）</option>';
+            COUNTERPARTIES.filter(function(cp) { return cp.status === '在池'; }).forEach(function(cp) {
+                cpSelect.innerHTML += '<option value="' + cp.id + '">' + cp.shortName + '</option>';
+            });
+            document.getElementById('tradeType').value = '买入(开仓)';
+            document.getElementById('tradeAmount').value = '';
+            document.getElementById('tradeShares').value = '';
+            document.getElementById('tradePriority').value = '';
+            document.getElementById('tradeExpectedDate').value = '';
+            document.getElementById('tradeRemark').value = '';
+            document.getElementById('tradeValidationTip').style.display = 'none';
+            contractRowCount = 0;
+            document.getElementById('contractRowsContainer').innerHTML = '';
+            document.getElementById('tradeFormModal').setAttribute('data-plan-id', planId);
+            document.getElementById('tradeFormModal').setAttribute('data-product-id', productId);
+            document.getElementById('tradeFormModal').style.display = 'block';
+        }
+
+        function closeTradeForm() { document.getElementById('tradeFormModal').style.display = 'none'; }
+
+        function onTradeTypeChange() {
+            validateTradeForm();
+        }
+
+        function validateTradeForm() {
+            var tipEl = document.getElementById('tradeValidationTip');
+            var amount = parseFloat(document.getElementById('tradeAmount').value);
+            var planId = document.getElementById('tradeFormModal').getAttribute('data-plan-id');
+            var productId = document.getElementById('tradeFormModal').getAttribute('data-product-id');
+            var plan = PLANS.find(function(p) { return p.id === planId; });
+            var product = getProductById(productId);
+            if (!plan || !product) { tipEl.style.display = 'none'; return; }
+
+            var remainAmount = plan.totalAmount - plan.usedAmount;
+            var html = '<div class="tip-item"><span class="tip-icon">⚠</span><span>校验规则：</span></div>';
+
+            var check1Pass = true;
+            if (!isNaN(amount) && amount > 0) {
+                check1Pass = amount <= remainAmount;
+            }
+            html += '<div class="tip-item"><span class="' + (check1Pass ? 'tip-pass' : 'tip-fail') + '">' + (check1Pass ? '✓' : '✗') + '</span><span>申报金额 ≤ 剩余可投额度（' + formatMoney(remainAmount) + '）</span></div>';
+
+            var check2Pass = product.status === '在投' || product.status === '无计划';
+            html += '<div class="tip-item"><span class="' + (check2Pass ? 'tip-pass' : 'tip-fail') + '">' + (check2Pass ? '✓' : '✗') + '</span><span>产品状态为在池（当前：' + product.status + '）</span></div>';
+
+            tipEl.innerHTML = html;
+            tipEl.style.display = 'block';
+        }
+
+        function submitTrade() {
+            var amount = parseFloat(document.getElementById('tradeAmount').value);
+            var type = document.getElementById('tradeType').value;
+            if (isNaN(amount) || amount <= 0) { alert('请输入有效的交易金额'); return; }
+            var counterpartyId = document.getElementById('tradeCounterparty').value;
+            var planId = document.getElementById('tradeFormModal').getAttribute('data-plan-id');
+            var productId = document.getElementById('tradeFormModal').getAttribute('data-product-id');
+            var plan = PLANS.find(function(p) { return p.id === planId; });
+            var product = getProductById(productId);
+            if (plan && type === '买入(开仓)') {
+                var remainAmount = plan.totalAmount - plan.usedAmount;
+                if (amount > remainAmount) { alert('申报金额超出剩余可投额度（' + formatMoney(remainAmount) + '），请调整'); return; }
+            }
+            if (product && type === '买入(开仓)') {
+                if (product.status !== '在投' && product.status !== '无计划') { alert('产品当前状态为"' + product.status + '"，不在池中，无法发起买入交易'); return; }
+            }
+            var cp = COUNTERPARTIES.find(function(c) { return c.id === counterpartyId; });
+            var newTrade = {
+                id: 'TRX' + new Date().toISOString().slice(0,10).replace(/-/g,'') + String(Math.floor(Math.random() * 900) + 100),
+                planId: planId,
+                productId: productId,
+                productName: product ? product.shortName : '',
+                counterpartyId: counterpartyId,
+                counterpartyName: cp ? cp.shortName : '',
+                type: type,
+                applyAmount: amount,
+                shares: document.getElementById('tradeShares').value,
+                priority: document.getElementById('tradePriority').value,
+                expectedDate: document.getElementById('tradeExpectedDate').value,
+                dealAmount: 0,
+                status: '待审批',
+                trader: getCurrentRole().label,
+                createTime: new Date().toISOString().slice(0,16).replace('T',' '),
+                remark: document.getElementById('tradeRemark').value
+            };
+            TRADES.push(newTrade);
+
+            var contractRows = document.querySelectorAll('#contractRowsContainer .contract-row');
+            contractRows.forEach(function(row) {
+                var ctType = row.querySelector('.contract-type').value;
+                var ctCounterpartyId = row.querySelector('.contract-counterparty').value;
+                var ctManager = row.querySelector('.contract-manager').value;
+                var ctAmount = parseFloat(row.querySelector('.contract-amount').value);
+                if (!ctCounterpartyId || isNaN(ctAmount) || ctAmount <= 0) return;
+                var cp = COUNTERPARTIES.find(function(c) { return c.id === ctCounterpartyId; });
+                var newContract = {
+                    id: 'CT' + new Date().toISOString().slice(0,10).replace(/-/g,'') + String(Math.floor(Math.random() * 900) + 100),
+                    tradeId: newTrade.id,
+                    productId: productId,
+                    productName: product ? product.shortName : '',
+                    counterpartyId: ctCounterpartyId,
+                    counterpartyName: cp ? cp.shortName : '',
+                    manager: ctManager,
+                    type: ctType,
+                    amount: ctAmount,
+                    signDate: '',
+                    expireDate: '',
+                    initFile: ctType + '_初始.pdf',
+                    sealFile: '',
+                    version: '初始版本',
+                    status: '待上传用印',
+                    remark: ''
+                };
+                CONTRACTS.push(newContract);
+            });
+
+            alert('交易已提交，编号: ' + newTrade.id);
+            closeTradeForm();
+            renderTable();
+        }
+
+        function openTradeRecordModal(planId, productName) {
+            var filtered = TRADES.filter(function(t) { return t.planId === planId; });
+            document.getElementById('tradeRecordTitle').textContent = '交易记录 - ' + productName;
+            var html = '';
+            if (filtered.length === 0) {
+                html = '<div style="text-align:center;color:var(--text-muted);padding:30px;">暂无交易记录</div>';
+            } else {
+                html = '<table class="data-table"><thead><tr><th>交易编号</th><th>产品</th><th>类型</th><th>申请金额</th><th>成交金额</th><th>状态</th><th>交易员</th><th>时间</th><th>备注</th></tr></thead><tbody>';
+                filtered.forEach(function(t) {
+                    var typeClass = t.type === '买入' || t.type === '买入(开仓)' ? 'status-investing' : 'status-rejected';
+                    html += '<tr>';
+                    html += '<td class="text-mono" style="font-size:var(--font-size-xs);">' + t.id + '</td>';
+                    html += '<td>' + t.productName + '</td>';
+                    html += '<td><span class="status-badge ' + typeClass + '">' + t.type + '</span></td>';
+                    html += '<td class="text-mono">' + formatMoney(t.applyAmount) + '</td>';
+                    html += '<td class="text-mono">' + (t.dealAmount > 0 ? formatMoney(t.dealAmount) : '-') + '</td>';
+                    html += '<td><span class="status-badge ' + getStatusClass(t.status) + '">' + t.status + '</span></td>';
+                    html += '<td>' + t.trader + '</td>';
+                    html += '<td style="font-size:var(--font-size-xs);">' + t.createTime + '</td>';
+                    html += '<td style="font-size:var(--font-size-xs);color:var(--text-muted);">' + (t.remark || '-') + '</td>';
+                    html += '</tr>';
+                    if (t.status === '已成交') {
+                        var tradeContracts = CONTRACTS.filter(function(c) { return c.tradeId === t.id; });
+                        if (tradeContracts.length > 0) {
+                            html += '<tr><td colspan="9" style="padding:0 0 8px 24px;"><div style="font-size:var(--font-size-xs);color:var(--text-secondary);font-weight:600;margin-bottom:4px;">关联合同</div>';
+                            tradeContracts.forEach(function(ct) {
+                                html += renderContractInfoCard(ct);
+                            });
+                            html += '</td></tr>';
+                        }
+                    }
+                });
+                html += '</tbody></table>';
+            }
+            document.getElementById('tradeRecordContent').innerHTML = html;
+            document.getElementById('tradeRecordModal').style.display = 'block';
+        }
+
+        function closeTradeRecordModal() { document.getElementById('tradeRecordModal').style.display = 'none'; }
+
+        function openPlanDetail(planId) {
+            currentDetailPlanId = planId;
+            var plan = PLANS.find(function(p) { return p.id === planId; });
+            if (!plan) return;
+            document.getElementById('planDetailTitle').textContent = '计划书详情 - ' + plan.name;
+            switchDetailTab('basic');
+            document.getElementById('planDetailModal').style.display = 'block';
+        }
+
+        function closePlanDetailModal() { document.getElementById('planDetailModal').style.display = 'none'; }
+
+        function switchDetailTab(tab) {
+            document.querySelectorAll('#detailTabBar .tab-item').forEach(function(t) { t.classList.remove('active'); });
+            var tabs = ['basic', 'products', 'trades', 'approval'];
+            var idx = tabs.indexOf(tab);
+            document.querySelectorAll('#detailTabBar .tab-item')[idx].classList.add('active');
+            document.getElementById('detailTabBasic').classList.remove('active');
+            document.getElementById('detailTabProducts').classList.remove('active');
+            document.getElementById('detailTabTrades').classList.remove('active');
+            document.getElementById('detailTabApproval').classList.remove('active');
+            document.getElementById('detailTab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+            var plan = PLANS.find(function(p) { return p.id === currentDetailPlanId; });
+            if (!plan) return;
+            if (tab === 'basic') renderDetailBasic(plan);
+            else if (tab === 'products') renderDetailProducts(plan);
+            else if (tab === 'trades') renderDetailTrades(plan);
+            else if (tab === 'approval') renderDetailApproval(plan);
+        }
+
+        function renderDetailBasic(plan) {
+            var remainAmount = plan.totalAmount - plan.usedAmount;
+            var el = document.getElementById('detailTabBasic');
+            el.innerHTML = '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;">' +
+                '<div class="detail-info-item"><div class="info-label">计划书编号</div><div class="info-value">' + plan.id + '</div></div>' +
+                '<div class="detail-info-item"><div class="info-label">计划书名称</div><div class="info-value">' + plan.name + '</div></div>' +
+                '<div class="detail-info-item"><div class="info-label">业务部门</div><div class="info-value">' + (plan.dept || '-') + '</div></div>' +
+                '<div class="detail-info-item"><div class="info-label">投资组</div><div class="info-value">' + (plan.group || '-') + '</div></div>' +
+                '<div class="detail-info-item"><div class="info-label">总额度</div><div class="info-value text-mono">' + formatMoneyFull(plan.totalAmount) + '</div></div>' +
+                '<div class="detail-info-item"><div class="info-label">已用额度</div><div class="info-value text-mono">' + formatMoneyFull(plan.usedAmount) + '</div></div>' +
+                '<div class="detail-info-item"><div class="info-label">剩余额度</div><div class="info-value text-mono" style="color:var(--primary);">' + formatMoneyFull(remainAmount) + '</div></div>' +
+                '<div class="detail-info-item"><div class="info-label">交易员</div><div class="info-value">' + plan.trader + '</div></div>' +
+                '<div class="detail-info-item"><div class="info-label">创建人</div><div class="info-value">' + plan.creator + '</div></div>' +
+                '<div class="detail-info-item"><div class="info-label">创建时间</div><div class="info-value">' + plan.createTime + '</div></div>' +
+                '<div class="detail-info-item"><div class="info-label">提交时间</div><div class="info-value">' + (plan.submitTime || '-') + '</div></div>' +
+                '<div class="detail-info-item"><div class="info-label">状态</div><div class="info-value"><span class="status-badge ' + getStatusClass(plan.status) + '">' + plan.status + '</span></div></div>' +
+                '<div class="detail-info-item"><div class="info-label">关联文件</div><div class="info-value">' + (plan.file || '-') + '</div></div>' +
+                '<div class="detail-info-item" style="grid-column:span 2;"><div class="info-label">备注</div><div class="info-value">' + (plan.remark || '-') + '</div></div>' +
+                '</div>';
+        }
+
+        function renderDetailProducts(plan) {
+            var el = document.getElementById('detailTabProducts');
+            if (plan.products.length === 0) {
+                var emptyHtml = '<div style="color:var(--text-muted);text-align:center;padding:20px;">暂无关联产品</div>';
+                el.innerHTML = emptyHtml;
+                return;
+            }
+            var html = '';
+            html += '<table class="data-table"><thead><tr><th>产品ID</th><th>产品简称</th><th>恒泰代码</th><th>产品类型</th><th>资产类型</th><th>最新净值</th><th>计划额度</th><th>已用额度</th><th>状态</th><th>操作</th></tr></thead><tbody>';
+            plan.products.forEach(function(pid) {
+                var p = getProductById(pid);
+                if (!p) return;
+                html += '<tr>';
+                html += '<td>' + p.id + '</td>';
+                html += '<td style="font-weight:500;color:var(--primary);">' + p.shortName + '</td>';
+                html += '<td class="text-mono">' + p.hengtaiCode + '</td>';
+                html += '<td>' + p.productType + '</td>';
+                html += '<td>' + p.assetType + '</td>';
+                html += '<td class="text-mono">' + p.nav.toFixed(4) + '</td>';
+                html += '<td class="text-mono">' + formatMoney(p.planAmount) + '</td>';
+                html += '<td class="text-mono">' + formatMoney(p.usedAmount) + '</td>';
+                html += '<td><span class="status-badge ' + getStatusClass(p.status) + '">' + p.status + '</span></td>';
+                html += '<td>';
+                if (!_isReadOnly) {
+                    if (plan.status === '已通过' && _canCreateTrade) {
+                        html += '<button class="btn btn-primary btn-sm" data-logic-id="btn_initiate_trade" onclick="openTradeForm(\'' + plan.id + '\',\'' + p.id + '\')">发起交易</button> ';
+                    }
+                    if (_canUploadPlan) {
+                        html += '<button class="btn btn-info btn-sm" data-logic-id="btn_contract_entry" onclick="contractEntry(\'' + plan.id + '\',\'' + p.id + '\')">合同录入</button> ';
+                    }
+                }
+                html += '</td>';
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            el.innerHTML = html;
+        }
+
+        function renderDetailTrades(plan) {
+            var el = document.getElementById('detailTabTrades');
+            var filtered = TRADES.filter(function(t) { return t.planId === plan.id; });
+            if (filtered.length === 0) {
+                el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:30px;">暂无交易记录</div>';
+                return;
+            }
+            var html = '<table class="data-table"><thead><tr><th>交易编号</th><th>产品</th><th>类型</th><th>申请金额</th><th>成交金额</th><th>状态</th><th>交易员</th><th>时间</th><th>备注</th></tr></thead><tbody>';
+            filtered.forEach(function(t) {
+                var typeClass = t.type === '买入' || t.type === '买入(开仓)' ? 'status-investing' : 'status-rejected';
+                html += '<tr>';
+                html += '<td class="text-mono" style="font-size:var(--font-size-xs);">' + t.id + '</td>';
+                html += '<td>' + t.productName + '</td>';
+                html += '<td><span class="status-badge ' + typeClass + '">' + t.type + '</span></td>';
+                html += '<td class="text-mono">' + formatMoney(t.applyAmount) + '</td>';
+                html += '<td class="text-mono">' + (t.dealAmount > 0 ? formatMoney(t.dealAmount) : '-') + '</td>';
+                html += '<td><span class="status-badge ' + getStatusClass(t.status) + '">' + t.status + '</span></td>';
+                html += '<td>' + t.trader + '</td>';
+                html += '<td style="font-size:var(--font-size-xs);">' + t.createTime + '</td>';
+                html += '<td style="font-size:var(--font-size-xs);color:var(--text-muted);">' + (t.remark || '-') + '</td>';
+                html += '</tr>';
+                if (t.status === '已成交') {
+                    var tradeContracts = CONTRACTS.filter(function(c) { return c.tradeId === t.id; });
+                    if (tradeContracts.length > 0) {
+                        html += '<tr><td colspan="9" style="padding:0 0 8px 24px;"><div style="font-size:var(--font-size-xs);color:var(--text-secondary);font-weight:600;margin-bottom:4px;">关联合同</div>';
+                        tradeContracts.forEach(function(ct) {
+                            html += renderContractInfoCard(ct);
+                        });
+                        html += '</td></tr>';
+                    }
+                }
+            });
+            html += '</tbody></table>';
+            el.innerHTML = html;
+        }
+
+        function renderDetailApproval(plan) {
+            var el = document.getElementById('detailTabApproval');
+            var approval = APPROVALS.find(function(a) { return a.object === plan.id; });
+            if (!approval) {
+                el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:30px;">暂无审批流程</div>';
+                return;
+            }
+            var html = '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:14px;">';
+            html += '<div class="detail-info-item"><div class="info-label">审批编号</div><div class="info-value">' + approval.id + '</div></div>';
+            html += '<div class="detail-info-item"><div class="info-label">审批类型</div><div class="info-value">' + approval.type + '</div></div>';
+            html += '<div class="detail-info-item"><div class="info-label">当前状态</div><div class="info-value"><span class="status-badge ' + getStatusClass(approval.status) + '">' + approval.status + '</span></div></div>';
+            html += '</div>';
+            html += '<div class="detail-section-title">审批流程</div>';
+            html += '<div class="erp-timeline">';
+            approval.steps.forEach(function(step) {
+                var cls = step.status === '已完成' ? 'step-done' : step.status === '当前' ? 'step-current' : '';
+                html += '<div class="erp-step ' + cls + '">';
+                html += '<div class="step-title">' + step.title + '</div>';
+                if (step.user) html += '<div class="step-user">' + step.user + '</div>';
+                if (step.time) html += '<div class="step-time">' + step.time + '</div>';
+                if (step.result) html += '<div style="font-size:var(--font-size-xs);color:var(--danger);">结果: ' + step.result + (step.reason ? ' - ' + step.reason : '') + '</div>';
+                html += '</div>';
+            });
+            html += '</div>';
+            el.innerHTML = html;
+        }
+
+        function renderContractInfoCard(ct) {
+            var html = '<div class="contract-info-card">';
+            html += '<div class="contract-info-header">';
+            html += '<span class="contract-id">' + ct.id + '</span>';
+            html += '<div>';
+            if (ct.status === '待上传用印') {
+                html += '<button class="btn btn-info btn-sm" onclick="openUploadSealModal(\'' + ct.id + '\')">上传用印版</button> ';
+            }
+            if (ct.status === '待推送') {
+                html += '<button class="btn btn-primary btn-sm" onclick="pushContractSystem(\'' + ct.id + '\')">推送合同系统</button> ';
+            }
+            if (ct.status === '已推送' || ct.status === '已签署') {
+                html += '<span class="status-badge ' + getStatusClass(ct.status) + '">' + ct.status + '</span>';
+            }
+            html += '</div></div>';
+            html += '<div class="contract-info-grid">';
+            html += '<div><span class="info-label">合同类型：</span><span class="info-val">' + ct.type + '</span></div>';
+            html += '<div><span class="info-label">对手方：</span><span class="info-val">' + ct.counterpartyName + '</span></div>';
+            html += '<div><span class="info-label">金额：</span><span class="info-val text-mono">' + formatMoney(ct.amount) + '</span></div>';
+            html += '<div><span class="info-label">状态：</span><span class="info-val"><span class="status-badge ' + getStatusClass(ct.status) + '">' + ct.status + '</span></span></div>';
+            html += '<div><span class="info-label">版本：</span><span class="info-val"><span class="status-badge ' + getStatusClass(ct.version) + '">' + ct.version + '</span></span></div>';
+            if (ct.manager) {
+                html += '<div><span class="info-label">管理人：</span><span class="info-val">' + ct.manager + '</span></div>';
+            }
+            html += '</div></div>';
+            return html;
+        }
+
+        function openUploadSealModal(contractId) {
+            var ct = CONTRACTS.find(function(c) { return c.id === contractId; });
+            if (!ct) return;
+            currentSealContractId = contractId;
+            var infoHtml = '<div class="detail-info-item"><div class="info-label">合同编号</div><div class="info-value">' + ct.id + '</div></div>';
+            infoHtml += '<div class="detail-info-item"><div class="info-label">合同类型</div><div class="info-value">' + ct.type + '</div></div>';
+            infoHtml += '<div class="detail-info-item"><div class="info-label">对手方</div><div class="info-value">' + ct.counterpartyName + '</div></div>';
+            infoHtml += '<div class="detail-info-item"><div class="info-label">合同金额</div><div class="info-value text-mono">' + formatMoney(ct.amount) + '</div></div>';
+            document.getElementById('sealContractInfo').innerHTML = infoHtml;
+            document.getElementById('sealSignDate').value = '';
+            document.getElementById('sealExpireDate').value = '';
+            document.getElementById('sealFileInput').value = '';
+            document.getElementById('uploadSealModal').style.display = 'block';
+        }
+
+        function closeUploadSealModal() {
+            document.getElementById('uploadSealModal').style.display = 'none';
+            currentSealContractId = '';
+        }
+
+        function confirmUploadSeal() {
+            var signDate = document.getElementById('sealSignDate').value;
+            if (!signDate) { alert('请选择签署日期'); return; }
+            var ct = CONTRACTS.find(function(c) { return c.id === currentSealContractId; });
+            if (!ct) return;
+            ct.version = '用印版本';
+            ct.status = '待推送';
+            ct.signDate = signDate;
+            ct.sealFile = ct.id + '_用印版.pdf';
+            var expireDate = document.getElementById('sealExpireDate').value;
+            if (expireDate) ct.expireDate = expireDate;
+            alert('用印版合同已上传，合同状态已更新为"待推送"');
+            closeUploadSealModal();
+            renderTable();
+        }
+
+        function pushContractSystem(contractId) {
+            if (!confirm('确认将合同 ' + contractId + ' 推送至合同系统？')) return;
+            var ct = CONTRACTS.find(function(c) { return c.id === contractId; });
+            if (!ct) return;
+            ct.status = '已推送';
+            alert('合同 ' + contractId + ' 已成功推送至合同系统');
+            renderTable();
+        }
+
+        function contractEntry(planId, productId) {
+            var plan = PLANS.find(function(p) { return p.id === planId; });
+            var product = getProductById(productId);
+            if (!plan || !product) return;
+            alert('合同录入功能: ' + plan.name + ' - ' + product.shortName);
+        }
+
+        function addProductToPlan(planId) {
+            var plan = PLANS.find(function(p) { return p.id === planId; });
+            if (!plan) return;
+            alert('添加产品到计划书: ' + plan.name);
+        }
+
+        window.addEventListener('click', function(event) {
+            ['planFormModal', 'tradeFormModal', 'tradeRecordModal', 'planDetailModal', 'uploadSealModal'].forEach(function(id) {
+                if (event.target === document.getElementById(id)) {
+                    document.getElementById(id).style.display = 'none';
+                }
+            });
+        });
+
+        updateStats();
+        renderTable();
+
+var logicData = {
+  "btn_new_plan": {
+    name: "新建计划书",
+    logic: "## 功能描述\n上传PDF/Word格式的投资计划书，填写基本信息并关联产品。\n\n## 核心交互流程\n1. 投资经理点击\"新建计划书\"，填写计划书名称、业务部门、投资组、交易员、总额度\n2. 添加关联产品并填写计划额度\n3. 可上传计划书文件（PDF/Word）\n4. 点击\"保存草稿\"保存为草稿状态，或\"提交审批\"进入审批流程\n\n## 表单字段\n- **计划书名称**：必填，计划书标题\n- **业务部门**：必填，关联投资组\n- **投资组**：必填，根据部门联动（创新金融业务总部→专户投资组/xn账户/fb账户，FICC固定收益业务总部→理财投资组，证券投资部→权益投资组）\n- **交易员**：必填，指定的交易执行人\n- **总额度**：必填，计划书总投资额度\n- **关联产品**：至少添加一个产品并填写计划额度\n- **上传文件**：支持PDF、Word格式\n\n## 校验规则\n- 计划书名称必填\n- 业务部门、投资组、交易员必选\n- 总额度必须大于0\n- 至少添加一个关联产品\n- 每个关联产品必须填写计划额度\n\n## 状态变更\n保存草稿→草稿 | 提交审批→待审批"
+  },
+  "plan_list": {
+    name: "计划书列表",
+    logic: "## 功能描述\n展示所有投资计划书及其状态，支持展开查看关联产品。\n\n## 列表字段\n- 计划书编号：系统自动生成，格式 TP+YYYYMMDD+序号\n- 计划书名称\n- 业务部门\n- 投资组\n- 总额度/已用额度（含额度使用进度条）\n- 状态：草稿/待审批/已通过/已驳回/已终止\n- 创建人\n- 交易员\n- 提交时间\n\n## 交互行为\n- 点击行展开关联产品详情\n- 支持按编号、名称、产品搜索\n- 支持按状态筛选\n- 支持按提交月份筛选\n\n## 状态流转\n```\n草稿 →(提交审批)→ 待审批 →(审批通过)→ 已通过\n  ↑                │\n  │ 可编辑/删除    │ 可撤回/终止\n  └────────────────┘\n         │\n         ├──(审批驳回)→ 已驳回\n         └──(终止)→ 已终止\n```\n\n## 边界条件\n- 计划书审批通过后，投资经理不可修改计划书内容\n- 计划书\"已驳回\"/\"已终止\"为终态，不可恢复，需重新发起\n- 交易员仅可查看和执行分配给自己的交易"
+  },
+  "stats_filter": {
+    name: "状态统计筛选",
+    logic: "## 功能描述\n按状态分类统计计划书数量，点击可快速筛选。\n\n## 统计维度\n- 全部：所有计划书总数\n- 草稿：状态为\"草稿\"的计划书数\n- 待审批：状态为\"待审批\"的计划书数\n- 已通过：状态为\"已通过\"的计划书数\n- 已驳回：状态为\"已驳回\"的计划书数\n- 已终止：状态为\"已终止\"的计划书数\n\n## 交互行为\n- 点击统计卡片，列表自动筛选对应状态\n- 当前选中状态高亮显示\n- 与下拉状态筛选联动"
+  },
+  "btn_submit_approval": {
+    name: "提交审批",
+    logic: "## 功能描述\n提交计划书进入审批流程。\n\n## 审批流程\n投资经理提交 → 风控审批 → 部门负责人审批\n\n## 前置条件\n- 计划书状态必须为\"草稿\"\n- 必填字段全部填写完成\n\n## 状态变更\n草稿 → 待审批\n\n## 边界条件\n- 审批流程按步骤顺序推进，不可跳步\n- 审批驳回为终态，不可恢复，需重新发起\n- 审批通过后，关联产品方可发起交易"
+  },
+  "btn_edit_plan": {
+    name: "编辑计划书",
+    logic: "## 功能描述\n修改草稿状态的计划书信息。\n\n## 前置条件\n- 计划书状态必须为\"草稿\"\n\n## 可编辑内容\n- 计划书名称、业务部门、投资组、交易员\n- 总额度\n- 关联产品及计划额度\n- 上传文件\n- 备注\n\n## 不可编辑条件\n- 待审批：不可编辑，仅可撤回/终止\n- 已通过/已驳回/已终止：不可编辑"
+  },
+  "btn_delete_plan": {
+    name: "删除计划书",
+    logic: "## 功能描述\n删除草稿状态的计划书。\n\n## 前置条件\n- 计划书状态必须为\"草稿\"\n\n## 交互行为\n- 点击删除按钮，弹出二次确认\n- 确认后删除计划书记录\n\n## 不可删除条件\n- 待审批/已通过/已驳回/已终止状态不可删除"
+  },
+  "btn_withdraw": {
+    name: "撤回计划书",
+    logic: "## 功能描述\n撤回待审批的计划书，使其回到草稿状态。\n\n## 前置条件\n- 计划书状态必须为\"待审批\"\n\n## 状态变更\n待审批 → 草稿\n\n## 业务规则\n- 撤回后可重新编辑和提交"
+  },
+  "btn_terminate": {
+    name: "终止计划书",
+    logic: "## 功能描述\n终止待审批的计划书，终止后为终态不可恢复。\n\n## 前置条件\n- 计划书状态必须为\"待审批\"\n\n## 状态变更\n待审批 → 已终止\n\n## 业务规则\n- 终止后不可恢复，需重新发起计划书\n- 终止操作需二次确认"
+  },
+  "btn_initiate_trade": {
+    name: "发起交易",
+    logic: "## 功能描述\n对已通过计划书的关联产品发起交易，输入投资金额。\n\n## 核心交互流程\n1. 投资经理在计划书详情中点击关联产品的\"发起交易\"按钮\n2. 输入投资金额，提交交易审批\n3. 交易审批通过后，进入ERP执行流程\n4. 交易成交后，系统自动生成会计凭证\n\n## 交易表单字段\n- 关联计划书（只读）\n- 产品名称（只读）\n- 管理人/对手方（选填）\n- 交易类型：买入(开仓)/赎回\n- 优先级：优先级/次级（选填）\n- 交易金额（必填）\n- 申报份额（选填）\n- 预计执行时间（选填）\n- 合同附件上传（可选）\n\n## 校验规则\n<span class=\"logic-tag rule\">BR-001</span> 交易金额不可超过产品剩余可投额度（计划额度 - 已投额度）\n<span class=\"logic-tag condition\">条件</span> 申报金额 ≤ 剩余可投额度\n<span class=\"logic-tag condition\">条件</span> 产品状态为在池（在投/待投）\n\n## 审批流程\n投资经理提交 → 风控审批 → 财务确认 → 交易执行\n\n## 边界条件\n- 仅已通过的计划书可发起交易\n- 交易金额不可超过产品剩余可投额度（BR-001）\n- 产品\"已完结\"后不可再发起交易"
+  },
+  "btn_contract_entry": {
+    name: "合同录入",
+    logic: "## 功能描述\n在交易管理-计划书产品行点击\"合同录入\"按钮，打开合同录入弹窗。\n\n## 核心交互流程\n1. 投资经理在交易管理-计划书产品行点击\"合同录入\"按钮\n2. 弹窗展示产品历史合同列表和新建合同表单\n3. 填写合同类型、对手方、金额、签署日期、到期日期等字段\n4. 提交前可二次编辑合同信息\n5. 点击\"提交合同系统流程\"，校验后提交至合同系统\n6. 合同系统完成签署后，状态自动更新为\"已签署\"\n\n## 合同字段\n- 合同编号：系统自动生成，格式 CT+YYYYMMDD+序号\n- 合同类型：专户资管合同/FOF投资合同/权益投资合同/信托投资合同/托管合同/补充协议\n- 对手方（必填）\n- 管理人（选填）\n- 合同金额（必填）\n- 合同文件上传\n\n## 合同状态流转\n```\n待上传用印 →(上传用印版)→ 待推送 →(推送合同系统)→ 已推送 →(签署完成)→ 已签署\n```\n\n## 边界条件\n- 合同到期日期必须晚于签署日期\n- 一份合同必须关联一个产品和一个对手方\n- 补充协议类型合同需关联原始主合同\n- 合同提交合同系统后，不可在OMS内修改"
+  },
+  "btn_trade_record": {
+    name: "交易记录",
+    logic: "## 功能描述\n查看产品的历史交易记录。\n\n## 列表字段\n- 交易编号\n- 产品名称\n- 交易类型：买入(开仓)/赎回\n- 申请金额/成交金额\n- 状态：待审批/审批中/待执行/已成交/已撤回/已驳回\n- 交易员\n- 时间\n- 备注\n\n## 交易状态\n- 待审批：刚提交的交易\n- 审批中：进入审批流程\n- 待执行：审批通过，等待执行\n- 已成交：交易完成\n- 已撤回：交易被撤回\n- 已驳回：审批被驳回\n\n## 关联合同\n已成交的交易下方展示关联合同信息卡片，包含合同编号、类型、对手方、金额、状态等"
+  },
+  "btn_plan_detail": {
+    name: "计划书详情",
+    logic: "## 功能描述\n查看计划书的完整信息，包含四个Tab页。\n\n## Tab页结构\n1. **基础信息**：计划书编号、名称、部门、投资组、总额度、已用额度、剩余额度、交易员、创建人、创建时间、状态、关联文件、备注\n2. **关联产品**：产品列表，含产品ID、简称、恒泰代码、产品类型、资产类型、最新净值、计划额度、已用额度、状态，支持发起交易和合同录入\n3. **交易记录**：该计划书下所有交易的明细\n4. **审批流程**：审批时间线，展示每个审批步骤的标题、操作人、完成时间、步骤状态\n\n## 审批流程时间线\n- 已完成步骤：绿色圆点\n- 当前步骤：蓝色圆点（带光晕）\n- 待处理步骤：灰色圆点"
+  },
+  "plan_form": {
+    name: "新建计划书表单",
+    logic: "## 功能描述\n创建新的投资计划书，填写基本信息并关联产品。\n\n## 表单字段\n| 字段 | 类型 | 必填 | 说明 |\n|------|------|------|------|\n| 计划书名称 | 文本 | 是 | 计划书标题 |\n| 业务部门 | 下拉 | 是 | 创新金融业务总部/FICC固定收益业务总部/证券投资部 |\n| 投资组 | 下拉 | 是 | 根据部门联动 |\n| 交易员 | 下拉 | 是 | 指定的交易执行人 |\n| 总额度 | 数值 | 是 | 计划书总投资额度 |\n| 上传文件 | 附件 | 否 | PDF/Word格式 |\n| 关联产品 | 动态行 | 是 | 至少一个产品+计划额度 |\n| 备注 | 文本 | 否 | 补充说明 |\n\n## 投资组联动规则\n- 创新金融业务总部 → 专户投资组/xn账户/fb账户\n- FICC固定收益业务总部 → 理财投资组\n- 证券投资部 → 权益投资组\n\n## 产品额度合计\n动态计算所有关联产品的计划额度之和\n\n## 操作按钮\n- 取消：关闭弹窗\n- 保存草稿：仅校验名称，状态为\"待提交\"\n- 提交审批：全字段校验，状态变更为\"审批中\""
+  },
+  "trade_form": {
+    name: "发起交易表单",
+    logic: "## 功能描述\n对已通过计划书的关联产品发起投资交易。\n\n## 交易表单\n| 字段 | 类型 | 必填 | 说明 |\n|------|------|------|------|\n| 关联计划书 | 只读 | — | 自动填充 |\n| 产品名称 | 只读 | — | 自动填充 |\n| 管理人/对手方 | 下拉 | 否 | 仅显示已入池的管理人 |\n| 交易类型 | 下拉 | 是 | 买入(开仓)/赎回 |\n| 优先级 | 下拉 | 否 | 优先级/次级 |\n| 交易金额 | 数值 | 是 | 不可超过剩余可投额度 |\n| 申报份额 | 数值 | 否 | — |\n| 预计执行时间 | 日期 | 否 | — |\n| 备注 | 文本 | 否 | — |\n| 合同附件 | 动态 | 否 | 可添加多份合同 |\n\n## 实时校验\n- 申报金额 ≤ 剩余可投额度（BR-001）\n- 产品状态为在池（在投/待投）\n\n## 审批流程\n投资经理提交 → 风控审批 → 财务确认 → 交易执行\n\n## 交易编号规则\nTRX + YYYYMMDD + 3位随机数"
+  },
+  "trade_record": {
+    name: "交易记录弹窗",
+    logic: "## 功能描述\n查看某产品的历史交易记录列表。\n\n## 展示内容\n- 交易编号、产品、类型、申请金额、成交金额、状态、交易员、时间、备注\n- 已成交交易下方展示关联合同信息\n\n## 合同信息卡片\n- 合同编号、类型、对手方、金额、状态、版本\n- 待上传用印状态：显示\"上传用印版\"按钮\n- 待推送状态：显示\"推送合同系统\"按钮\n- 已推送/已签署状态：显示状态标签"
+  },
+  "upload_seal": {
+    name: "上传用印版合同",
+    logic: "## 功能描述\n上传合同的用印版文件，更新合同状态。\n\n## 表单字段\n- 合同编号（只读）\n- 合同类型（只读）\n- 对手方（只读）\n- 合同金额（只读）\n- 用印版合同文件（必填，PDF/Word）\n- 签署日期（必填）\n- 到期日期（选填）\n\n## 状态变更\n待上传用印 → 待推送\n\n## 合同版本\n- 初始版本：刚创建的合同\n- 用印版本：上传用印版后的合同\n\n## 后续操作\n待推送状态可点击\"推送合同系统\"，将合同推送至外部合同系统"
+  }
+};
+
+var logicContextMenu = document.getElementById('logic-context-menu');
+var logicMenuViewLogic = document.getElementById('menu-view-logic');
+var currentLogicId = null;
+
+document.addEventListener('contextmenu', function(e) {
+  var target = e.target.closest('[data-logic-id]');
+  if (target) {
+    e.preventDefault();
+    currentLogicId = target.getAttribute('data-logic-id');
+    if (logicData[currentLogicId]) {
+      logicContextMenu.style.display = 'block';
+      logicContextMenu.style.left = e.clientX + 'px';
+      logicContextMenu.style.top = e.clientY + 'px';
+      var rect = logicContextMenu.getBoundingClientRect();
+      if (rect.right > window.innerWidth) logicContextMenu.style.left = (e.clientX - rect.width) + 'px';
+      if (rect.bottom > window.innerHeight) logicContextMenu.style.top = (e.clientY - rect.height) + 'px';
+    }
+  } else {
+    logicContextMenu.style.display = 'none';
+  }
+});
+
+document.addEventListener('click', function() {
+  logicContextMenu.style.display = 'none';
+});
+
+logicMenuViewLogic.addEventListener('click', function() {
+  if (!currentLogicId || !logicData[currentLogicId]) return;
+  var data = logicData[currentLogicId];
+  document.getElementById('logic-modal-title').textContent = data.name;
+  document.getElementById('logic-modal-body').innerHTML = renderLogicMarkdown(data.logic);
+  document.getElementById('logic-modal-overlay').classList.add('show');
+  logicContextMenu.style.display = 'none';
+});
+
+var logicOverlay = document.getElementById('logic-modal-overlay');
+document.getElementById('logic-modal-close').addEventListener('click', function() {
+  logicOverlay.classList.remove('show');
+});
+logicOverlay.addEventListener('click', function(e) {
+  if (e.target === logicOverlay) logicOverlay.classList.remove('show');
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') logicOverlay.classList.remove('show');
+});
+
+function renderLogicMarkdown(text) {
+  if (!text) return '';
+  var html = text;
+  html = html.replace(/```([\s\S]*?)```/g, function(m, code) {
+    return '<div class="logic-flow">' + code.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
+  });
+  html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/`(.+?)`/g, '<code>$1</code>');
+  html = html.replace(/^(\|.+?\|)\n(\|[-:| ]+\|)\n((?:\|.+\|\n?)*)/gm, function(m, header, sep, body) {
+    var headers = header.split('|').filter(function(c){return c.trim();});
+    var rows = body.trim().split('\n');
+    var t = '<table style="width:100%;border-collapse:collapse;margin:8px 0;font-size:13px;"><thead><tr>';
+    headers.forEach(function(h){ t += '<th style="padding:6px 10px;background:#f8fafc;border:1px solid #e2e8f0;text-align:left;font-weight:600;">' + h.trim() + '</th>'; });
+    t += '</tr></thead><tbody>';
+    rows.forEach(function(r){
+      var cells = r.split('|').filter(function(c){return c.trim();});
+      t += '<tr>';
+      cells.forEach(function(c){ t += '<td style="padding:6px 10px;border:1px solid #e2e8f0;">' + c.trim() + '</td>'; });
+      t += '</tr>';
+    });
+    t += '</tbody></table>';
+    return t;
+  });
+  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>)/gs, function(match) {
+    if (!match.startsWith('<ul>')) return '<ul>' + match + '</ul>';
+    return match;
+  });
+  html = html.replace(/\n\n/g, '</p><p>');
+  html = html.replace(/\n/g, '<br>');
+  return '<p>' + html + '</p>';
+}
+    </script>
+</body>
+</html>

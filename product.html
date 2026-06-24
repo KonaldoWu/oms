@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>场外簿记OMS系统 - 产品管理</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .product-name-link { font-weight: 500; color: var(--primary); cursor: pointer; text-decoration: none; }
+        .product-name-link:hover { text-decoration: underline; }
+        .tab-nav { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+        .tab-btn { padding: 7px 16px; font-size: var(--font-size-sm); font-weight: 500; color: var(--text-muted); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.15s; }
+        .tab-btn:hover { color: var(--text-primary); }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .toggle-btn { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: var(--radius-sm); font-size: var(--font-size-xs); font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
+        .toggle-btn.enable { background: var(--success-bg); color: var(--success); }
+        .toggle-btn.enable:hover { background: var(--success); color: white; }
+        .toggle-btn.disable { background: var(--danger-bg); color: var(--danger); }
+        .toggle-btn.disable:hover { background: var(--danger); color: white; }
+        .modal-content.wide { width: 800px; }
+        .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .form-hint { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+        .form-group .required-star { color: red; }
+        .btn-group { display: flex; gap: 8px; justify-content: flex-end; }
+        .btn-group .btn { min-width: 90px; }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <nav class="sidebar"></nav>
+        <div class="main-area">
+            <div class="topbar"></div>
+            <div class="content">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <span class="page-title">产品管理 - 产品池</span>
+                        <span class="page-subtitle">Product Pool</span>
+                    </div>
+                    <div class="page-actions">
+                        <button class="btn btn-ghost btn-sm" id="btnBatchImport" data-logic-id="modal_batch_import" onclick="openBatchImportModal()" style="display:none;">📥 批量入池</button>
+                        <button class="btn btn-primary btn-sm" id="btnAddProduct" data-logic-id="modal_add_product" onclick="openAddModal()" style="display:none;">+ 产品入池</button>
+                    </div>
+                </div>
+
+                <div class="stats-row" id="statsRow" data-logic-id="module_product_list"></div>
+
+                <div class="card" data-logic-id="module_product_list">
+                    <div class="card-header"><span class="card-title">筛选条件</span></div>
+                    <div class="card-body">
+                        <div class="search-bar">
+                            <select class="search-input" id="filterAccountType" style="flex:none;width:150px;">
+                                <option value="">全部账套类型</option>
+                                <option value="专户资管">专户资管</option>
+                                <option value="ABS">ABS</option>
+                                <option value="信托">信托</option>
+                                <option value="票据">票据</option>
+                                <option value="碳金融">碳金融</option>
+                            </select>
+                            <select class="search-input" id="filterDept" style="flex:none;width:180px;">
+                                <option value="">全部部门</option>
+                                <option value="创新金融业务总部">创新金融业务总部</option>
+                                <option value="FICC固定收益业务总部">FICC固定收益业务总部</option>
+                                <option value="证券投资部">证券投资部</option>
+                            </select>
+                            <select class="search-input" id="filterStatus" style="flex:none;width:120px;">
+                                <option value="">全部状态</option>
+                                <option value="在投">在投</option>
+                                <option value="无计划">无计划</option>
+                            </select>
+                            <input type="text" placeholder="搜索产品名称/ID/内部编码/外部编码" class="search-input" id="filterKeyword">
+                            <button class="btn btn-primary btn-sm" onclick="applyFilters()">搜索</button>
+                            <button class="btn btn-ghost btn-sm" onclick="resetFilters()">重置</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" data-logic-id="module_product_list">
+                    <div class="card-header">
+                        <span class="card-title">产品列表</span>
+                        <span class="page-subtitle" id="productCount"></span>
+                    </div>
+                    <div class="card-body-p0">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>产品ID</th>
+                                        <th>产品名称</th>
+                                        <th>内部编码</th>
+                                        <th>外部编码</th>
+                                        <th>产品类型</th>
+                                        <th>账套类型</th>
+                                        <th>投资状态</th>
+                                        <th>单位净值</th>
+                                        <th>最新净值日期</th>
+                                        <th>投资组</th>
+                                        <th>入池日期</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="productTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="productModal" class="modal" data-logic-id="modal_add_product">
+        <div class="modal-content wide">
+            <div class="modal-header">
+                <h3 id="modalTitle">产品入池</h3>
+                <button class="btn btn-ghost btn-sm" onclick="closeProductModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="grid-3" style="gap:10px;">
+                    <div class="form-group"><label>产品名称 <span class="required-star">*</span></label><input type="text" id="fName" required maxlength="100"></div>
+                    <div class="form-group"><label>内部编码</label><input type="text" id="fHengtaiCode" readonly style="background:var(--border-light);"><div class="form-hint">系统自动生成</div></div>
+                    <div class="form-group"><label>外部编码</label><input type="text" id="fExternalCode" placeholder="选填，对接外部系统"></div>
+                    <div class="form-group"><label>产品类型 <span class="required-star">*</span></label><select id="fProductType" required><option value="">请选择</option><option value="权益类">权益类</option><option value="固收类">固收类</option><option value="混合型">混合型</option><option value="FOF">FOF</option></select></div>
+                    <div class="form-group"><label>账套类型 <span class="required-star">*</span></label><select id="fAccountType" required onchange="onAccountTypeChange()"><option value="">请选择</option><option value="专户资管">专户资管</option><option value="ABS">ABS</option><option value="信托">信托</option><option value="票据">票据</option><option value="碳金融">碳金融</option></select><div class="form-hint">从iBor同步</div></div>
+                    <div class="form-group"><label>投资组 <span class="required-star">*</span></label><select id="fGroup" required><option value="">请选择投资组</option></select><div class="form-hint">按用户权限过滤</div></div>
+                    <div class="form-group" style="grid-column:span 3;"><label>产品描述</label><textarea id="fDescription" rows="3" maxlength="500" placeholder="选填，最多500字符" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);resize:vertical;"></textarea></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeProductModal()">取消</button>
+                <button class="btn btn-ghost" onclick="saveProduct('draft')">保存草稿</button>
+                <button class="btn btn-primary" onclick="saveProduct('submit')">提交入池</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="batchImportModal" class="modal" data-logic-id="modal_batch_import">
+        <div class="modal-content" style="width:800px;">
+            <div class="modal-header">
+                <h3>批量入池</h3>
+                <button class="btn btn-ghost btn-sm" onclick="closeBatchImportModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="file-upload" style="margin-bottom:12px;">
+                    <input type="file" id="batchFileInput" accept=".xlsx">
+                    <label for="batchFileInput">选择Excel文件</label>
+                    <p>支持 .xlsx 格式，<a href="javascript:void(0)" onclick="downloadTemplate()" style="color:var(--primary);">下载导入模板</a></p>
+                </div>
+                <div id="batchResult" style="display:none;"></div>
+                <div id="batchPreview" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeBatchImportModal()">取消</button>
+                <button class="btn btn-primary" id="btnConfirmBatch" onclick="confirmBatchImport()" disabled>确认入池</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script>
+        initLayout('product.html', '产品管理');
+
+        var _perm = {
+            canAddProduct: hasPermission('addProduct'),
+            canEditProduct: hasPermission('editProduct'),
+            canBatchImport: hasPermission('batchImportProduct'),
+            isReadOnly: isReadOnly()
+        };
+        var editingId = null;
+
+        function renderStats() {
+            var counts = { '在投': 0, '无计划': 0 };
+            PRODUCTS.forEach(function(p) {
+                if (counts.hasOwnProperty(p.status)) counts[p.status]++;
+            });
+            var icons = [
+                { key: '在投', icon: '💹', cls: 'green' },
+                { key: '无计划', icon: '⏳', cls: 'orange' }
+            ];
+            var html = '';
+            icons.forEach(function(item) {
+                html += '<div class="stat-card">' +
+                    '<div class="stat-icon ' + item.cls + '">' + item.icon + '</div>' +
+                    '<div class="stat-info">' +
+                    '<div class="stat-label">' + item.key + '</div>' +
+                    '<div class="stat-value">' + counts[item.key] + '</div>' +
+                    '</div></div>';
+            });
+            document.getElementById('statsRow').innerHTML = html;
+        }
+
+        function getFilteredProducts() {
+            var accountType = document.getElementById('filterAccountType').value;
+            var dept = document.getElementById('filterDept').value;
+            var status = document.getElementById('filterStatus').value;
+            var keyword = document.getElementById('filterKeyword').value.toLowerCase().trim();
+            return PRODUCTS.filter(function(p) {
+                if (accountType && p.accountType !== accountType) return false;
+                if (dept && p.dept !== dept) return false;
+                if (status && p.status !== status) return false;
+                if (keyword) {
+                    var haystack = (p.id + p.name + p.hengtaiCode + (p.externalCode||'')).toLowerCase();
+                    if (haystack.indexOf(keyword) === -1) return false;
+                }
+                return true;
+            });
+        }
+
+        function renderTable() {
+            var list = getFilteredProducts();
+            document.getElementById('productCount').textContent = '共 ' + list.length + ' 个产品';
+            var tbody = document.getElementById('productTableBody');
+            if (list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:30px;">暂无匹配产品</td></tr>';
+                return;
+            }
+            var html = '';
+            list.forEach(function(p) {
+                var statusBadge = '<span class="status-badge ' + getStatusClass(p.status) + '">' + p.status + '</span>';
+                var navStr = p.nav ? p.nav.toFixed(4) : '-';
+                var nameLink = '<a class="product-name-link" href="product_detail.html?id=' + p.id + '">' + p.name + '</a>';
+                var actionHtml = '<a class="btn btn-info btn-sm" href="product_detail.html?id=' + p.id + '">详情</a> ';
+                if (!_perm.isReadOnly) {
+                    if (_perm.canEditProduct) {
+                        if (p.status === '无计划' || p.status === '在投') {
+                            actionHtml += '<button class="btn btn-ghost btn-sm" data-logic-id="modal_edit_product" onclick="openEditModal(\'' + p.id + '\')">编辑</button> ';
+                        }
+                    }
+                    if (hasPermission('createTrade') && (p.status === '在投' || p.status === '无计划')) {
+                        actionHtml += '<button class="btn btn-primary btn-sm" onclick="alert(\'本期暂不涉及交易功能\')">发起交易</button>';
+                    }
+                }
+                html += '<tr>' +
+                    '<td class="text-mono">' + p.id + '</td>' +
+                    '<td>' + nameLink + '</td>' +
+                    '<td class="text-mono">' + (p.hengtaiCode || '-') + '</td>' +
+                    '<td class="text-mono">' + (p.externalCode || '-') + '</td>' +
+                    '<td>' + p.productType + '</td>' +
+                    '<td><span class="type-badge type-plan-notice">' + (p.accountType || '-') + '</span></td>' +
+                    '<td>' + statusBadge + '</td>' +
+                    '<td class="text-mono">' + navStr + '</td>' +
+                    '<td>' + (p.navDate || '-') + '</td>' +
+                    '<td>' + (p.group || '-') + '</td>' +
+                    '<td>' + (p.poolTime || '-') + '</td>' +
+                    '<td>' + actionHtml + '</td>' +
+                    '</tr>';
+            });
+            tbody.innerHTML = html;
+        }
+
+        function applyFilters() { renderTable(); }
+        function resetFilters() {
+            document.getElementById('filterAccountType').value = '';
+            document.getElementById('filterDept').value = '';
+            document.getElementById('filterStatus').value = '';
+            document.getElementById('filterKeyword').value = '';
+            renderTable();
+        }
+
+        function openAddModal() {
+            editingId = null;
+            document.getElementById('modalTitle').textContent = '产品入池';
+            document.getElementById('fName').value = '';
+            document.getElementById('fHengtaiCode').value = '';
+            document.getElementById('fExternalCode').value = '';
+            document.getElementById('fProductType').value = '';
+            document.getElementById('fAccountType').value = '';
+            populateGroupSelect();
+            document.getElementById('fGroup').value = '';
+            document.getElementById('fDescription').value = '';
+            document.getElementById('productModal').style.display = 'block';
+        }
+
+        function openEditModal(pid) {
+            var p = PRODUCTS.find(function(x) { return x.id === pid; });
+            if (!p) return;
+            editingId = pid;
+            document.getElementById('modalTitle').textContent = '编辑产品';
+            document.getElementById('fName').value = p.name;
+            document.getElementById('fHengtaiCode').value = p.hengtaiCode || '';
+            document.getElementById('fExternalCode').value = p.externalCode || '';
+            document.getElementById('fProductType').value = p.productType;
+            document.getElementById('fAccountType').value = p.accountType || '';
+            populateGroupSelect();
+            document.getElementById('fGroup').value = p.group || '';
+            document.getElementById('fDescription').value = p.description || '';
+            if (p.status === '在投') {
+                document.getElementById('fName').readOnly = true;
+                document.getElementById('fProductType').disabled = true;
+                document.getElementById('fAccountType').disabled = true;
+                document.getElementById('fGroup').disabled = true;
+            } else {
+                document.getElementById('fName').readOnly = false;
+                document.getElementById('fProductType').disabled = false;
+                document.getElementById('fAccountType').disabled = false;
+                document.getElementById('fGroup').disabled = false;
+            }
+            document.getElementById('productModal').style.display = 'block';
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').style.display = 'none';
+            editingId = null;
+        }
+
+        function saveProduct(mode) {
+            var name = document.getElementById('fName').value.trim();
+            var productType = document.getElementById('fProductType').value;
+            var accountType = document.getElementById('fAccountType').value;
+            var group = document.getElementById('fGroup').value;
+            if (!name || !productType || !accountType || !group) {
+                alert('请填写所有必填字段（标记 * 的项）');
+                return;
+            }
+            var externalCode = document.getElementById('fExternalCode').value.trim();
+            var description = document.getElementById('fDescription').value.trim();
+            if (editingId) {
+                var p = PRODUCTS.find(function(x) { return x.id === editingId; });
+                if (p) {
+                    if (p.status === '无计划') {
+                        p.name = name;
+                        p.productType = productType;
+                        p.accountType = accountType;
+                        p.group = group;
+                    }
+                    p.externalCode = externalCode;
+                    p.description = description;
+                }
+                alert('产品已更新');
+            } else {
+                var maxNum = 0;
+                PRODUCTS.forEach(function(x) {
+                    var n = parseInt(x.id.replace('P', ''));
+                    if (n > maxNum) maxNum = n;
+                });
+                var newId = 'P' + String(maxNum + 1).padStart(3, '0');
+                var today = new Date().toISOString().slice(0,10).replace(/-/g,'');
+                var prefix = accountType === 'ABS' ? 'ABS' : accountType === '信托' ? 'XT' : 'XT';
+                var seq = String(PRODUCTS.filter(function(x){return x.accountType===accountType;}).length + 1).padStart(3,'0');
+                var newCode = prefix + today + seq;
+                var role = getCurrentRole();
+                var newStatus = mode === 'submit' ? '无计划' : '无计划';
+                PRODUCTS.push({
+                    id: newId,
+                    name: name,
+                    shortName: name.length > 8 ? name.slice(0,8) : name,
+                    assetType: accountType === 'ABS' ? 'ABS(中保登)' : accountType === '信托' ? '信托' : '专户资管产品',
+                    productType: productType,
+                    accountType: accountType,
+                    hengtaiCode: newCode,
+                    externalCode: externalCode,
+                    dept: role.dept,
+                    group: group,
+                    expireDate: '',
+                    redeemable: true,
+                    status: newStatus,
+                    nav: 1.0000,
+                    navDate: '',
+                    holdAmount: 0,
+                    holdShares: 0,
+                    planAmount: 0,
+                    usedAmount: 0,
+                    counterparty: '',
+                    tradeLimit: 0,
+                    accountMapping: '',
+                    poolUser: role.label,
+                    poolTime: new Date().toISOString().slice(0,10),
+                    description: description
+                });
+                if (mode === 'submit') {
+                    alert('产品已提交入池，审批流程已触发，ID: ' + newId);
+                } else {
+                    alert('产品已保存为草稿，ID: ' + newId);
+                }
+            }
+            closeProductModal();
+            renderStats();
+            renderTable();
+        }
+
+        function populateGroupSelect() {
+            var sel = document.getElementById('fGroup');
+            sel.innerHTML = '<option value="">请选择投资组</option>';
+            var role = getCurrentRole();
+            var groups = role.investGroups && role.investGroups.length > 0 ? role.investGroups : ['专户投资组','xn账户','fb账户','理财投资组','权益投资组'];
+            groups.forEach(function(g) {
+                var opt = document.createElement('option');
+                opt.value = g;
+                opt.textContent = g;
+                sel.appendChild(opt);
+            });
+        }
+
+        function onAccountTypeChange() {}
+
+        function openBatchImportModal() {
+            document.getElementById('batchFileInput').value = '';
+            document.getElementById('batchResult').style.display = 'none';
+            document.getElementById('batchPreview').style.display = 'none';
+            document.getElementById('btnConfirmBatch').disabled = true;
+            document.getElementById('batchImportModal').style.display = 'block';
+        }
+
+        function closeBatchImportModal() {
+            document.getElementById('batchImportModal').style.display = 'none';
+        }
+
+        function downloadTemplate() {
+            alert('模板下载：oms产品批量入池模板.xlsx');
+        }
+
+        document.getElementById('batchFileInput').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+            var resultEl = document.getElementById('batchResult');
+            var previewEl = document.getElementById('batchPreview');
+            var fileName = file.name.toLowerCase();
+            if (!fileName.endsWith('.xlsx')) {
+                resultEl.style.display = 'block';
+                resultEl.innerHTML = '<div style="color:var(--danger);padding:10px;background:#FEF2F2;border-radius:var(--radius);">❌ 文件格式不正确，请上传 .xlsx 格式文件</div>';
+                document.getElementById('btnConfirmBatch').disabled = true;
+                previewEl.style.display = 'none';
+                return;
+            }
+            resultEl.style.display = 'block';
+            resultEl.innerHTML = '<div style="color:var(--success);padding:10px;background:#F0FDF4;border-radius:var(--radius);">✅ 校验通过，共3条数据</div>';
+            previewEl.style.display = 'block';
+            previewEl.innerHTML = '<div style="font-size:var(--font-size-sm);font-weight:600;margin-bottom:8px;">数据预览（前10行）</div>' +
+                '<table class="data-table"><thead><tr><th>产品名称</th><th>产品类型</th><th>账套类型</th><th>投资组</th><th>外部编码</th></tr></thead><tbody>' +
+                '<tr><td>测试产品A</td><td>混合型</td><td>专户资管</td><td>专户投资组</td><td>-</td></tr>' +
+                '<tr><td>测试产品B</td><td>FOF</td><td>信托</td><td>理财投资组</td><td>-</td></tr>' +
+                '<tr><td>测试产品C</td><td>固收类</td><td>ABS</td><td>fb账户</td><td>1101010905</td></tr>' +
+                '</tbody></table>';
+            document.getElementById('btnConfirmBatch').disabled = false;
+        });
+
+        function confirmBatchImport() {
+            if (!confirm('确认批量提交3个产品入池申请？')) return;
+            alert('已批量提交3个产品入池申请');
+            closeBatchImportModal();
+            renderStats();
+            renderTable();
+        }
+
+        if (_perm.canAddProduct && !_perm.isReadOnly) {
+            document.getElementById('btnAddProduct').style.display = '';
+        }
+        if (_perm.canBatchImport && !_perm.isReadOnly) {
+            document.getElementById('btnBatchImport').style.display = '';
+        }
+
+        renderStats();
+        renderTable();
+
+        window.addEventListener('click', function(event) {
+            if (event.target === document.getElementById('productModal')) closeProductModal();
+            if (event.target === document.getElementById('batchImportModal')) closeBatchImportModal();
+        });
+    </script>
+</body>
+</html>

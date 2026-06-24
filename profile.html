@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>场外簿记OMS系统 - 个人中心</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .profile-layout {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            gap: 16px;
+            min-height: calc(100vh - var(--topbar-height) - 32px);
+        }
+        .profile-sidebar {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        .profile-user-card {
+            padding: 24px 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-light);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+        }
+        .profile-avatar-lg {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0 auto 10px;
+            border: 2px solid rgba(255,255,255,0.4);
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        .profile-avatar-lg:hover .avatar-edit-overlay {
+            opacity: 1;
+        }
+        .avatar-edit-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+            font-size: 12px;
+        }
+        .profile-user-name {
+            font-size: var(--font-size-lg);
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .profile-user-role {
+            font-size: var(--font-size-xs);
+            opacity: 0.85;
+        }
+        .profile-nav {
+            padding: 8px 0;
+        }
+        .profile-nav-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s;
+            border-left: 3px solid transparent;
+        }
+        .profile-nav-item:hover {
+            background: var(--info-bg);
+            color: var(--primary);
+        }
+        .profile-nav-item.active {
+            background: var(--info-bg);
+            color: var(--primary);
+            border-left-color: var(--primary);
+            font-weight: 600;
+        }
+        .profile-nav-item .nav-icon {
+            width: 20px;
+            text-align: center;
+        }
+        .profile-nav-item .nav-badge {
+            margin-left: auto;
+            background: var(--danger);
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            min-width: 16px;
+            height: 16px;
+            line-height: 16px;
+            text-align: center;
+            border-radius: 8px;
+            padding: 0 4px;
+        }
+        .profile-main {
+            min-width: 0;
+        }
+        .profile-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 14px;
+        }
+        .profile-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-light);
+        }
+        .profile-section-title {
+            font-size: var(--font-size-md);
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .profile-section-body {
+            padding: 16px;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .info-item .info-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+        }
+        .info-item .info-value {
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        .info-item-editable {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .info-item-editable .info-value {
+            font-size: var(--font-size-sm);
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        .info-item-editable .edit-btn {
+            width: 22px;
+            height: 22px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.15s;
+        }
+        .info-item-editable .edit-btn:hover {
+            background: var(--info-bg);
+            color: var(--primary);
+        }
+        .info-item-editable .edit-input {
+            padding: 4px 8px;
+            border: 1px solid var(--primary);
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+            outline: none;
+            width: 160px;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+        .info-item-editable .save-btn,
+        .info-item-editable .cancel-btn {
+            padding: 2px 8px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-xs);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .info-item-editable .save-btn {
+            background: var(--primary);
+            color: white;
+        }
+        .info-item-editable .save-btn:hover {
+            background: var(--primary-dark);
+        }
+        .info-item-editable .cancel-btn {
+            background: var(--border-light);
+            color: var(--text-secondary);
+        }
+        .info-item-editable .cancel-btn:hover {
+            background: var(--border);
+        }
+        .avatar-picker-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(11, 17, 32, 0.5);
+            z-index: 1000;
+            backdrop-filter: blur(2px);
+        }
+        .avatar-picker-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            width: 320px;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+        .avatar-picker-title {
+            font-size: var(--font-size-md);
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+        .avatar-options {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .avatar-option {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            cursor: pointer;
+            border: 2px solid var(--border);
+            transition: all 0.15s;
+        }
+        .avatar-option:hover {
+            border-color: var(--primary);
+            transform: scale(1.1);
+        }
+        .avatar-option.selected {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+        .avatar-picker-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        .notif-stats-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .notif-stat-card {
+            flex: 1;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .notif-stat-card:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 1px var(--primary);
+        }
+        .notif-stat-card.active {
+            border-color: var(--primary);
+            background: var(--info-bg);
+        }
+        .notif-stat-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .notif-stat-icon.all { background: var(--info-bg); }
+        .notif-stat-icon.emergency { background: var(--danger-bg); }
+        .notif-stat-icon.warning { background: var(--warning-bg); }
+        .notif-stat-icon.normal { background: var(--success-bg); }
+        .notif-stat-info .stat-label { font-size: var(--font-size-xs); color: var(--text-muted); }
+        .notif-stat-info .stat-value { font-size: var(--font-size-md); font-weight: 700; color: var(--text-primary); font-family: var(--font-mono); }
+        .notif-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 6px 10px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+        .notif-toolbar-left { display: flex; gap: 8px; align-items: center; }
+        .notif-toolbar-right { display: flex; gap: 8px; align-items: center; }
+        .notif-list {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        .notif-list-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border-light);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .notif-list-item:hover { background: var(--info-bg); }
+        .notif-list-item.unread { background: #F8FAFF; }
+        .notif-list-item.unread:hover { background: var(--info-bg); }
+        .notif-level-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-top: 5px;
+            flex-shrink: 0;
+        }
+        .notif-level-dot.emergency { background: var(--danger); }
+        .notif-level-dot.warning { background: var(--warning); }
+        .notif-level-dot.normal { background: var(--success); }
+        .notif-item-body { flex: 1; min-width: 0; }
+        .notif-item-title { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+        .notif-list-item.unread .notif-item-title { font-weight: 700; }
+        .notif-item-content { font-size: var(--font-size-xs); color: var(--text-secondary); margin-bottom: 3px; }
+        .notif-item-meta { display: flex; align-items: center; gap: 8px; font-size: var(--font-size-xs); color: var(--text-muted); }
+        .notif-type-tag { padding: 1px 6px; border-radius: 2px; font-size: 10px; font-weight: 600; }
+        .notif-type-tag.emergency { background: var(--danger-bg); color: #991B1B; }
+        .notif-type-tag.warning { background: var(--warning-bg); color: #92400E; }
+        .notif-type-tag.normal { background: var(--success-bg); color: #065F46; }
+        .notif-item-actions { display: flex; gap: 4px; flex-shrink: 0; align-items: center; }
+        .notif-empty { padding: 40px 20px; text-align: center; color: var(--text-muted); }
+        .notif-empty-icon { font-size: 40px; margin-bottom: 8px; }
+        .notif-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 8px;
+            border-top: 1px solid var(--border-light);
+        }
+        .notif-pagination .page-btn {
+            padding: 3px 8px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--surface);
+            color: var(--text-secondary);
+            font-size: var(--font-size-xs);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .notif-pagination .page-btn:hover { border-color: var(--primary); color: var(--primary); }
+        .notif-pagination .page-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <nav class="sidebar"></nav>
+        <div class="main-area">
+            <div class="topbar"></div>
+            <div class="content">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <span class="page-title">个人中心</span>
+                        <span class="page-subtitle">Profile</span>
+                    </div>
+                </div>
+
+                <div class="profile-layout">
+                    <div class="profile-sidebar">
+                        <div class="profile-user-card">
+                            <div class="profile-avatar-lg" id="profileAvatar" onclick="openAvatarPicker()">
+                                <span id="avatarText"></span>
+                                <div class="avatar-edit-overlay">更换</div>
+                            </div>
+                            <div class="profile-user-name" id="profileName"></div>
+                            <div class="profile-user-role" id="profileRole"></div>
+                        </div>
+                        <div class="profile-nav">
+                            <div class="profile-nav-item active" onclick="switchProfileTab('account')">
+                                <span class="nav-icon">👤</span>账号信息
+                            </div>
+                            <div class="profile-nav-item" onclick="switchProfileTab('notification')">
+                                <span class="nav-icon">🔔</span>通知中心
+                                <span class="nav-badge" id="navNotifBadge" style="display:none;"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-main">
+                        <div id="tab-account" class="profile-tab-content">
+                            <div class="profile-section">
+                                <div class="profile-section-header">
+                                    <span class="profile-section-title">📋 基本信息</span>
+                                </div>
+                                <div class="profile-section-body">
+                                    <div class="info-grid" id="basicInfo"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-notification" class="profile-tab-content" style="display:none;">
+                            <div class="notif-stats-row" id="notifStats"></div>
+                            <div class="notif-toolbar">
+                                <div class="notif-toolbar-left">
+                                    <select id="filterType" onchange="renderNotifList()" style="padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:var(--font-size-xs);">
+                                        <option value="all">全部类型</option>
+                                        <option value="NC推送失败">NC推送失败</option>
+                                        <option value="净值异常">净值异常</option>
+                                        <option value="iBor异常">iBor异常</option>
+                                        <option value="凭证超时">凭证超时</option>
+                                        <option value="审批通知">审批通知</option>
+                                        <option value="审批结果">审批结果</option>
+                                        <option value="到期预警">到期预警</option>
+                                        <option value="流程完成">流程完成</option>
+                                    </select>
+                                    <select id="filterRead" onchange="renderNotifList()" style="padding:4px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:var(--font-size-xs);">
+                                        <option value="all">全部状态</option>
+                                        <option value="unread">未读</option>
+                                        <option value="read">已读</option>
+                                    </select>
+                                </div>
+                                <div class="notif-toolbar-right">
+                                    <span style="font-size:var(--font-size-xs);color:var(--text-muted);" id="notifCount"></span>
+                                    <button class="btn btn-ghost btn-sm" onclick="markAllReadProfile()">全部已读</button>
+                                    <button class="btn btn-ghost btn-sm" onclick="clearReadNotifs()">清除已读</button>
+                                </div>
+                            </div>
+                            <div class="notif-list" id="notifList"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="avatar-picker-modal" id="avatarPickerModal">
+        <div class="avatar-picker-content">
+            <div class="avatar-picker-title">选择头像</div>
+            <div class="avatar-options" id="avatarOptions"></div>
+            <div class="avatar-picker-actions">
+                <button class="btn btn-ghost btn-sm" onclick="closeAvatarPicker()">取消</button>
+                <button class="btn btn-primary btn-sm" onclick="confirmAvatar()">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script>
+        var AVATAR_EMOJIS = ['😀','😎','🤓','🧑‍💼','👨‍💻','👩‍💻','🦊','🐱','🐶','🐼','🦁','🐯','🦄','🐸','🦉'];
+        var userNickname = '';
+        var userAvatarEmoji = '';
+        var selectedAvatarEmoji = '';
+        var currentFilter = 'all';
+        var currentPage = 1;
+        var pageSize = 15;
+
+        function init() {
+            initLayout('profile.html', '个人中心');
+            var role = getCurrentRole();
+            userNickname = role.label;
+            userAvatarEmoji = role.label.charAt(0);
+            renderProfileCard();
+            renderBasicInfo();
+            renderNotifStats();
+            renderNotifList();
+            updateNavBadge();
+            if (location.hash === '#notification') {
+                switchProfileTab('notification');
+            }
+        }
+
+        function renderProfileCard() {
+            var role = getCurrentRole();
+            document.getElementById('avatarText').textContent = userAvatarEmoji;
+            document.getElementById('profileName').textContent = userNickname;
+            document.getElementById('profileRole').textContent = role.name + ' · ' + role.dept;
+        }
+
+        function renderBasicInfo() {
+            var role = getCurrentRole();
+            var info = [
+                { key: 'name', label: '姓名', value: role.label, editable: false },
+                { key: 'nickname', label: '昵称', value: userNickname, editable: true },
+                { key: 'role', label: '角色', value: role.name, editable: false },
+                { key: 'dept', label: '所属部门', value: role.dept, editable: false },
+                { key: 'group', label: '投资组', value: role.group || '—', editable: false },
+                { key: 'status', label: '登录状态', value: '在线', editable: false }
+            ];
+            var html = '';
+            info.forEach(function(item) {
+                html += '<div class="info-item"><div class="info-label">' + item.label + '</div>';
+                if (item.editable) {
+                    html += '<div class="info-item-editable" id="field-' + item.key + '">';
+                    html += '<span class="info-value">' + item.value + '</span>';
+                    html += '<button class="edit-btn" onclick="startEdit(\'' + item.key + '\', \'' + escapeHtml(item.value) + '\')" title="编辑">✏️</button>';
+                    html += '</div>';
+                } else {
+                    html += '<div class="info-value">' + item.value + '</div>';
+                }
+                html += '</div>';
+            });
+            document.getElementById('basicInfo').innerHTML = html;
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        function startEdit(key, currentValue) {
+            var container = document.getElementById('field-' + key);
+            var html = '<input class="edit-input" id="input-' + key + '" value="' + currentValue + '" onkeydown="handleEditKey(event, \'' + key + '\')">';
+            html += '<button class="save-btn" onclick="saveEdit(\'' + key + '\')">保存</button>';
+            html += '<button class="cancel-btn" onclick="cancelEdit(\'' + key + '\')">取消</button>';
+            container.innerHTML = html;
+            document.getElementById('input-' + key).focus();
+        }
+
+        function handleEditKey(event, key) {
+            if (event.key === 'Enter') saveEdit(key);
+            if (event.key === 'Escape') cancelEdit(key);
+        }
+
+        function saveEdit(key) {
+            var input = document.getElementById('input-' + key);
+            var newValue = input.value.trim();
+            if (!newValue) { cancelEdit(key); return; }
+            if (key === 'nickname') { userNickname = newValue; }
+            renderBasicInfo();
+            renderProfileCard();
+        }
+
+        function cancelEdit(key) { renderBasicInfo(); }
+
+        function openAvatarPicker() {
+            selectedAvatarEmoji = userAvatarEmoji;
+            var html = '';
+            AVATAR_EMOJIS.forEach(function(emoji) {
+                var cls = emoji === selectedAvatarEmoji ? ' selected' : '';
+                html += '<div class="avatar-option' + cls + '" onclick="selectAvatar(this, \'' + emoji + '\')">' + emoji + '</div>';
+            });
+            document.getElementById('avatarOptions').innerHTML = html;
+            document.getElementById('avatarPickerModal').style.display = 'block';
+        }
+
+        function closeAvatarPicker() { document.getElementById('avatarPickerModal').style.display = 'none'; }
+
+        function selectAvatar(el, emoji) {
+            selectedAvatarEmoji = emoji;
+            document.querySelectorAll('.avatar-option').forEach(function(opt) { opt.classList.remove('selected'); });
+            el.classList.add('selected');
+        }
+
+        function confirmAvatar() {
+            userAvatarEmoji = selectedAvatarEmoji;
+            renderProfileCard();
+            closeAvatarPicker();
+        }
+
+        function updateNavBadge() {
+            var unread = getUnreadCount();
+            var badge = document.getElementById('navNotifBadge');
+            if (unread > 0) {
+                badge.textContent = unread;
+                badge.style.display = '';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function renderNotifStats() {
+            var notifs = getNotifications();
+            var total = notifs.length;
+            var emergency = notifs.filter(function(n) { return n.level === 'emergency'; }).length;
+            var warning = notifs.filter(function(n) { return n.level === 'warning'; }).length;
+            var normal = notifs.filter(function(n) { return n.level === 'normal'; }).length;
+            var html = '';
+            html += '<div class="notif-stat-card' + (currentFilter === 'all' ? ' active' : '') + '" onclick="filterByLevel(\'all\')">';
+            html += '<div class="notif-stat-icon all">📋</div><div class="notif-stat-info"><div class="stat-label">全部</div><div class="stat-value">' + total + '</div></div></div>';
+            html += '<div class="notif-stat-card' + (currentFilter === 'emergency' ? ' active' : '') + '" onclick="filterByLevel(\'emergency\')">';
+            html += '<div class="notif-stat-icon emergency">🔴</div><div class="notif-stat-info"><div class="stat-label">紧急</div><div class="stat-value">' + emergency + '</div></div></div>';
+            html += '<div class="notif-stat-card' + (currentFilter === 'warning' ? ' active' : '') + '" onclick="filterByLevel(\'warning\')">';
+            html += '<div class="notif-stat-icon warning">🟡</div><div class="notif-stat-info"><div class="stat-label">警告</div><div class="stat-value">' + warning + '</div></div></div>';
+            html += '<div class="notif-stat-card' + (currentFilter === 'normal' ? ' active' : '') + '" onclick="filterByLevel(\'normal\')">';
+            html += '<div class="notif-stat-icon normal">🟢</div><div class="notif-stat-info"><div class="stat-label">正常</div><div class="stat-value">' + normal + '</div></div></div>';
+            document.getElementById('notifStats').innerHTML = html;
+        }
+
+        function getFilteredNotifs() {
+            var notifs = getNotifications();
+            var level = currentFilter;
+            var type = document.getElementById('filterType').value;
+            var readFilter = document.getElementById('filterRead').value;
+            return notifs.filter(function(n) {
+                if (level !== 'all' && n.level !== level) return false;
+                if (type !== 'all' && n.type !== type) return false;
+                if (readFilter === 'unread' && n.read) return false;
+                if (readFilter === 'read' && !n.read) return false;
+                return true;
+            });
+        }
+
+        function renderNotifList() {
+            var filtered = getFilteredNotifs();
+            var totalPages = Math.ceil(filtered.length / pageSize) || 1;
+            if (currentPage > totalPages) currentPage = totalPages;
+            var start = (currentPage - 1) * pageSize;
+            var pageData = filtered.slice(start, start + pageSize);
+            document.getElementById('notifCount').textContent = '共 ' + filtered.length + ' 条';
+            if (pageData.length === 0) {
+                document.getElementById('notifList').innerHTML = '<div class="notif-empty"><div class="notif-empty-icon">📭</div><div>暂无通知</div></div>';
+                return;
+            }
+            var html = '';
+            pageData.forEach(function(n) {
+                html += '<div class="notif-list-item' + (n.read ? '' : ' unread') + '" onclick="handleNotifClick(\'' + n.id + '\')">';
+                html += '<div class="notif-level-dot ' + n.level + '"></div>';
+                html += '<div class="notif-item-body">';
+                html += '<div class="notif-item-title">' + n.title + '</div>';
+                html += '<div class="notif-item-content">' + n.content + '</div>';
+                html += '<div class="notif-item-meta"><span class="notif-type-tag ' + n.level + '">' + n.type + '</span><span>' + n.time + '</span></div>';
+                html += '</div>';
+                html += '<div class="notif-item-actions">';
+                if (!n.read) {
+                    html += '<button class="btn btn-ghost btn-sm" onclick="markReadSingle(event,\'' + n.id + '\')">已读</button>';
+                }
+                html += '</div></div>';
+            });
+            if (totalPages > 1) {
+                html += '<div class="notif-pagination">';
+                html += '<button class="page-btn" onclick="goPage(' + (currentPage - 1) + ')" ' + (currentPage <= 1 ? 'disabled' : '') + '>上一页</button>';
+                for (var i = 1; i <= totalPages; i++) {
+                    html += '<button class="page-btn' + (i === currentPage ? ' active' : '') + '" onclick="goPage(' + i + ')">' + i + '</button>';
+                }
+                html += '<button class="page-btn" onclick="goPage(' + (currentPage + 1) + ')" ' + (currentPage >= totalPages ? 'disabled' : '') + '>下一页</button>';
+                html += '</div>';
+            }
+            document.getElementById('notifList').innerHTML = html;
+        }
+
+        function filterByLevel(level) {
+            currentFilter = level;
+            currentPage = 1;
+            renderNotifStats();
+            renderNotifList();
+        }
+
+        function goPage(page) {
+            var filtered = getFilteredNotifs();
+            var totalPages = Math.ceil(filtered.length / pageSize) || 1;
+            if (page < 1 || page > totalPages) return;
+            currentPage = page;
+            renderNotifList();
+        }
+
+        function handleNotifClick(id) {
+            var n = NOTIFICATIONS.find(function(x) { return x.id === id; });
+            if (!n) return;
+            n.read = true;
+            updateNavBadge();
+            if (n.page) { location.href = n.page; } else { renderNotifList(); renderNotifStats(); }
+        }
+
+        function markReadSingle(event, id) {
+            event.stopPropagation();
+            var n = NOTIFICATIONS.find(function(x) { return x.id === id; });
+            if (n) n.read = true;
+            updateNavBadge();
+            renderNotifStats();
+            renderNotifList();
+        }
+
+        function markAllReadProfile() {
+            NOTIFICATIONS.forEach(function(n) { n.read = true; });
+            updateNavBadge();
+            renderNotifStats();
+            renderNotifList();
+        }
+
+        function clearReadNotifs() {
+            var keep = NOTIFICATIONS.filter(function(n) { return !n.read; });
+            NOTIFICATIONS.length = 0;
+            keep.forEach(function(n) { NOTIFICATIONS.push(n); });
+            updateNavBadge();
+            renderNotifStats();
+            renderNotifList();
+        }
+
+        function switchProfileTab(tab) {
+            document.querySelectorAll('.profile-tab-content').forEach(function(el) { el.style.display = 'none'; });
+            document.querySelectorAll('.profile-nav-item').forEach(function(el) { el.classList.remove('active'); });
+            document.getElementById('tab-' + tab).style.display = '';
+            event.target.closest('.profile-nav-item').classList.add('active');
+            location.hash = tab;
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

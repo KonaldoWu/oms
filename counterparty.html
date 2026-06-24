@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>场外簿记OMS系统 - 对手方管理</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .financial-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 2px solid var(--primary); }
+        .financial-header h2 { color: var(--primary); font-size: var(--font-size-lg); font-weight: 600; margin: 0; }
+        .file-upload { border: 1px dashed var(--border); border-radius: var(--radius); padding: 14px; text-align: center; margin-bottom: 12px; }
+        .file-upload input { display: none; }
+        .file-upload label { display: inline-block; padding: 5px 12px; background: var(--primary); color: white; border-radius: var(--radius-sm); cursor: pointer; font-size: var(--font-size-sm); font-weight: 500; }
+        .file-upload label:hover { background: var(--primary-dark); }
+        .cp-name-link { font-weight: 500; color: var(--primary); cursor: pointer; text-decoration: none; }
+        .cp-name-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <nav class="sidebar"></nav>
+        <div class="main-area">
+            <div class="topbar"></div>
+            <div class="content">
+                <div class="financial-header">
+                    <h2>对手方管理</h2>
+                    <div style="display: flex; gap: 6px;">
+                        <button class="btn btn-primary btn-sm" onclick="openEntryModal()" id="btnEntry">+ 对手方入池</button>
+                    </div>
+                </div>
+
+                <div class="stats-row" id="statsRow"></div>
+
+                <div class="card">
+                    <div class="card-header"><span class="card-title">筛选器</span></div>
+                    <div class="card-body">
+                        <div class="search-bar">
+                            <select class="search-input" id="statusFilter" style="flex: none; min-width: 120px;">
+                                <option value="">全部状态</option>
+                                <option value="在池">在池</option>
+                                <option value="禁用">禁用</option>
+                            </select>
+                            <input type="text" placeholder="搜索对手方名称/ID" class="search-input" id="keywordInput">
+                            <button class="btn btn-primary" onclick="searchTable()">搜索</button>
+                            <button class="btn btn-ghost" onclick="resetSearch()">重置</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><span class="card-title">对手方列表</span></div>
+                    <div class="card-body-p0">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>对手方ID</th>
+                                    <th>名称</th>
+                                    <th>类型</th>
+                                    <th>关联产品数</th>
+                                    <th>状态</th>
+                                    <th>入池人</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cpTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="entry-modal" class="modal">
+        <div class="modal-content" style="width: 600px;">
+            <div class="modal-header"><h3>对手方入池</h3></div>
+            <div class="modal-body">
+                <div class="grid-2" style="gap: 10px;">
+                    <div class="form-group"><label>对手方名称 *</label><input type="text" id="entry-name" placeholder="请输入对手方全称" required></div>
+                    <div class="form-group"><label>简称 *</label><input type="text" id="entry-shortName" placeholder="请输入简称" required></div>
+                    <div class="form-group"><label>类型 *</label><select id="entry-type" required><option value="">请选择</option><option value="证券公司">证券公司</option><option value="资管公司">资管公司</option><option value="银行">银行</option><option value="信托公司">信托公司</option></select></div>
+                    <div class="form-group"><label>联系人</label><input type="text" id="entry-contact" placeholder="请输入联系人"></div>
+                    <div class="form-group"><label>联系电话</label><input type="tel" id="entry-phone" placeholder="请输入联系电话"></div>
+                    <div class="form-group"><label>邮箱</label><input type="email" id="entry-email" placeholder="请输入邮箱"></div>
+                </div>
+                <div class="form-group"><label>上传用资计划书</label>
+                    <div class="file-upload"><input type="file" id="plan-file" accept=".pdf,.docx"><label for="plan-file">选择文件</label><p id="file-name" style="margin-top:8px;color:var(--text-muted);font-size:var(--font-size-xs);">未选择文件</p></div>
+                </div>
+                <div class="form-group"><label>备注</label><textarea id="entry-remark" rows="3" placeholder="请输入备注信息"></textarea></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeEntryModal()">取消</button>
+                <button class="btn btn-primary" onclick="submitEntry()">确认入池</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="detail-modal" class="modal">
+        <div class="modal-content" style="width: 600px;">
+            <div class="modal-header"><h3>对手方详情</h3></div>
+            <div class="modal-body" id="detail-modal-body"></div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeDetailModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script>
+        initLayout('counterparty.html', '对手方管理');
+
+        var _canSubmitCounterparty = hasPermission('submitCounterparty');
+        var _isReadOnly = isReadOnly();
+
+        function getCPProductCount(cpId) {
+            return PRODUCTS.filter(function(p) { return p.counterparty === cpId; }).length;
+        }
+
+        function renderStats() {
+            var inPool = COUNTERPARTIES.filter(function(c) { return c.status === '在池'; }).length;
+            var disabled = COUNTERPARTIES.filter(function(c) { return c.status === '禁用'; }).length;
+            var html = '';
+            html += '<div class="stat-card"><div class="stat-icon blue">🏢</div><div class="stat-info"><div class="stat-label">在池</div><div class="stat-value">' + inPool + '</div></div></div>';
+            html += '<div class="stat-card"><div class="stat-icon red">🚫</div><div class="stat-info"><div class="stat-label">禁用</div><div class="stat-value">' + disabled + '</div></div></div>';
+            document.getElementById('statsRow').innerHTML = html;
+        }
+
+        function renderTable(data) {
+            var list = data || COUNTERPARTIES;
+            var tbody = document.getElementById('cpTableBody');
+            var html = '';
+            list.forEach(function(cp) {
+                var productCount = getCPProductCount(cp.id);
+                var statusClass = getStatusClass(cp.status);
+                html += '<tr>';
+                html += '<td>' + cp.id + '</td>';
+                html += '<td><a class="cp-name-link" href="counterparty_detail.html?id=' + cp.id + '">' + cp.name + '</a></td>';
+                html += '<td>' + cp.type + '</td>';
+                html += '<td>' + productCount + '</td>';
+                html += '<td><span class="status-badge ' + statusClass + '">' + cp.status + '</span></td>';
+                html += '<td>' + cp.poolUser + '</td>';
+                html += '<td>';
+                html += '<button class="btn btn-info btn-sm" onclick="openDetailModal(\'' + cp.id + '\')">查看</button> ';
+                if (_canSubmitCounterparty && !_isReadOnly) {
+                    if (cp.status === '在池') {
+                        html += '<button class="btn btn-danger btn-sm" onclick="toggleStatus(\'' + cp.id + '\')">禁用</button>';
+                    } else if (cp.status === '禁用') {
+                        html += '<button class="btn btn-success btn-sm" onclick="toggleStatus(\'' + cp.id + '\')">启用</button>';
+                    }
+                }
+                html += '</td>';
+                html += '</tr>';
+            });
+            tbody.innerHTML = html;
+        }
+
+        function searchTable() {
+            var status = document.getElementById('statusFilter').value;
+            var keyword = document.getElementById('keywordInput').value.trim().toLowerCase();
+            var filtered = COUNTERPARTIES.filter(function(cp) {
+                var matchStatus = !status || cp.status === status;
+                var matchKeyword = !keyword || cp.name.toLowerCase().indexOf(keyword) >= 0 || cp.id.toLowerCase().indexOf(keyword) >= 0;
+                return matchStatus && matchKeyword;
+            });
+            renderTable(filtered);
+        }
+
+        function resetSearch() {
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('keywordInput').value = '';
+            renderTable();
+        }
+
+        function openEntryModal() {
+            if (_isReadOnly) return;
+            document.getElementById('entry-name').value = '';
+            document.getElementById('entry-shortName').value = '';
+            document.getElementById('entry-type').value = '';
+            document.getElementById('entry-contact').value = '';
+            document.getElementById('entry-phone').value = '';
+            document.getElementById('entry-email').value = '';
+            document.getElementById('plan-file').value = '';
+            document.getElementById('file-name').textContent = '未选择文件';
+            document.getElementById('entry-remark').value = '';
+            document.getElementById('entry-modal').style.display = 'block';
+        }
+
+        function closeEntryModal() {
+            document.getElementById('entry-modal').style.display = 'none';
+        }
+
+        function submitEntry() {
+            var name = document.getElementById('entry-name').value.trim();
+            var shortName = document.getElementById('entry-shortName').value.trim();
+            var type = document.getElementById('entry-type').value;
+            if (!name || !shortName || !type) { alert('请填写必填项'); return; }
+            alert('对手方入池成功！');
+            closeEntryModal();
+        }
+
+        document.getElementById('plan-file').addEventListener('change', function(e) {
+            document.getElementById('file-name').textContent = e.target.files[0] ? e.target.files[0].name : '未选择文件';
+        });
+
+        function openDetailModal(cpId) {
+            var cp = COUNTERPARTIES.find(function(c) { return c.id === cpId; });
+            if (!cp) return;
+            var productCount = getCPProductCount(cp.id);
+            var statusClass = getStatusClass(cp.status);
+            var html = '<div class="detail-info-grid">';
+            html += '<div class="detail-info-item"><div class="info-label">对手方ID</div><div class="info-value">' + cp.id + '</div></div>';
+            html += '<div class="detail-info-item"><div class="info-label">名称</div><div class="info-value">' + cp.name + '</div></div>';
+            html += '<div class="detail-info-item"><div class="info-label">简称</div><div class="info-value">' + cp.shortName + '</div></div>';
+            html += '<div class="detail-info-item"><div class="info-label">类型</div><div class="info-value">' + cp.type + '</div></div>';
+            html += '<div class="detail-info-item"><div class="info-label">关联产品数</div><div class="info-value">' + productCount + '</div></div>';
+            html += '<div class="detail-info-item"><div class="info-label">状态</div><div class="info-value"><span class="status-badge ' + statusClass + '">' + cp.status + '</span></div></div>';
+            html += '<div class="detail-info-item"><div class="info-label">联系人</div><div class="info-value">' + (cp.contact || '-') + '</div></div>';
+            html += '<div class="detail-info-item"><div class="info-label">联系电话</div><div class="info-value">' + (cp.phone || '-') + '</div></div>';
+            html += '<div class="detail-info-item"><div class="info-label">邮箱</div><div class="info-value">' + (cp.email || '-') + '</div></div>';
+            html += '<div class="detail-info-item"><div class="info-label">用资计划书</div><div class="info-value">' + (cp.planFile || '-') + '</div></div>';
+            html += '<div class="detail-info-item"><div class="info-label">入池人</div><div class="info-value">' + cp.poolUser + '</div></div>';
+            html += '<div class="detail-info-item"><div class="info-label">入池时间</div><div class="info-value">' + cp.poolTime + '</div></div>';
+            html += '</div>';
+            document.getElementById('detail-modal-body').innerHTML = html;
+            document.getElementById('detail-modal').style.display = 'block';
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detail-modal').style.display = 'none';
+        }
+
+        function toggleStatus(cpId) {
+            var cp = COUNTERPARTIES.find(function(c) { return c.id === cpId; });
+            if (!cp) return;
+            if (cp.status === '在池') {
+                if (confirm('确定要禁用该对手方吗？')) { cp.status = '禁用'; }
+            } else if (cp.status === '禁用') {
+                if (confirm('确定要启用该对手方吗？')) { cp.status = '在池'; }
+            }
+            renderStats();
+            searchTable();
+        }
+
+        window.addEventListener('click', function(event) {
+            ['entry-modal', 'detail-modal'].forEach(function(id) {
+                if (event.target === document.getElementById(id)) document.getElementById(id).style.display = 'none';
+            });
+        });
+
+        if (!_canSubmitCounterparty || _isReadOnly) {
+            var btnEntry = document.getElementById('btnEntry');
+            if (btnEntry) btnEntry.style.display = 'none';
+        }
+        renderStats();
+        renderTable();
+    </script>
+</body>
+</html>

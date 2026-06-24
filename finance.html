@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>财务核算 - 场外簿记OMS系统</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .tab-bar { display: flex; gap: 0; margin-bottom: 14px; border-bottom: 2px solid var(--border); }
+        .tab-item { padding: 8px 20px; font-size: var(--font-size-sm); font-weight: 500; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
+        .tab-item:hover { color: var(--primary); }
+        .tab-item.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .filter-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; text-align: center; cursor: pointer; transition: all 0.15s; }
+        .filter-card:hover { border-color: var(--primary); }
+        .filter-card.active { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+        .filter-card .stat-label { font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 2px; }
+        .filter-card .stat-value { font-size: var(--font-size-lg); font-weight: 700; color: var(--text-primary); font-family: var(--font-mono); }
+        .financial-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+        .header-actions { display: flex; gap: 8px; align-items: center; }
+        .push-stat { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+        .push-stat .push-stat-label { font-size: var(--font-size-xs); color: var(--text-muted); }
+        .push-stat .push-stat-value { font-size: var(--font-size-xl); font-weight: 700; font-family: var(--font-mono); }
+        .push-stat .push-stat-value.success { color: var(--success); }
+        .push-stat .push-stat-value.fail { color: var(--danger); }
+        .push-stat .push-stat-value.pending { color: var(--warning); }
+        .voucher-row { display: grid; grid-template-columns: 2fr 2fr 2fr 1.5fr; gap: 8px; margin-bottom: 6px; padding: 6px 0; border-bottom: 1px solid var(--border-light); }
+        .voucher-row:last-child { border-bottom: none; }
+        .account-select { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: var(--font-size-xs); background: var(--surface); color: var(--text-primary); }
+        .account-select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <nav class="sidebar"></nav>
+        <div class="main-area">
+            <div class="topbar"></div>
+            <div class="content">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <span class="page-title">财务核算</span>
+                        <span class="page-subtitle">Financial Accounting</span>
+                    </div>
+                </div>
+
+                <div class="tab-bar">
+                    <div class="tab-item active" onclick="switchTab('voucher')">凭证列表</div>
+                    <div class="tab-item" onclick="switchTab('push')">NC推送记录</div>
+                </div>
+
+                <div id="tab-voucher" class="tab-content active">
+                    <div class="stats-row" id="voucherStats"></div>
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="search-bar">
+                                <button class="btn btn-primary" id="btnCreateVoucher" onclick="openCreateVoucherModal()">+ 创建凭证</button>
+                                <select class="search-input" id="typeFilter" style="flex:0 0 140px;" onchange="renderVoucherTable()">
+                                    <option value="">全部类型</option>
+                                    <option value="兑息兑付">兑息兑付</option>
+                                    <option value="公允价值变更">公允价值变更</option>
+                                    <option value="申购">申购</option>
+                                    <option value="赎回">赎回</option>
+                                    <option value="内部往来">内部往来</option>
+                                </select>
+                                <select class="search-input" id="statusFilter" style="flex:0 0 130px;" onchange="renderVoucherTable()">
+                                    <option value="">全部状态</option>
+                                    <option value="待确认">待确认</option>
+                                    <option value="已确认">已确认</option>
+                                    <option value="已推送NC">已推送NC</option>
+                                </select>
+                                <input type="text" placeholder="搜索产品名称或编号" class="search-input" id="searchInput" onkeyup="if(event.key==='Enter')renderVoucherTable()">
+                                <button class="btn btn-primary btn-sm" onclick="renderVoucherTable()">查询</button>
+                                <button class="btn btn-ghost btn-sm" onclick="resetVoucherFilters()">重置</button>
+                            </div>
+                        </div>
+                        <div class="card-body-p0">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>记录编号</th>
+                                        <th>产品名称</th>
+                                        <th>变更类型</th>
+                                        <th>变更日期</th>
+                                        <th>变更金额</th>
+                                        <th>凭证状态</th>
+                                        <th>凭证编号</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="voucherTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-push" class="tab-content">
+                    <div class="stats-row" id="pushStats" style="margin-bottom:14px;"></div>
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">推送记录</span>
+                        </div>
+                        <div class="card-body-p0">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>凭证编号</th>
+                                        <th>产品</th>
+                                        <th>推送时间</th>
+                                        <th>推送状态</th>
+                                        <th>NC响应</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pushTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="createVoucherModal" class="modal">
+        <div class="modal-content" style="width:680px;">
+            <div class="modal-header">
+                <h3 id="createVoucherTitle">创建凭证</h3>
+                <button class="btn btn-ghost btn-sm" onclick="closeCreateVoucherModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>关联产品 *</label>
+                        <select id="cvProduct">
+                            <option value="">请选择产品</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>变更类型 *</label>
+                        <select id="cvChangeType" onchange="autoFillAccounts()">
+                            <option value="">请选择变更类型</option>
+                            <option value="兑息兑付">兑息兑付</option>
+                            <option value="公允价值变更">公允价值变更</option>
+                            <option value="申购">申购</option>
+                            <option value="赎回">赎回</option>
+                            <option value="内部往来">内部往来</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>变更日期 *</label>
+                        <input type="date" id="cvChangeDate">
+                    </div>
+                </div>
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label>来源系统 *</label>
+                        <select id="cvSourceSystem">
+                            <option value="OMS">OMS</option>
+                            <option value="邮件解析">邮件解析</option>
+                            <option value="手动录入">手动录入</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>核算单位 *</label>
+                        <select id="cvAccountingUnit">
+                            <option value="总公司">总公司</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>币种 *</label>
+                        <select id="cvCurrency">
+                            <option value="CNY">CNY（人民币）</option>
+                            <option value="USD">USD（美元）</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="detail-section-title" style="margin-top:8px;">会计分录</div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>借方科目 *</label>
+                        <select id="cvDebitAccount" class="account-select">
+                            <option value="">请选择借方科目</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>贷方科目 *</label>
+                        <select id="cvCreditAccount" class="account-select">
+                            <option value="">请选择贷方科目</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>借方本币(元) *</label>
+                        <input type="number" id="cvDebitAmount" placeholder="请输入借方本币" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label>贷方本币(元) *</label>
+                        <input type="number" id="cvCreditAmount" placeholder="请输入贷方本币" step="0.01">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>摘要</label>
+                    <input type="text" id="cvSummary" placeholder="请输入凭证摘要">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeCreateVoucherModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveVoucher()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="detailModal" class="modal">
+        <div class="modal-content" style="width:750px;">
+            <div class="modal-header">
+                <h3 id="detailModalTitle">凭证详情</h3>
+                <button class="btn btn-ghost btn-sm" onclick="closeDetailModal()">✕</button>
+            </div>
+            <div class="modal-body" id="detailModalBody"></div>
+            <div class="modal-footer" id="detailModalFooter"></div>
+        </div>
+    </div>
+
+    <div id="xmlModal" class="modal">
+        <div class="modal-content" style="width:800px;">
+            <div class="modal-header">
+                <h3>XML格式预览</h3>
+                <button class="btn btn-ghost btn-sm" onclick="closeXmlModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div id="xmlPreviewContent" class="xml-preview"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeXmlModal()">关闭</button>
+                <button class="btn btn-nc" id="pushNcFromXmlBtn" onclick="pushToNCFromXml()">推送NC</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script>
+        initLayout('finance.html', '财务核算');
+
+        var _roleKey = getCurrentRoleKey();
+        var _isFinancialStaff = _roleKey === 'financial_staff';
+        var _isCompanyLeader = _roleKey === 'company_leader';
+        var _isAdmin = _roleKey === 'admin';
+        var _isDemo = _roleKey === 'demo';
+        if (!_isFinancialStaff && !_isCompanyLeader && !_isAdmin && !_isDemo) {
+            location.replace('investment_manager.html');
+        }
+
+        var _canConfirmVoucher = hasPermission('confirmVoucher');
+        var _canPushNC = hasPermission('pushNC');
+        var _isReadOnly = isReadOnly();
+
+        var ACCOUNT_OPTIONS = [
+            { code: '1101010703', name: '交易性金融资产\\成本\\其他\\资管计划' },
+            { code: '1101010901', name: '交易性金融资产\\成本\\ABS\\资产支持证券' },
+            { code: '1101010903', name: '交易性金融资产\\成本\\ABS\\保交所资产支持计划' },
+            { code: '1101020703', name: '交易性金融资产\\公允价值变动\\其他\\资管计划' },
+            { code: '1101021003', name: '交易性金融资产\\公允价值变动\\ABS\\保交所资产支持计划' },
+            { code: '1122', name: '应收利息' },
+            { code: '1002', name: '银行存款' },
+            { code: '6001', name: '投资收益' },
+            { code: '61010107', name: '公允价值变动损益\\交易性金融资产\\信托计划' },
+            { code: '61010111', name: '公允价值变动损益\\交易性金融资产\\资管计划' },
+            { code: '61010112', name: '公允价值变动损益\\交易性金融资产\\ABS' },
+            { code: '61110312', name: '投资收益\\交易性金融资产\\信托计划' },
+            { code: '6111031301', name: '投资收益\\交易性金融资产\\ABS\\买卖价差收益' },
+            { code: '6111031302', name: '投资收益\\交易性金融资产\\ABS\\非保本持有期收益' },
+            { code: '22040201', name: '内部往来应付款\\自有资金往来款项\\公司内部部门往来' }
+        ];
+
+        var ACCOUNT_MAP = {
+            '兑息兑付':   { debit: '1122-应收利息',         credit: '6001-投资收益' },
+            '公允价值变更': { debit: '1101-交易性金融资产',    credit: '6101-公允价值变动损益' },
+            '申购':       { debit: '1101-交易性金融资产',    credit: '1002-银行存款' },
+            '赎回':       { debit: '1002-银行存款',         credit: '1101-交易性金融资产' },
+            '内部往来':   { debit: '22040201-内部往来应付款', credit: '1002-银行存款' }
+        };
+
+        var FIN_PRODUCTS = [
+            { id: 'P0001', name: '红利产品A0001' },
+            { id: 'P0002', name: '红利产品A0002' },
+            { id: 'P0003', name: '红利产品A0003' },
+            { id: 'P0004', name: '红利产品A0004' }
+        ];
+
+        var FIN_RECORDS = [
+            { id: 'FR20260519001', productId: 'P0001', productName: '红利产品A0001', changeType: '兑息兑付', changeDate: '2026-05-19', changeAmount: 500000, voucherStatus: '待确认', createMethod: '自动生成', source: '邮件解析', voucherId: 'VCH20260519001' },
+            { id: 'FR20260518001', productId: 'P0002', productName: '红利产品A0002', changeType: '公允价值变更', changeDate: '2026-05-18', changeAmount: 300000, voucherStatus: '待确认', createMethod: '自动生成', source: '邮件解析', voucherId: 'VCH20260518001' },
+            { id: 'FR20260518002', productId: 'P0001', productName: '红利产品A0001', changeType: '申购', changeDate: '2026-05-18', changeAmount: 8000000, voucherStatus: '待确认', createMethod: '自动生成', source: '交易确认', voucherId: '' },
+            { id: 'FR20260517001', productId: 'P0003', productName: '红利产品A0003', changeType: '赎回', changeDate: '2026-05-17', changeAmount: 5000000, voucherStatus: '待确认', createMethod: '手动创建', source: '手动录入', voucherId: '' },
+            { id: 'FR20260517002', productId: 'P0004', productName: '红利产品A0004', changeType: '兑息兑付', changeDate: '2026-05-17', changeAmount: 120000, voucherStatus: '待确认', createMethod: '自动生成', source: '邮件解析', voucherId: 'VCH20260517002' },
+            { id: 'FR20260515001', productId: 'P0002', productName: '红利产品A0002', changeType: '兑息兑付', changeDate: '2026-05-15', changeAmount: 200000, voucherStatus: '已确认', createMethod: '自动生成', source: '邮件解析', voucherId: 'VCH20260515001' },
+            { id: 'FR20260510001', productId: 'P0001', productName: '红利产品A0001', changeType: '公允价值变更', changeDate: '2026-05-10', changeAmount: 450000, voucherStatus: '已确认', createMethod: '自动生成', source: '邮件解析', voucherId: 'VCH20260510001' },
+            { id: 'FR20260505001', productId: 'P0003', productName: '红利产品A0003', changeType: '申购', changeDate: '2026-05-05', changeAmount: 15000000, voucherStatus: '已确认', createMethod: '自动生成', source: '交易确认', voucherId: 'VCH20260505001' },
+            { id: 'FR20260430001', productId: 'P0004', productName: '红利产品A0004', changeType: '兑息兑付', changeDate: '2026-04-30', changeAmount: 180000, voucherStatus: '已推送NC', createMethod: '自动生成', source: '邮件解析', voucherId: 'VCH20260430001' },
+            { id: 'FR20260425001', productId: 'P0001', productName: '红利产品A0001', changeType: '公允价值变更', changeDate: '2026-04-25', changeAmount: -380000, voucherStatus: '已推送NC', createMethod: '自动生成', source: '邮件解析', voucherId: 'VCH20260425001' }
+        ];
+
+        var FIN_VOUCHERS = [
+            { id: 'VCH20260519001', summary: '红利产品A0001兑息兑付', debitAccount: '1122-应收利息', creditAccount: '6001-投资收益', debitAmount: 500000, creditAmount: 500000, maker: '系统', makeTime: '2026-05-19 17:30', sourceSystem: 'OMS', accountingUnit: '总公司', currency: 'CNY' },
+            { id: 'VCH20260518001', summary: '红利产品A0002公允价值变动', debitAccount: '1101-交易性金融资产', creditAccount: '6101-公允价值变动损益', debitAmount: 300000, creditAmount: 300000, maker: '系统', makeTime: '2026-05-18 17:30', sourceSystem: 'OMS', accountingUnit: '总公司', currency: 'CNY' },
+            { id: 'VCH20260517002', summary: '红利产品A0004兑息兑付', debitAccount: '1122-应收利息', creditAccount: '6001-投资收益', debitAmount: 120000, creditAmount: 120000, maker: '系统', makeTime: '2026-05-17 17:30', sourceSystem: 'OMS', accountingUnit: '总公司', currency: 'CNY' },
+            { id: 'VCH20260515001', summary: '红利产品A0002兑息兑付', debitAccount: '1122-应收利息', creditAccount: '6001-投资收益', debitAmount: 200000, creditAmount: 200000, maker: '系统', makeTime: '2026-05-15 17:30', sourceSystem: 'OMS', accountingUnit: '总公司', currency: 'CNY' },
+            { id: 'VCH20260510001', summary: '红利产品A0001公允价值变动', debitAccount: '1101-交易性金融资产', creditAccount: '6101-公允价值变动损益', debitAmount: 450000, creditAmount: 450000, maker: '系统', makeTime: '2026-05-10 17:30', sourceSystem: 'OMS', accountingUnit: '总公司', currency: 'CNY' },
+            { id: 'VCH20260505001', summary: '红利产品A0003申购', debitAccount: '1101-交易性金融资产', creditAccount: '1002-银行存款', debitAmount: 15000000, creditAmount: 15000000, maker: '系统', makeTime: '2026-05-05 17:30', sourceSystem: 'OMS', accountingUnit: '总公司', currency: 'CNY' },
+            { id: 'VCH20260430001', summary: '红利产品A0004兑息兑付', debitAccount: '1122-应收利息', creditAccount: '6001-投资收益', debitAmount: 180000, creditAmount: 180000, maker: '系统', makeTime: '2026-04-30 17:30', sourceSystem: 'OMS', accountingUnit: '总公司', currency: 'CNY' },
+            { id: 'VCH20260425001', summary: '红利产品A0001公允价值变动', debitAccount: '6101-公允价值变动损益', creditAccount: '1101-交易性金融资产', debitAmount: 380000, creditAmount: 380000, maker: '系统', makeTime: '2026-04-25 17:30', sourceSystem: 'OMS', accountingUnit: '总公司', currency: 'CNY' }
+        ];
+
+        var PUSH_RECORDS = [
+            { voucherId: 'VCH20260430001', productName: '红利产品A0004', pushTime: '2026-04-30 18:05:12', status: '成功', response: '200 OK - 凭证已入账', recordId: 'FR20260430001' },
+            { voucherId: 'VCH20260425001', productName: '红利产品A0001', pushTime: '2026-04-25 18:03:45', status: '成功', response: '200 OK - 凭证已入账', recordId: 'FR20260425001' },
+            { voucherId: 'VCH20260420001', productName: '红利产品A0002', pushTime: '2026-04-20 18:06:33', status: '成功', response: '200 OK - 凭证已入账', recordId: '' },
+            { voucherId: 'VCH20260418001', productName: '红利产品A0003', pushTime: '2026-04-18 18:02:10', status: '失败', response: 'Timeout - 连接超时', recordId: '' },
+            { voucherId: 'VCH20260415001', productName: '红利产品A0001', pushTime: '2026-04-15 18:04:28', status: '成功', response: '200 OK - 凭证已入账', recordId: '' },
+            { voucherId: 'VCH20260410001', productName: '红利产品A0004', pushTime: '', status: '待推送', response: '-', recordId: '' }
+        ];
+
+        var currentEditRecordId = null;
+        var currentDetailRecordId = null;
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-item').forEach(function(t) { t.classList.remove('active'); });
+            document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+            if (tab === 'voucher') {
+                document.querySelectorAll('.tab-item')[0].classList.add('active');
+                document.getElementById('tab-voucher').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab-item')[1].classList.add('active');
+                document.getElementById('tab-push').classList.add('active');
+            }
+        }
+
+        function renderVoucherStats() {
+            var pending = 0, confirmed = 0, dividend = 0, pushed = 0;
+            FIN_RECORDS.forEach(function(r) {
+                if (r.voucherStatus === '待确认') pending++;
+                if (r.voucherStatus === '已确认') confirmed++;
+                if (r.changeType === '兑息兑付') dividend++;
+                if (r.voucherStatus === '已推送NC') pushed++;
+            });
+            var html = '';
+            html += '<div class="stat-card"><div class="stat-icon orange">⏳</div><div class="stat-info"><div class="stat-label">待确认</div><div class="stat-value">' + pending + '</div></div></div>';
+            html += '<div class="stat-card"><div class="stat-icon green">✅</div><div class="stat-info"><div class="stat-label">已确认</div><div class="stat-value">' + confirmed + '</div></div></div>';
+            html += '<div class="stat-card"><div class="stat-icon red">💰</div><div class="stat-info"><div class="stat-label">兑息兑付</div><div class="stat-value">' + dividend + '</div></div></div>';
+            html += '<div class="stat-card"><div class="stat-icon purple">📤</div><div class="stat-info"><div class="stat-label">已推送NC</div><div class="stat-value">' + pushed + '</div></div></div>';
+            document.getElementById('voucherStats').innerHTML = html;
+        }
+
+        function renderVoucherTable() {
+            var keyword = document.getElementById('searchInput').value.toLowerCase();
+            var typeVal = document.getElementById('typeFilter').value;
+            var statusVal = document.getElementById('statusFilter').value;
+            var filtered = FIN_RECORDS.filter(function(r) {
+                var matchKeyword = !keyword || r.id.toLowerCase().indexOf(keyword) >= 0 || r.productName.toLowerCase().indexOf(keyword) >= 0 || r.productId.toLowerCase().indexOf(keyword) >= 0;
+                var matchType = !typeVal || r.changeType === typeVal;
+                var matchStatus = !statusVal || r.voucherStatus === statusVal;
+                return matchKeyword && matchType && matchStatus;
+            });
+            var tbody = document.getElementById('voucherTableBody');
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:40px;">暂无记录</td></tr>';
+                return;
+            }
+            tbody.innerHTML = filtered.map(function(r) {
+                var amountStr = r.changeAmount < 0
+                    ? '<span class="text-danger text-mono">' + formatMoney(r.changeAmount) + '</span>'
+                    : '<span class="text-mono">' + formatMoney(r.changeAmount) + '</span>';
+                var actionHtml = '';
+                if (r.voucherStatus === '待确认' && !_isReadOnly) {
+                    actionHtml = '<button class="btn btn-info btn-sm" onclick="openEditVoucher(\'' + r.id + '\')">编辑</button> ';
+                    if (_canConfirmVoucher) {
+                        actionHtml += '<button class="btn btn-success btn-sm" onclick="confirmVoucher(\'' + r.id + '\')">确认</button> ';
+                    }
+                    actionHtml += '<button class="btn btn-ghost btn-sm" onclick="openDetailModal(\'' + r.id + '\')">查看</button>';
+                } else if (r.voucherStatus === '已确认' && !_isReadOnly) {
+                    actionHtml = '<button class="btn btn-xml btn-sm" onclick="previewXml(\'' + r.id + '\')">预览XML</button> ';
+                    if (_canPushNC) {
+                        actionHtml += '<button class="btn btn-nc btn-sm" onclick="pushToNC(\'' + r.id + '\')">推送NC</button> ';
+                    }
+                    actionHtml += '<button class="btn btn-ghost btn-sm" onclick="openDetailModal(\'' + r.id + '\')">查看</button>';
+                } else {
+                    actionHtml = '<button class="btn btn-ghost btn-sm" onclick="openDetailModal(\'' + r.id + '\')">查看</button>';
+                }
+                return '<tr>'
+                    + '<td class="text-mono" style="font-size:var(--font-size-xs);">' + r.id + '</td>'
+                    + '<td style="font-weight:500;color:var(--primary);">' + r.productName + '</td>'
+                    + '<td><span class="type-badge ' + getChangeTypeClass(r.changeType) + '">' + r.changeType + '</span></td>'
+                    + '<td>' + r.changeDate + '</td>'
+                    + '<td>' + amountStr + '</td>'
+                    + '<td><span class="status-badge ' + getStatusClass(r.voucherStatus) + '">' + r.voucherStatus + '</span></td>'
+                    + '<td class="text-mono" style="font-size:var(--font-size-xs);">' + (r.voucherId || '-') + '</td>'
+                    + '<td>' + actionHtml + '</td>'
+                    + '</tr>';
+            }).join('');
+        }
+
+        function resetVoucherFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('typeFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            renderVoucherTable();
+        }
+
+        function renderPushStats() {
+            var success = 0, fail = 0, pending = 0;
+            PUSH_RECORDS.forEach(function(p) {
+                if (p.status === '成功') success++;
+                if (p.status === '失败') fail++;
+                if (p.status === '待推送') pending++;
+            });
+            var html = '';
+            html += '<div class="push-stat"><div><div class="push-stat-label">推送成功</div><div class="push-stat-value success">' + success + '</div></div></div>';
+            html += '<div class="push-stat"><div><div class="push-stat-label">推送失败</div><div class="push-stat-value fail">' + fail + '</div></div></div>';
+            html += '<div class="push-stat"><div><div class="push-stat-label">待推送</div><div class="push-stat-value pending">' + pending + '</div></div></div>';
+            document.getElementById('pushStats').innerHTML = html;
+        }
+
+        function renderPushTable() {
+            var tbody = document.getElementById('pushTableBody');
+            if (PUSH_RECORDS.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:40px;">暂无推送记录</td></tr>';
+                return;
+            }
+            tbody.innerHTML = PUSH_RECORDS.map(function(p) {
+                var statusClass = p.status === '成功' ? 'status-approved' : p.status === '失败' ? 'status-rejected' : 'status-pending';
+                var actionHtml = '';
+                if (p.status === '失败') {
+                    actionHtml = '<button class="btn btn-warning btn-sm" onclick="retryPush(\'' + p.voucherId + '\')">重试</button> ';
+                    actionHtml += '<button class="btn btn-ghost btn-sm" onclick="viewPushDetail(\'' + p.voucherId + '\')">查看</button>';
+                } else if (p.status === '待推送') {
+                    actionHtml = '<button class="btn btn-nc btn-sm" onclick="retryPush(\'' + p.voucherId + '\')">推送</button>';
+                } else {
+                    actionHtml = '<button class="btn btn-ghost btn-sm" onclick="viewPushDetail(\'' + p.voucherId + '\')">查看</button>';
+                }
+                return '<tr>'
+                    + '<td class="text-mono" style="font-size:var(--font-size-xs);">' + p.voucherId + '</td>'
+                    + '<td style="font-weight:500;">' + p.productName + '</td>'
+                    + '<td style="font-size:var(--font-size-xs);">' + (p.pushTime || '-') + '</td>'
+                    + '<td><span class="status-badge ' + statusClass + '">' + p.status + '</span></td>'
+                    + '<td style="font-size:var(--font-size-xs);color:var(--text-secondary);">' + p.response + '</td>'
+                    + '<td>' + actionHtml + '</td>'
+                    + '</tr>';
+            }).join('');
+        }
+
+        function buildAccountOptions() {
+            return '<option value="">请选择科目</option>' + ACCOUNT_OPTIONS.map(function(a) {
+                return '<option value="' + a.code + '-' + a.name + '">' + a.code + ' ' + a.name + '</option>';
+            }).join('');
+        }
+
+        function openCreateVoucherModal() {
+            currentEditRecordId = null;
+            document.getElementById('createVoucherTitle').textContent = '创建凭证';
+            var productSelect = document.getElementById('cvProduct');
+            productSelect.innerHTML = '<option value="">请选择产品</option>' + FIN_PRODUCTS.map(function(p) {
+                return '<option value="' + p.id + '">' + p.id + ' ' + p.name + '</option>';
+            }).join('');
+            document.getElementById('cvChangeType').value = '';
+            document.getElementById('cvChangeDate').value = new Date().toISOString().slice(0, 10);
+            document.getElementById('cvSourceSystem').value = 'OMS';
+            document.getElementById('cvAccountingUnit').value = '总公司';
+            document.getElementById('cvCurrency').value = 'CNY';
+            document.getElementById('cvDebitAccount').innerHTML = buildAccountOptions();
+            document.getElementById('cvCreditAccount').innerHTML = buildAccountOptions();
+            document.getElementById('cvDebitAmount').value = '';
+            document.getElementById('cvCreditAmount').value = '';
+            document.getElementById('cvSummary').value = '';
+            document.getElementById('createVoucherModal').style.display = 'block';
+        }
+
+        function openEditVoucher(recordId) {
+            var r = FIN_RECORDS.find(function(x) { return x.id === recordId; });
+            if (!r) return;
+            currentEditRecordId = recordId;
+            document.getElementById('createVoucherTitle').textContent = '编辑凭证';
+            var productSelect = document.getElementById('cvProduct');
+            productSelect.innerHTML = '<option value="">请选择产品</option>' + FIN_PRODUCTS.map(function(p) {
+                return '<option value="' + p.id + '"' + (p.id === r.productId ? ' selected' : '') + '>' + p.id + ' ' + p.name + '</option>';
+            }).join('');
+            document.getElementById('cvChangeType').value = r.changeType;
+            document.getElementById('cvChangeDate').value = r.changeDate;
+            var v = FIN_VOUCHERS.find(function(x) { return x.id === r.voucherId; });
+            document.getElementById('cvDebitAccount').innerHTML = buildAccountOptions();
+            document.getElementById('cvCreditAccount').innerHTML = buildAccountOptions();
+            if (v) {
+                document.getElementById('cvDebitAccount').value = v.debitAccount;
+                document.getElementById('cvCreditAccount').value = v.creditAccount;
+                document.getElementById('cvDebitAmount').value = v.debitAmount;
+                document.getElementById('cvCreditAmount').value = v.creditAmount;
+                document.getElementById('cvSummary').value = v.summary;
+                document.getElementById('cvSourceSystem').value = v.sourceSystem || 'OMS';
+                document.getElementById('cvAccountingUnit').value = v.accountingUnit || '总公司';
+                document.getElementById('cvCurrency').value = v.currency || 'CNY';
+            } else {
+                document.getElementById('cvDebitAmount').value = '';
+                document.getElementById('cvCreditAmount').value = '';
+                document.getElementById('cvSummary').value = r.productName + r.changeType;
+            }
+            document.getElementById('createVoucherModal').style.display = 'block';
+        }
+
+        function closeCreateVoucherModal() {
+            document.getElementById('createVoucherModal').style.display = 'none';
+            currentEditRecordId = null;
+        }
+
+        function autoFillAccounts() {
+            var type = document.getElementById('cvChangeType').value;
+            if (type && ACCOUNT_MAP[type]) {
+                document.getElementById('cvDebitAccount').value = ACCOUNT_MAP[type].debit;
+                document.getElementById('cvCreditAccount').value = ACCOUNT_MAP[type].credit;
+            }
+        }
+
+        function saveVoucher() {
+            var product = document.getElementById('cvProduct').value;
+            var changeType = document.getElementById('cvChangeType').value;
+            var changeDate = document.getElementById('cvChangeDate').value;
+            var sourceSystem = document.getElementById('cvSourceSystem').value;
+            var accountingUnit = document.getElementById('cvAccountingUnit').value;
+            var currency = document.getElementById('cvCurrency').value;
+            var debitAccount = document.getElementById('cvDebitAccount').value;
+            var creditAccount = document.getElementById('cvCreditAccount').value;
+            var debitAmount = document.getElementById('cvDebitAmount').value;
+            var creditAmount = document.getElementById('cvCreditAmount').value;
+            var summary = document.getElementById('cvSummary').value;
+            if (!product || !changeType || !changeDate) {
+                alert('请填写产品、变更类型和变更日期');
+                return;
+            }
+            if (!debitAccount || !creditAccount || !debitAmount || !creditAmount) {
+                alert('请填写完整的借方科目、贷方科目和金额');
+                return;
+            }
+            var p = FIN_PRODUCTS.find(function(x) { return x.id === product; });
+            if (currentEditRecordId) {
+                var r = FIN_RECORDS.find(function(x) { return x.id === currentEditRecordId; });
+                if (r) {
+                    r.productId = product;
+                    r.productName = p ? p.name : '';
+                    r.changeType = changeType;
+                    r.changeDate = changeDate;
+                    r.changeAmount = (parseFloat(debitAmount) || parseFloat(creditAmount) || 0);
+                    var v = FIN_VOUCHERS.find(function(x) { return x.id === r.voucherId; });
+                    if (v) {
+                        v.debitAccount = debitAccount;
+                        v.creditAccount = creditAccount;
+                        v.debitAmount = parseFloat(debitAmount);
+                        v.creditAmount = parseFloat(creditAmount);
+                        v.sourceSystem = sourceSystem;
+                        v.accountingUnit = accountingUnit;
+                        v.currency = currency;
+                        if (summary) v.summary = summary;
+                    }
+                }
+                alert('凭证已更新');
+            } else {
+                var today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+                var seq = String(FIN_RECORDS.filter(function(x) { return x.id.indexOf('FR' + today) === 0; }).length + 1).padStart(3, '0');
+                var newId = 'FR' + today + seq;
+                var vSeq = String(FIN_VOUCHERS.length + 1).padStart(3, '0');
+                var newVid = 'VCH' + today + vSeq;
+                FIN_RECORDS.push({
+                    id: newId,
+                    productId: product,
+                    productName: p ? p.name : '',
+                    changeType: changeType,
+                    changeDate: changeDate,
+                    changeAmount: (parseFloat(debitAmount) || parseFloat(creditAmount) || 0),
+                    voucherStatus: '待确认',
+                    createMethod: '手动创建',
+                    source: '手动录入',
+                    voucherId: newVid
+                });
+                FIN_VOUCHERS.push({
+                    id: newVid,
+                    summary: summary || (p ? p.name : '') + changeType,
+                    debitAccount: debitAccount,
+                    creditAccount: creditAccount,
+                    debitAmount: parseFloat(debitAmount),
+                    creditAmount: parseFloat(creditAmount),
+                    sourceSystem: sourceSystem,
+                    accountingUnit: accountingUnit,
+                    currency: currency,
+                    maker: getCurrentRole().label,
+                    makeTime: new Date().toISOString().slice(0, 16).replace('T', ' ')
+                });
+                alert('凭证已创建，编号: ' + newId);
+            }
+            closeCreateVoucherModal();
+            renderVoucherStats();
+            renderVoucherTable();
+        }
+
+        function confirmVoucher(recordId) {
+            var r = FIN_RECORDS.find(function(x) { return x.id === recordId; });
+            if (!r) return;
+            if (!r.voucherId) {
+                var today = r.changeDate.replace(/-/g, '');
+                var seq = String(FIN_VOUCHERS.length + 1).padStart(3, '0');
+                r.voucherId = 'VCH' + today + seq;
+                FIN_VOUCHERS.push({
+                    id: r.voucherId,
+                    summary: r.productName + r.changeType,
+                    debitAccount: ACCOUNT_MAP[r.changeType] ? ACCOUNT_MAP[r.changeType].debit : '',
+                    creditAccount: ACCOUNT_MAP[r.changeType] ? ACCOUNT_MAP[r.changeType].credit : '',
+                    debitAmount: Math.abs(r.changeAmount),
+                    creditAmount: Math.abs(r.changeAmount),
+                    sourceSystem: 'OMS',
+                    accountingUnit: '总公司',
+                    currency: 'CNY',
+                    maker: '系统',
+                    makeTime: r.changeDate + ' 17:30'
+                });
+            }
+            r.voucherStatus = '已确认';
+            alert('凭证已确认');
+            renderVoucherStats();
+            renderVoucherTable();
+        }
+
+        function openDetailModal(recordId) {
+            var r = FIN_RECORDS.find(function(x) { return x.id === recordId; });
+            if (!r) return;
+            currentDetailRecordId = recordId;
+            var v = FIN_VOUCHERS.find(function(x) { return x.id === r.voucherId; });
+            document.getElementById('detailModalTitle').textContent = '凭证详情 - ' + (r.voucherId || r.id);
+
+            var body = '<div class="detail-section-title">关联信息</div>';
+            body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr 1fr;">';
+            body += '<div class="detail-info-item"><div class="info-label">记录编号</div><div class="info-value text-mono">' + r.id + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">产品</div><div class="info-value">' + r.productId + ' ' + r.productName + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">变更类型</div><div class="info-value"><span class="type-badge ' + getChangeTypeClass(r.changeType) + '">' + r.changeType + '</span></div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">变更日期</div><div class="info-value">' + r.changeDate + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">变更金额</div><div class="info-value text-mono">' + formatMoneyFull(r.changeAmount) + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">凭证状态</div><div class="info-value"><span class="status-badge ' + getStatusClass(r.voucherStatus) + '">' + r.voucherStatus + '</span></div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">创建方式</div><div class="info-value">' + r.createMethod + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">来源</div><div class="info-value">' + r.source + '</div></div>';
+            body += '</div>';
+
+            body += '<div class="detail-section-title" style="margin-top:16px;">凭证信息</div>';
+            if (v) {
+                body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr;">';
+                body += '<div class="detail-info-item"><div class="info-label">凭证号</div><div class="info-value text-mono">' + v.id + '</div></div>';
+                body += '<div class="detail-info-item"><div class="info-label">制单日期</div><div class="info-value">' + v.makeTime + '</div></div>';
+                body += '<div class="detail-info-item"><div class="info-label">来源系统</div><div class="info-value">' + (v.sourceSystem || 'OMS') + '</div></div>';
+                body += '<div class="detail-info-item"><div class="info-label">核算单位</div><div class="info-value">' + (v.accountingUnit || '总公司') + '</div></div>';
+                body += '<div class="detail-info-item"><div class="info-label">币种</div><div class="info-value">' + (v.currency || 'CNY') + '</div></div>';
+                body += '</div>';
+                body += '<table class="data-table" style="margin-top:12px;">';
+                body += '<thead><tr><th>摘要</th><th>会计科目</th><th>借方本币</th><th>贷方本币</th></tr></thead>';
+                body += '<tbody>';
+                body += '<tr>';
+                body += '<td>' + v.summary + '</td>';
+                body += '<td style="font-size:var(--font-size-xs);">' + v.debitAccount + '</td>';
+                body += '<td class="text-mono">' + (v.debitAmount > 0 ? formatMoneyFull(v.debitAmount) : '-') + '</td>';
+                body += '<td class="text-mono">-</td>';
+                body += '</tr>';
+                body += '<tr>';
+                body += '<td>' + v.summary + '</td>';
+                body += '<td style="font-size:var(--font-size-xs);">' + v.creditAccount + '</td>';
+                body += '<td class="text-mono">-</td>';
+                body += '<td class="text-mono">' + (v.creditAmount > 0 ? formatMoneyFull(v.creditAmount) : '-') + '</td>';
+                body += '</tr>';
+                body += '<tr style="font-weight:bold;background:var(--info-bg);">';
+                body += '<td>合计</td>';
+                body += '<td></td>';
+                body += '<td class="text-mono">' + (v.debitAmount > 0 ? formatMoneyFull(v.debitAmount) : '-') + '</td>';
+                body += '<td class="text-mono">' + (v.creditAmount > 0 ? formatMoneyFull(v.creditAmount) : '-') + '</td>';
+                body += '</tr>';
+                body += '<tr><td colspan="4" style="text-align:right;color:var(--text-secondary);">附单据：0张</td></tr>';
+                body += '</tbody></table>';
+            } else {
+                body += '<div style="text-align:center;color:var(--text-muted);padding:20px;">暂无凭证信息，请先确认凭证</div>';
+            }
+
+            document.getElementById('detailModalBody').innerHTML = body;
+
+            var footer = '';
+            if (r.voucherStatus === '待确认' && !_isReadOnly) {
+                footer = '<button class="btn btn-ghost" onclick="closeDetailModal()">关闭</button>';
+                footer += '<button class="btn btn-info" onclick="closeDetailModal();openEditVoucher(\'' + r.id + '\')">编辑</button>';
+                if (_canConfirmVoucher) {
+                    footer += '<button class="btn btn-primary" onclick="confirmVoucher(\'' + r.id + '\');closeDetailModal()">确认凭证</button>';
+                }
+            } else if (r.voucherStatus === '已确认' && !_isReadOnly) {
+                footer = '<button class="btn btn-ghost" onclick="closeDetailModal()">关闭</button>';
+                footer += '<button class="btn btn-xml" onclick="closeDetailModal();previewXml(\'' + r.id + '\')">预览XML</button>';
+                if (_canPushNC) {
+                    footer += '<button class="btn btn-nc" onclick="pushToNC(\'' + r.id + '\');closeDetailModal()">推送NC</button>';
+                }
+            } else {
+                footer = '<button class="btn btn-ghost" onclick="closeDetailModal()">关闭</button>';
+                footer += '<button class="btn btn-info" onclick="closeDetailModal();switchTab(\'push\')">查看推送记录</button>';
+            }
+            document.getElementById('detailModalFooter').innerHTML = footer;
+            document.getElementById('detailModal').style.display = 'block';
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').style.display = 'none';
+        }
+
+        function previewXml(recordId) {
+            var r = FIN_RECORDS.find(function(x) { return x.id === recordId; });
+            if (!r) return;
+            currentDetailRecordId = recordId;
+            var v = FIN_VOUCHERS.find(function(x) { return x.id === r.voucherId; });
+            var now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            var xml = '';
+            xml += '&lt;?xml version="1.0" encoding="UTF-8"?&gt;\n';
+            xml += '&lt;ufinterface system="OMS" billtype="voucher"&gt;\n';
+            xml += '  &lt;voucher&gt;\n';
+            xml += '    &lt;voucherHead&gt;\n';
+            if (v) {
+                xml += '      &lt;voucherId&gt;' + v.id + '&lt;/voucherId&gt;\n';
+                xml += '      &lt;voucherDate&gt;' + r.changeDate + '&lt;/voucherDate&gt;\n';
+                xml += '      &lt;prepareDate&gt;' + v.makeTime + '&lt;/prepareDate&gt;\n';
+                xml += '      &lt;maker&gt;' + v.maker + '&lt;/maker&gt;\n';
+            }
+            xml += '      &lt;attachment&gt;0&lt;/attachment&gt;\n';
+            xml += '    &lt;/voucherHead&gt;\n';
+            xml += '    &lt;voucherEntries&gt;\n';
+            if (v) {
+                xml += '      &lt;entry&gt;\n';
+                xml += '        &lt;summary&gt;' + v.summary + '&lt;/summary&gt;\n';
+                xml += '        &lt;accountCode&gt;' + v.debitAccount.split('-')[0] + '&lt;/accountCode&gt;\n';
+                xml += '        &lt;accountName&gt;' + (v.debitAccount.split('-')[1] || '') + '&lt;/accountName&gt;\n';
+                xml += '        &lt;debitAmount&gt;' + v.debitAmount.toFixed(2) + '&lt;/debitAmount&gt;\n';
+                xml += '        &lt;creditAmount&gt;0.00&lt;/creditAmount&gt;\n';
+                xml += '      &lt;/entry&gt;\n';
+                xml += '      &lt;entry&gt;\n';
+                xml += '        &lt;summary&gt;' + v.summary + '&lt;/summary&gt;\n';
+                xml += '        &lt;accountCode&gt;' + v.creditAccount.split('-')[0] + '&lt;/accountCode&gt;\n';
+                xml += '        &lt;accountName&gt;' + (v.creditAccount.split('-')[1] || '') + '&lt;/accountName&gt;\n';
+                xml += '        &lt;debitAmount&gt;0.00&lt;/debitAmount&gt;\n';
+                xml += '        &lt;creditAmount&gt;' + v.creditAmount.toFixed(2) + '&lt;/creditAmount&gt;\n';
+                xml += '      &lt;/entry&gt;\n';
+            }
+            xml += '    &lt;/voucherEntries&gt;\n';
+            xml += '    &lt;productInfo&gt;\n';
+            xml += '      &lt;productId&gt;' + r.productId + '&lt;/productId&gt;\n';
+            xml += '      &lt;productName&gt;' + r.productName + '&lt;/productName&gt;\n';
+            xml += '      &lt;changeType&gt;' + r.changeType + '&lt;/changeType&gt;\n';
+            xml += '      &lt;changeDate&gt;' + r.changeDate + '&lt;/changeDate&gt;\n';
+            xml += '      &lt;changeAmount&gt;' + r.changeAmount.toFixed(2) + '&lt;/changeAmount&gt;\n';
+            xml += '    &lt;/productInfo&gt;\n';
+            xml += '    &lt;pushInfo&gt;\n';
+            xml += '      &lt;pushTime&gt;' + now + '&lt;/pushTime&gt;\n';
+            xml += '      &lt;operator&gt;' + getCurrentRole().label + '&lt;/operator&gt;\n';
+            xml += '      &lt;targetSystem&gt;NC财务系统&lt;/targetSystem&gt;\n';
+            xml += '    &lt;/pushInfo&gt;\n';
+            xml += '  &lt;/voucher&gt;\n';
+            xml += '&lt;/ufinterface&gt;';
+            document.getElementById('xmlPreviewContent').innerHTML = xml;
+            document.getElementById('pushNcFromXmlBtn').style.display = r.voucherStatus === '已推送NC' ? 'none' : 'inline-flex';
+            document.getElementById('xmlModal').style.display = 'block';
+        }
+
+        function closeXmlModal() {
+            document.getElementById('xmlModal').style.display = 'none';
+        }
+
+        function pushToNC(recordId) {
+            var r = FIN_RECORDS.find(function(x) { return x.id === recordId; });
+            if (!r) return;
+            if (r.voucherStatus !== '已确认') {
+                alert('只有已确认状态的凭证才能推送NC');
+                return;
+            }
+            if (!confirm('确认推送凭证 ' + r.voucherId + ' 至NC财务系统？')) return;
+            r.voucherStatus = '已推送NC';
+            PUSH_RECORDS.unshift({
+                voucherId: r.voucherId,
+                productName: r.productName,
+                pushTime: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                status: '成功',
+                response: '200 OK - 凭证已入账',
+                recordId: r.id
+            });
+            alert('凭证已成功推送至NC财务系统！');
+            renderVoucherStats();
+            renderVoucherTable();
+            renderPushStats();
+            renderPushTable();
+        }
+
+        function pushToNCFromXml() {
+            if (!currentDetailRecordId) return;
+            closeXmlModal();
+            pushToNC(currentDetailRecordId);
+        }
+
+        function retryPush(voucherId) {
+            var p = PUSH_RECORDS.find(function(x) { return x.voucherId === voucherId; });
+            if (!p) return;
+            if (!confirm('确认重新推送凭证 ' + voucherId + '？')) return;
+            p.status = '成功';
+            p.pushTime = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            p.response = '200 OK - 凭证已入账';
+            var r = FIN_RECORDS.find(function(x) { return x.voucherId === voucherId; });
+            if (r && r.voucherStatus !== '已推送NC') {
+                r.voucherStatus = '已推送NC';
+                renderVoucherStats();
+                renderVoucherTable();
+            }
+            alert('推送成功！');
+            renderPushStats();
+            renderPushTable();
+        }
+
+        function viewPushDetail(voucherId) {
+            var p = PUSH_RECORDS.find(function(x) { return x.voucherId === voucherId; });
+            if (!p) { alert('未找到推送记录'); return; }
+            var r = FIN_RECORDS.find(function(x) { return x.voucherId === voucherId; });
+            var v = FIN_VOUCHERS.find(function(x) { return x.id === voucherId; });
+            document.getElementById('detailModalTitle').textContent = '推送详情 - ' + voucherId;
+            var body = '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;">';
+            body += '<div class="detail-info-item"><div class="info-label">凭证编号</div><div class="info-value text-mono">' + p.voucherId + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">产品</div><div class="info-value">' + p.productName + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">推送时间</div><div class="info-value">' + (p.pushTime || '-') + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">推送状态</div><div class="info-value"><span class="status-badge ' + (p.status === '成功' ? 'status-approved' : p.status === '失败' ? 'status-rejected' : 'status-pending') + '">' + p.status + '</span></div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">NC响应</div><div class="info-value" style="font-size:var(--font-size-xs);">' + p.response + '</div></div>';
+            if (v) {
+                body += '<div class="detail-info-item"><div class="info-label">凭证摘要</div><div class="info-value">' + v.summary + '</div></div>';
+            }
+            body += '</div>';
+            if (v) {
+                body += '<div class="detail-section-title" style="margin-top:14px;">凭证分录</div>';
+                body += '<table class="data-table">';
+                body += '<thead><tr><th>摘要</th><th>会计科目</th><th>借方本币</th><th>贷方本币</th></tr></thead>';
+                body += '<tbody>';
+                body += '<tr><td>' + v.summary + '</td><td style="font-size:var(--font-size-xs);">' + v.debitAccount + '</td><td class="text-mono">' + (v.debitAmount > 0 ? formatMoneyFull(v.debitAmount) : '-') + '</td><td class="text-mono">-</td></tr>';
+                body += '<tr><td>' + v.summary + '</td><td style="font-size:var(--font-size-xs);">' + v.creditAccount + '</td><td class="text-mono">-</td><td class="text-mono">' + (v.creditAmount > 0 ? formatMoneyFull(v.creditAmount) : '-') + '</td></tr>';
+                body += '<tr style="font-weight:bold;background:var(--info-bg);"><td>合计</td><td></td><td class="text-mono">' + (v.debitAmount > 0 ? formatMoneyFull(v.debitAmount) : '-') + '</td><td class="text-mono">' + (v.creditAmount > 0 ? formatMoneyFull(v.creditAmount) : '-') + '</td></tr>';
+                body += '<tr><td colspan="4" style="text-align:right;color:var(--text-secondary);">附单据：0张</td></tr>';
+                body += '</tbody></table>';
+            }
+            document.getElementById('detailModalBody').innerHTML = body;
+            document.getElementById('detailModalFooter').innerHTML = '<button class="btn btn-ghost" onclick="closeDetailModal()">关闭</button>';
+            document.getElementById('detailModal').style.display = 'block';
+        }
+
+        window.addEventListener('click', function(event) {
+            if (event.target === document.getElementById('createVoucherModal')) closeCreateVoucherModal();
+            if (event.target === document.getElementById('detailModal')) closeDetailModal();
+            if (event.target === document.getElementById('xmlModal')) closeXmlModal();
+        });
+
+        if (_isReadOnly) {
+            var btnCreate = document.getElementById('btnCreateVoucher');
+            if (btnCreate) btnCreate.style.display = 'none';
+        }
+        renderVoucherStats();
+        renderVoucherTable();
+        renderPushStats();
+        renderPushTable();
+    </script>
+</body>
+</html>

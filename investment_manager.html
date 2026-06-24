@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>场外簿记OMS系统 - 监控看板</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        .overview-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .overview-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        .overview-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+        }
+        .overview-card.card-blue::before { background: linear-gradient(180deg, #3B82F6, #60A5FA); }
+        .overview-card.card-green::before { background: linear-gradient(180deg, #10B981, #34D399); }
+        .overview-card.card-orange::before { background: linear-gradient(180deg, #F59E0B, #FBBF24); }
+        .overview-card.card-purple::before { background: linear-gradient(180deg, #8B5CF6, #A78BFA); }
+        .overview-card .card-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .overview-card .card-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .overview-card.card-blue .card-icon { background: var(--info-bg); }
+        .overview-card.card-green .card-icon { background: var(--success-bg); }
+        .overview-card.card-orange .card-icon { background: var(--warning-bg); }
+        .overview-card.card-purple .card-icon { background: #F5F3FF; }
+        .overview-card .card-label {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .overview-card .card-main-value {
+            font-size: 28px;
+            font-weight: 700;
+            font-family: var(--font-mono);
+            line-height: 1.2;
+            margin-bottom: 10px;
+        }
+        .overview-card.card-blue .card-main-value { color: var(--primary); }
+        .overview-card.card-green .card-main-value { color: var(--success); }
+        .overview-card.card-orange .card-main-value { color: var(--warning); }
+        .overview-card.card-purple .card-main-value { color: var(--accent-purple); }
+        .overview-card .card-sub-items {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px 12px;
+        }
+        .overview-card .sub-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+        }
+        .overview-card .sub-item .sub-val {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+        }
+
+        .todo-center {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 0;
+            margin-bottom: 14px;
+        }
+        .todo-stats {
+            padding: 14px;
+            border-right: 1px solid var(--border-light);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            align-content: start;
+        }
+        .todo-stat-block {
+            background: var(--border-light);
+            border-radius: var(--radius-sm);
+            padding: 10px;
+            text-align: center;
+        }
+        .todo-stat-block .tsb-value {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            font-family: var(--font-mono);
+            color: var(--primary);
+            line-height: 1.2;
+        }
+        .todo-stat-block .tsb-label {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .todo-list-area {
+            max-height: 280px;
+            overflow-y: auto;
+        }
+        .todo-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border-light);
+        }
+        .todo-item:last-child { border-bottom: none; }
+        .todo-title { font-weight: 500; font-size: var(--font-size-sm); color: var(--text-primary); margin-bottom: 2px; }
+        .todo-meta { font-size: var(--font-size-xs); color: var(--text-muted); }
+        .todo-type-tag {
+            display: inline-block;
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: 2px;
+            margin-right: 6px;
+            font-weight: 500;
+        }
+        .todo-type-tag.tag-plan { background: var(--info-bg); color: var(--primary); }
+        .todo-type-tag.tag-trade { background: var(--success-bg); color: var(--success); }
+        .todo-type-tag.tag-pool { background: var(--warning-bg); color: var(--warning); }
+        .todo-type-tag.tag-finance { background: #F5F3FF; color: var(--accent-purple); }
+
+        .alert-item {
+            display: flex;
+            align-items: flex-start;
+            padding: 12px 14px;
+            margin-bottom: 6px;
+            border-radius: var(--radius-sm);
+            font-size: var(--font-size-sm);
+        }
+        .alert-item:last-child { margin-bottom: 0; }
+        .alert-item.emergency { background: var(--danger-bg); border-left: 3px solid var(--danger); }
+        .alert-item.warning { background: var(--warning-bg); border-left: 3px solid var(--warning); }
+        .alert-item.normal { background: var(--success-bg); border-left: 3px solid var(--success); }
+        .alert-icon { margin-right: 10px; font-size: 12px; flex-shrink: 0; margin-top: 2px; }
+        .alert-content { flex: 1; min-width: 0; }
+        .alert-title { font-weight: 600; font-size: var(--font-size-sm); color: var(--text-primary); }
+        .alert-desc { font-size: var(--font-size-xs); color: var(--text-secondary); margin-top: 2px; }
+        .alert-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+            margin-left: 12px;
+            align-items: center;
+        }
+        .alert-btn {
+            display: inline-block;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 2px;
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid;
+            transition: all 0.15s;
+        }
+        .alert-btn.btn-retry { color: var(--danger); border-color: var(--danger); background: transparent; }
+        .alert-btn.btn-retry:hover { background: var(--danger); color: #fff; }
+        .alert-btn.btn-view { color: var(--text-secondary); border-color: var(--border); background: transparent; }
+        .alert-btn.btn-view:hover { border-color: var(--primary); color: var(--primary); }
+        .alert-btn.btn-audit { color: var(--warning); border-color: var(--warning); background: transparent; }
+        .alert-btn.btn-audit:hover { background: var(--warning); color: #fff; }
+        .alert-btn.btn-manual { color: var(--danger); border-color: var(--danger); background: transparent; }
+        .alert-btn.btn-manual:hover { background: var(--danger); color: #fff; }
+
+        .chart-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .chart-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        .chart-box .chart-header {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border-light);
+            font-size: var(--font-size-sm);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .chart-box .chart-body {
+            height: 260px;
+            padding: 8px;
+        }
+
+        @media (max-width: 1200px) {
+            .overview-cards { grid-template-columns: repeat(2, 1fr); }
+            .todo-center { grid-template-columns: 1fr; }
+            .todo-stats { border-right: none; border-bottom: 1px solid var(--border-light); }
+        }
+        @media (max-width: 900px) {
+            .overview-cards { grid-template-columns: 1fr; }
+            .chart-container { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <nav class="sidebar"></nav>
+
+        <div class="main-area">
+            <div class="topbar"></div>
+
+            <div class="content">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <span class="page-title">监控看板</span>
+                        <span class="page-subtitle">Dashboard · M0</span>
+                    </div>
+                </div>
+
+                <div class="overview-cards" id="overviewCards"></div>
+
+                <div class="card" style="margin-bottom:14px;">
+                    <div class="card-header">
+                        <span class="card-title">📋 待办审批中心</span>
+                        <a href="approval.html" class="btn btn-sm btn-ghost">查看全部</a>
+                    </div>
+                    <div class="todo-center">
+                        <div class="todo-stats" id="todoStats"></div>
+                        <div class="todo-list-area" id="todoList"></div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-bottom:14px;">
+                    <div class="card-header">
+                        <span class="card-title">⚠️ 异常预警中心</span>
+                    </div>
+                    <div class="card-body" style="padding:10px 14px;" id="alertCenter"></div>
+                </div>
+
+                <div class="card" style="margin-bottom: 12px;">
+                    <div class="card-header">
+                        <span class="card-title">📈 业务流程趋势</span>
+                    </div>
+                    <div class="card-body" style="padding: 10px;">
+                        <div class="chart-container">
+                            <div class="chart-box">
+                                <div class="chart-header">近7日交易趋势</div>
+                                <div class="chart-body" id="tradeChart"></div>
+                            </div>
+                            <div class="chart-box">
+                                <div class="chart-header">近7日凭证生成 & NC推送趋势</div>
+                                <div class="chart-body" id="voucherChart"></div>
+                            </div>
+                            <div class="chart-box">
+                                <div class="chart-header">近7日净值解析成功率</div>
+                                <div class="chart-body" id="successRateChart"></div>
+                            </div>
+                            <div class="chart-box">
+                                <div class="chart-header">产品类型占比</div>
+                                <div class="chart-body" id="productChart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="js/script.js"></script>
+    <script>
+        initLayout('investment_manager.html', '监控看板');
+
+        var _roleKey = getCurrentRoleKey();
+        var _rolePerms = getCurrentPerms();
+        var _dataScope = _rolePerms.dataScope || 'investGroup';
+        var _isCompanyLeader = _roleKey === 'company_leader';
+        var _canViewAll = _dataScope === 'all';
+        var _isInvestmentManager = _roleKey === 'investment_manager';
+        var _isTrader = _roleKey === 'trader';
+
+        var overviewData = [
+            {
+                color: 'blue', icon: '📦', label: '产品池总览', mainValue: '32', mainUnit: '在池',
+                subs: [
+                    { label: '在池', value: '32' },
+                    { label: '禁用', value: '2' },
+                    { label: '今日新增', value: '1' },
+                    { label: '待更新', value: '4' }
+                ]
+            },
+            {
+                color: 'green', icon: '💹', label: '交易总览', mainValue: '5', mainUnit: '今日申报',
+                subs: [
+                    { label: '今日申报', value: '5' },
+                    { label: '成交', value: '3' },
+                    { label: '赎回', value: '1' },
+                    { label: '总金额', value: '2.1亿' }
+                ]
+            },
+            {
+                color: 'orange', icon: '🧾', label: '核算总览', mainValue: '3', mainUnit: '待审核',
+                subs: [
+                    { label: '待审核', value: '3' },
+                    { label: '已确认', value: '12' },
+                    { label: '已推送NC', value: '7' },
+                    { label: '推送失败', value: '0' }
+                ]
+            },
+            {
+                color: 'purple', icon: '📊', label: '净值总览', mainValue: '8', mainUnit: '今日解析',
+                subs: [
+                    { label: '今日解析', value: '8' },
+                    { label: '失败', value: '1' },
+                    { label: '待人工', value: '2' },
+                    { label: '成功率', value: '87.5%' }
+                ]
+            }
+        ];
+
+        var overviewHtml = '';
+        overviewData.forEach(function(c) {
+            overviewHtml += '<div class="overview-card card-' + c.color + '">';
+            overviewHtml += '<div class="card-head">';
+            overviewHtml += '<div class="card-icon">' + c.icon + '</div>';
+            overviewHtml += '<div class="card-label">' + c.label + '</div>';
+            overviewHtml += '</div>';
+            overviewHtml += '<div class="card-main-value">' + c.mainValue + ' <span style="font-size:12px;font-weight:400;color:var(--text-muted);">' + c.mainUnit + '</span></div>';
+            overviewHtml += '<div class="card-sub-items">';
+            c.subs.forEach(function(s) {
+                overviewHtml += '<div class="sub-item">' + s.label + '：<span class="sub-val">' + s.value + '</span></div>';
+            });
+            overviewHtml += '</div>';
+            overviewHtml += '</div>';
+        });
+        document.getElementById('overviewCards').innerHTML = overviewHtml;
+
+        var todoStatsData = [
+            { label: '计划书', value: 3 },
+            { label: '交易', value: 2 },
+            { label: '入池', value: 1 },
+            { label: '财务', value: 4 }
+        ];
+        var todoStatsHtml = '';
+        todoStatsData.forEach(function(t) {
+            todoStatsHtml += '<div class="todo-stat-block">';
+            todoStatsHtml += '<div class="tsb-value">' + t.value + '</div>';
+            todoStatsHtml += '<div class="tsb-label">' + t.label + '</div>';
+            todoStatsHtml += '</div>';
+        });
+        document.getElementById('todoStats').innerHTML = todoStatsHtml;
+
+        var todoItemsRaw = [
+            { type: '投资计划书审批', tag: 'plan', id: 'TP20260518001', name: '2026年5月FICC固收投资计划', applicant: '王强', time: '2026-05-18 10:00', investGroup: '理财投资组' },
+            { type: '交易审批', tag: 'trade', id: 'TRX20260517001', name: '天玑13号赎回¥3,000,000', applicant: '李华', time: '2026-05-17 10:00', investGroup: '专户投资组' },
+            { type: '交易审批', tag: 'trade', id: 'TRX20260516001', name: '国君君得3640买入¥8,000,000', applicant: '李华', time: '2026-05-16 14:00', investGroup: 'xn账户' },
+            { type: '产品入池审批', tag: 'pool', id: 'P006', name: '中金财富1554号FOF', applicant: '刘伟', time: '2026-05-01 10:00', investGroup: '权益投资组' },
+            { type: '财务审核', tag: 'finance', id: 'VCH20260517001', name: '天玑13号兑息兑付凭证', applicant: '系统', time: '2026-05-17 17:30', investGroup: '专户投资组' },
+            { type: '财务审核', tag: 'finance', id: 'VCH20260517002', name: '盛乾同行2号公允价值变更凭证', applicant: '系统', time: '2026-05-17 17:30', investGroup: 'fb账户' }
+        ];
+
+        var todoItems = _canViewAll ? todoItemsRaw : todoItemsRaw.filter(function(item) {
+            return !item.investGroup || true;
+        });
+        var tagClassMap = { plan: 'tag-plan', trade: 'tag-trade', pool: 'tag-pool', finance: 'tag-finance' };
+        var todoListHtml = '';
+        todoItems.forEach(function(item) {
+            todoListHtml += '<div class="todo-item">';
+            todoListHtml += '<div>';
+            todoListHtml += '<div class="todo-title"><span class="todo-type-tag ' + tagClassMap[item.tag] + '">' + item.type + '</span>' + item.id + '</div>';
+            todoListHtml += '<div class="todo-meta">' + item.name + ' · ' + item.applicant + ' · ' + item.time + '</div>';
+            todoListHtml += '</div>';
+            todoListHtml += '<a href="approval.html" class="btn btn-sm btn-primary">去处理</a>';
+            todoListHtml += '</div>';
+        });
+        document.getElementById('todoList').innerHTML = todoListHtml;
+
+        var alertData = [
+            {
+                level: 'emergency', icon: '🔴',
+                title: 'NC推送失败',
+                desc: '凭证VCH20260517003推送至NC系统失败，错误码：E4001',
+                actions: [
+                    { label: '重试', cls: 'btn-retry', href: 'approval.html' },
+                    { label: '查看', cls: 'btn-view', href: 'approval.html' }
+                ]
+            },
+            {
+                level: 'emergency', icon: '🔴',
+                title: '邮件解析失败',
+                desc: '产品"天玑13号"净值邮件解析异常，附件格式无法识别',
+                actions: [
+                    { label: '手动处理', cls: 'btn-manual', href: 'approval.html' },
+                    { label: '查看', cls: 'btn-view', href: 'approval.html' }
+                ]
+            },
+            {
+                level: 'warning', icon: '🟡',
+                title: '凭证待审核超4小时',
+                desc: '产品"盛乾同行2号"公允价值变更凭证已等待超4小时',
+                actions: [
+                    { label: '去审核', cls: 'btn-audit', href: 'approval.html' }
+                ]
+            },
+            {
+                level: 'normal', icon: '🟢',
+                title: '流程完成',
+                desc: '投资计划书TP20260515001已通过审批，可进入执行阶段',
+                actions: []
+            }
+        ];
+        var alertHtml = '';
+        alertData.forEach(function(a) {
+            alertHtml += '<div class="alert-item ' + a.level + '">';
+            alertHtml += '<span class="alert-icon">' + a.icon + '</span>';
+            alertHtml += '<div class="alert-content">';
+            alertHtml += '<div class="alert-title">' + a.title + '</div>';
+            alertHtml += '<div class="alert-desc">' + a.desc + '</div>';
+            alertHtml += '</div>';
+            if (a.actions.length > 0) {
+                alertHtml += '<div class="alert-actions">';
+                a.actions.forEach(function(act) {
+                    alertHtml += '<a href="' + act.href + '" class="alert-btn ' + act.cls + '">' + act.label + '</a>';
+                });
+                alertHtml += '</div>';
+            }
+            alertHtml += '</div>';
+        });
+        document.getElementById('alertCenter').innerHTML = alertHtml;
+
+        var chartTheme = {
+            color: ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#14B8A6'],
+            textStyle: { fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif', fontSize: 11 },
+            grid: { left: 40, right: 16, bottom: 24, top: 36, containLabel: false }
+        };
+
+        function getRecentDays(n) {
+            var arr = [];
+            for (var i = n - 1; i >= 0; i--) {
+                var d = new Date();
+                d.setDate(d.getDate() - i);
+                arr.push((d.getMonth() + 1) + '/' + d.getDate());
+            }
+            return arr;
+        }
+        var recentDays = getRecentDays(7);
+
+        var tradeChart = echarts.init(document.getElementById('tradeChart'));
+        tradeChart.setOption(Object.assign({}, chartTheme, {
+            tooltip: { trigger: 'axis', textStyle: { fontSize: 12 } },
+            legend: { data: ['交易笔数', '交易金额(万)'], top: 8, textStyle: { fontSize: 11 } },
+            xAxis: { type: 'category', data: recentDays, axisLabel: { fontSize: 10 } },
+            yAxis: [
+                { type: 'value', name: '笔', axisLabel: { fontSize: 10 } },
+                { type: 'value', name: '万元', position: 'right', axisLabel: { fontSize: 10 } }
+            ],
+            series: [
+                { name: '交易笔数', type: 'line', data: [3, 5, 2, 4, 6, 3, 5], smooth: true, lineStyle: { width: 2 }, itemStyle: { color: '#3B82F6' }, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(59,130,246,0.15)' }, { offset: 1, color: 'rgba(59,130,246,0.01)' }] } } },
+                { name: '交易金额(万)', type: 'line', yAxisIndex: 1, data: [350, 580, 200, 450, 720, 300, 510], smooth: true, lineStyle: { width: 2 }, itemStyle: { color: '#10B981' }, areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(16,185,129,0.15)' }, { offset: 1, color: 'rgba(16,185,129,0.01)' }] } } }
+            ]
+        }));
+
+        var voucherChart = echarts.init(document.getElementById('voucherChart'));
+        voucherChart.setOption(Object.assign({}, chartTheme, {
+            tooltip: { trigger: 'axis', textStyle: { fontSize: 12 } },
+            legend: { data: ['生成凭证', 'NC推送'], top: 8, textStyle: { fontSize: 11 } },
+            xAxis: { type: 'category', data: recentDays, axisLabel: { fontSize: 10 } },
+            yAxis: { type: 'value', axisLabel: { fontSize: 10 } },
+            series: [
+                { name: '生成凭证', type: 'bar', data: [5, 8, 3, 6, 7, 4, 6], barWidth: 14, itemStyle: { color: '#3B82F6', borderRadius: [2,2,0,0] } },
+                { name: 'NC推送', type: 'bar', data: [4, 7, 3, 5, 6, 4, 5], barWidth: 14, itemStyle: { color: '#10B981', borderRadius: [2,2,0,0] } }
+            ]
+        }));
+
+        var successRateChart = echarts.init(document.getElementById('successRateChart'));
+        successRateChart.setOption(Object.assign({}, chartTheme, {
+            tooltip: { trigger: 'axis', formatter: '{b}: {c}%', textStyle: { fontSize: 12 } },
+            xAxis: { type: 'category', data: recentDays, axisLabel: { fontSize: 10 } },
+            yAxis: { type: 'value', min: 80, max: 100, axisLabel: { formatter: '{value}%', fontSize: 10 } },
+            series: [
+                {
+                    name: '成功率',
+                    type: 'line',
+                    data: [92, 95, 88, 96, 94, 97, 87.5],
+                    smooth: true,
+                    lineStyle: { width: 2, color: '#8B5CF6' },
+                    itemStyle: { color: '#8B5CF6' },
+                    areaStyle: {
+                        color: {
+                            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+                            colorStops: [
+                                { offset: 0, color: 'rgba(139,92,246,0.2)' },
+                                { offset: 1, color: 'rgba(139,92,246,0.01)' }
+                            ]
+                        }
+                    },
+                    markPoint: {
+                        data: [{ type: 'min', name: '最低', symbolSize: 36, label: { fontSize: 10 } }],
+                        itemStyle: { color: '#EF4444' }
+                    }
+                }
+            ]
+        }));
+
+        var productPieData = [
+            { value: 3, name: 'ABS' },
+            { value: 2, name: '信托' },
+            { value: 5, name: '专户资管' },
+            { value: 1, name: '碳金融' }
+        ];
+        var productChart = echarts.init(document.getElementById('productChart'));
+        productChart.setOption(Object.assign({}, chartTheme, {
+            tooltip: { trigger: 'item', formatter: '{b}: {c}只 ({d}%)', textStyle: { fontSize: 12 } },
+            legend: { orient: 'vertical', right: 8, top: 'center', textStyle: { fontSize: 11 } },
+            series: [
+                {
+                    name: '产品类型',
+                    type: 'pie',
+                    radius: ['36%', '62%'],
+                    center: ['38%', '50%'],
+                    data: productPieData,
+                    label: { show: false },
+                    emphasis: {
+                        label: { show: true, fontSize: 12, fontWeight: 'bold' },
+                        itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.1)' }
+                    },
+                    itemStyle: { borderRadius: 4, borderColor: '#fff', borderWidth: 2 }
+                }
+            ]
+        }));
+
+        window.addEventListener('resize', function() {
+            tradeChart.resize();
+            voucherChart.resize();
+            successRateChart.resize();
+            productChart.resize();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>场外簿记OMS系统 - 审批中心</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .tab-bar { display: flex; gap: 0; margin-bottom: 14px; border-bottom: 2px solid var(--border); }
+        .tab-item { padding: 8px 20px; font-size: var(--font-size-sm); font-weight: 500; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
+        .tab-item:hover { color: var(--primary); }
+        .tab-item.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .filter-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; text-align: center; cursor: pointer; transition: all 0.15s; }
+        .filter-card:hover { border-color: var(--primary); }
+        .filter-card.active { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(59,130,246,0.15); }
+        .filter-card .stat-label { font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 2px; }
+        .filter-card .stat-value { font-size: var(--font-size-lg); font-weight: 700; color: var(--text-primary); font-family: var(--font-mono); }
+        .approval-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; display: flex; align-items: flex-start; gap: 14px; transition: all 0.15s; }
+        .approval-card:hover { box-shadow: var(--shadow); border-color: var(--primary); }
+        .approval-card .card-icon { width: 40px; height: 40px; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+        .approval-card .card-icon.icon-plan { background: var(--info-bg); }
+        .approval-card .card-icon.icon-product { background: var(--success-bg); }
+        .approval-card .card-icon.icon-counterparty { background: var(--warning-bg); }
+        .approval-card .card-icon.icon-trade { background: #F5F3FF; }
+        .approval-card .card-icon.icon-finance { background: #FFF7ED; }
+        .approval-card .card-info { flex: 1; min-width: 0; }
+        .approval-card .card-type-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+        .approval-card .card-type-tag { font-size: var(--font-size-xs); font-weight: 600; color: var(--primary); background: var(--info-bg); padding: 1px 8px; border-radius: 3px; }
+        .approval-card .card-object { font-weight: 600; color: var(--text-primary); font-size: var(--font-size-md); }
+        .approval-card .card-object-ref { font-size: var(--font-size-xs); color: var(--text-muted); font-family: var(--font-mono); }
+        .approval-card .card-meta { display: flex; gap: 16px; font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 6px; flex-wrap: wrap; }
+        .approval-card .card-meta span { display: inline-flex; align-items: center; gap: 3px; }
+        .approval-card .card-step { font-size: var(--font-size-xs); color: var(--primary); font-weight: 500; background: var(--info-bg); padding: 2px 8px; border-radius: 3px; display: inline-block; }
+        .approval-card .card-actions { display: flex; gap: 6px; flex-shrink: 0; align-items: flex-start; }
+        .timeline { position: relative; padding-left: 24px; }
+        .timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+        .timeline-item { position: relative; padding-bottom: 20px; }
+        .timeline-item:last-child { padding-bottom: 0; }
+        .timeline-dot { position: absolute; left: -20px; top: 2px; width: 12px; height: 12px; border-radius: 50%; z-index: 1; }
+        .timeline-dot.completed { background: var(--success, #22c55e); }
+        .timeline-dot.current { background: var(--primary, #3b82f6); box-shadow: 0 0 0 4px rgba(59,130,246,0.2); }
+        .timeline-dot.pending { background: var(--border, #e5e7eb); }
+        .timeline-dot.rejected { background: var(--danger, #ef4444); }
+        .timeline-title { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); }
+        .timeline-title.pending-title { color: var(--text-muted); }
+        .timeline-user { font-size: var(--font-size-xs); color: var(--text-secondary); margin-top: 2px; }
+        .timeline-time { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: 1px; }
+        .timeline-reason { font-size: var(--font-size-xs); color: var(--danger); margin-top: 2px; padding: 4px 8px; background: #FEF2F2; border-radius: 3px; }
+        .detail-section-title { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); margin: 16px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+        .detail-object-link { color: var(--primary); cursor: pointer; text-decoration: underline; }
+        .detail-object-link:hover { color: var(--primary-dark, #2563eb); }
+        .opinion-input { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: var(--font-size-sm); resize: vertical; min-height: 60px; margin-top: 8px; }
+        .opinion-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
+        .voucher-row { display: grid; grid-template-columns: 2fr 2fr 2fr 1.5fr; gap: 8px; margin-bottom: 6px; padding: 6px 0; border-bottom: 1px solid var(--border-light); }
+        .voucher-row:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <nav class="sidebar"></nav>
+        <div class="main-area">
+            <div class="topbar"></div>
+            <div class="content">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <span class="page-title">审批中心</span>
+                        <span class="page-subtitle">Approval & Finance</span>
+                    </div>
+                </div>
+
+                <div class="tab-bar" data-logic-id="page_approval_list">
+                    <div class="tab-item active" onclick="switchTab('todo')">待我审批 <span id="tabTodoCount" style="margin-left:4px;font-size:var(--font-size-xs);background:var(--danger);color:#fff;border-radius:8px;padding:1px 6px;">0</span></div>
+                    <div class="tab-item" onclick="switchTab('mine')">我发起的 <span id="tabMineCount" style="margin-left:4px;font-size:var(--font-size-xs);color:var(--text-muted);">0</span></div>
+                    <div class="tab-item" onclick="switchTab('done')">已审批 <span id="tabDoneCount" style="margin-left:4px;font-size:var(--font-size-xs);color:var(--text-muted);">0</span></div>
+                </div>
+
+                <div id="tab-todo" class="tab-content active" data-logic-id="page_approval_list">
+                    <div class="card" style="margin-bottom:12px;">
+                        <div class="card-body">
+                            <div class="search-bar">
+                                <select class="search-input" id="typeFilter" style="flex:0 0 140px;">
+                                    <option value="">所有审批类型</option>
+                                    <option value="产品入池审批">产品入池审批</option>
+                                    <option value="投资计划书审批">投资计划书审批</option>
+                                </select>
+                                <input type="date" class="search-input" id="dateFrom" style="flex:0 0 150px;" placeholder="开始日期">
+                                <input type="date" class="search-input" id="dateTo" style="flex:0 0 150px;" placeholder="结束日期">
+                                <input type="text" placeholder="搜索编号、名称或发起人" class="search-input" id="searchInput">
+                                <button class="btn btn-primary btn-sm" onclick="renderApprovalList()">搜索</button>
+                                <button class="btn btn-ghost btn-sm" onclick="resetApprovalFilters()">重置</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="approvalList"></div>
+                </div>
+                <div id="tab-mine" class="tab-content">
+                    <div class="card" style="margin-bottom:12px;">
+                        <div class="card-body">
+                            <div class="search-bar">
+                                <select class="search-input" id="typeFilterMine" style="flex:0 0 140px;">
+                                    <option value="">所有审批类型</option>
+                                    <option value="产品入池审批">产品入池审批</option>
+                                    <option value="投资计划书审批">投资计划书审批</option>
+                                </select>
+                                <input type="text" placeholder="搜索编号、名称" class="search-input" id="searchInputMine">
+                                <button class="btn btn-primary btn-sm" onclick="renderApprovalList()">搜索</button>
+                                <button class="btn btn-ghost btn-sm" onclick="resetApprovalFilters()">重置</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="approvalListMine"></div>
+                </div>
+                <div id="tab-done" class="tab-content">
+                    <div class="card" style="margin-bottom:12px;">
+                        <div class="card-body">
+                            <div class="search-bar">
+                                <select class="search-input" id="typeFilterDone" style="flex:0 0 140px;">
+                                    <option value="">所有审批类型</option>
+                                    <option value="产品入池审批">产品入池审批</option>
+                                    <option value="投资计划书审批">投资计划书审批</option>
+                                </select>
+                                <input type="text" placeholder="搜索编号、名称" class="search-input" id="searchInputDone">
+                                <button class="btn btn-primary btn-sm" onclick="renderApprovalList()">搜索</button>
+                                <button class="btn btn-ghost btn-sm" onclick="resetApprovalFilters()">重置</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="approvalListDone"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="detailModal" class="modal" data-logic-id="modal_approval_detail">
+        <div class="modal-content" style="width:700px;">
+            <div class="modal-header">
+                <h3 id="detailModalTitle">审批详情</h3>
+                <button class="btn btn-ghost btn-sm" onclick="closeDetailModal()">✕</button>
+            </div>
+            <div class="modal-body" id="detailModalBody"></div>
+            <div class="modal-footer" id="detailModalFooter"></div>
+        </div>
+    </div>
+
+    <div id="rejectModal" class="modal" data-logic-id="modal_approval_detail">
+        <div class="modal-content" style="width:480px;">
+            <div class="modal-header">
+                <h3>驳回审批</h3>
+                <button class="btn btn-ghost btn-sm" onclick="closeRejectModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>驳回原因 <span style="color:var(--danger);">*</span></label>
+                    <textarea id="rejectReason" rows="4" placeholder="请输入驳回原因（必填）..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);resize:vertical;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeRejectModal()">取消</button>
+                <button class="btn btn-danger" onclick="confirmReject()">确认驳回</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="terminateModal" class="modal" data-logic-id="modal_approval_detail">
+        <div class="modal-content" style="width:480px;">
+            <div class="modal-header">
+                <h3>终止审批</h3>
+                <button class="btn btn-ghost btn-sm" onclick="closeTerminateModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>终止原因 <span style="color:var(--danger);">*</span></label>
+                    <textarea id="terminateReason" rows="4" placeholder="请输入终止原因（必填）..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);resize:vertical;"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeTerminateModal()">取消</button>
+                <button class="btn btn-danger" onclick="confirmTerminate()">确认终止</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script>
+        initLayout('approval.html', '审批中心');
+
+        var _approvePlan = hasPermission('approvePlan');
+        var _approveProduct = hasPermission('approveProduct');
+        var _isReadOnly = isReadOnly();
+        var _currentRole = getCurrentRole();
+        var _currentRoleLabel = _currentRole.label;
+
+        var APPROVAL_TYPE_PERM = {
+            '投资计划书审批': 'approvePlan',
+            '产品入池审批': 'approveProduct'
+        };
+
+        var currentRejectId = null;
+
+        var TYPE_CONFIG = {
+            '投资计划书审批': { key: 'plan', icon: '📋', iconClass: 'icon-plan', label: '计划书审批' },
+            '产品入池审批': { key: 'product', icon: '📦', iconClass: 'icon-product', label: '产品入池' }
+        };
+
+        var OBJECT_LINK_MAP = {
+            '投资计划书审批': 'trade.html',
+            '产品入池审批': 'product.html'
+        };
+
+        var currentTab = 'todo';
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-item').forEach(function(t) { t.classList.remove('active'); });
+            document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+            var tabIdx = ['todo','mine','done'].indexOf(tab);
+            document.querySelectorAll('.tab-item')[tabIdx].classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+            renderApprovalList();
+        }
+
+        function getCurrentStep(a) {
+            var step = a.steps.find(function(s) { return s.status === '当前'; });
+            return step ? step.title : (a.status === '已通过' ? '已完成' : a.status === '已驳回' ? '已驳回' : '-');
+        }
+
+        function getFilteredApprovals(tab) {
+            var typeFilter, searchInput, dateFrom, dateTo;
+            if (tab === 'todo') {
+                typeFilter = document.getElementById('typeFilter').value;
+                searchInput = document.getElementById('searchInput').value.toLowerCase();
+                dateFrom = document.getElementById('dateFrom').value;
+                dateTo = document.getElementById('dateTo').value;
+            } else if (tab === 'mine') {
+                typeFilter = document.getElementById('typeFilterMine').value;
+                searchInput = document.getElementById('searchInputMine').value.toLowerCase();
+            } else {
+                typeFilter = document.getElementById('typeFilterDone').value;
+                searchInput = document.getElementById('searchInputDone').value.toLowerCase();
+            }
+            return APPROVALS.filter(function(a) {
+                if (!TYPE_CONFIG[a.type]) return false;
+                if (typeFilter && a.type !== typeFilter) return false;
+                if (searchInput) {
+                    var hay = (a.id + a.objectName + a.object + a.applicant).toLowerCase();
+                    if (hay.indexOf(searchInput) < 0) return false;
+                }
+                if (dateFrom && a.applyTime < dateFrom) return false;
+                if (dateTo && a.applyTime > dateTo + ' 23:59') return false;
+                if (tab === 'todo') {
+                    if (a.status !== '审批中') return false;
+                    var permKey = APPROVAL_TYPE_PERM[a.type];
+                    if (!permKey || !hasPermission(permKey)) return false;
+                    var currentStep = a.steps.find(function(s) { return s.status === '当前'; });
+                    if (!currentStep) return false;
+                } else if (tab === 'mine') {
+                    if (a.applicant !== _currentRoleLabel) return false;
+                } else if (tab === 'done') {
+                    var hasDone = a.steps.some(function(s) { return s.status === '已完成' && s.user === _currentRoleLabel; });
+                    if (!hasDone) return false;
+                }
+                return true;
+            });
+        }
+
+        function renderApprovalList() {
+            var todoList = getFilteredApprovals('todo');
+            var mineList = getFilteredApprovals('mine');
+            var doneList = getFilteredApprovals('done');
+            document.getElementById('tabTodoCount').textContent = todoList.length;
+            document.getElementById('tabMineCount').textContent = mineList.length;
+            document.getElementById('tabDoneCount').textContent = doneList.length;
+            var container;
+            if (currentTab === 'todo') container = document.getElementById('approvalList');
+            else if (currentTab === 'mine') container = document.getElementById('approvalListMine');
+            else container = document.getElementById('approvalListDone');
+            var list = currentTab === 'todo' ? todoList : currentTab === 'mine' ? mineList : doneList;
+            if (list.length === 0) {
+                container.innerHTML = '<div class="card"><div class="card-body" style="text-align:center;color:var(--text-muted);padding:40px;">暂无审批记录</div></div>';
+                return;
+            }
+            container.innerHTML = list.map(function(a) {
+                var cfg = TYPE_CONFIG[a.type] || { icon: '📄', iconClass: 'icon-plan', label: a.type };
+                var currentStep = getCurrentStep(a);
+                var btns = '<button class="btn btn-info btn-sm" data-logic-id="modal_approval_detail" onclick="viewDetail(\'' + a.id + '\')">查看详情</button>';
+                var isPending = a.status === '审批中';
+                var permKey = APPROVAL_TYPE_PERM[a.type];
+                var canApproveThisType = permKey ? hasPermission(permKey) : false;
+                var isInitiator = a.applicant === _currentRoleLabel;
+                if (isPending && !_isReadOnly) {
+                    if (canApproveThisType) {
+                        btns += ' <button class="btn btn-success btn-sm" data-logic-id="page_approval_list" onclick="approveItem(\'' + a.id + '\')">通过</button>';
+                        btns += ' <button class="btn btn-danger btn-sm" onclick="openRejectModal(\'' + a.id + '\')">驳回</button>';
+                    }
+                    if (isInitiator) {
+                        btns += ' <button class="btn btn-withdraw btn-sm" onclick="withdrawApproval(\'' + a.id + '\')">撤回</button>';
+                        btns += ' <button class="btn btn-ghost btn-sm" onclick="openTerminateModal(\'' + a.id + '\')">终止</button>';
+                    }
+                }
+                return '<div class="approval-card">'
+                    + '<div class="card-icon ' + cfg.iconClass + '">' + cfg.icon + '</div>'
+                    + '<div class="card-info">'
+                    + '<div class="card-type-row">'
+                    + '<span class="card-type-tag">' + cfg.icon + ' ' + cfg.label + '</span>'
+                    + '<span class="status-badge ' + getStatusClass(a.status) + '">' + a.status + '</span>'
+                    + '</div>'
+                    + '<div class="card-object">' + a.objectName + '</div>'
+                    + '<div class="card-object-ref">编号: ' + a.object + '</div>'
+                    + '<div class="card-meta">'
+                    + '<span>👤 ' + a.applicant + '</span>'
+                    + '<span>🕐 ' + a.applyTime + '</span>'
+                    + '</div>'
+                    + '<span class="card-step">当前节点: ' + currentStep + '</span>'
+                    + '</div>'
+                    + '<div class="card-actions">' + btns + '</div>'
+                    + '</div>';
+            }).join('');
+        }
+
+        function resetApprovalFilters() {
+            if (document.getElementById('searchInput')) document.getElementById('searchInput').value = '';
+            if (document.getElementById('typeFilter')) document.getElementById('typeFilter').value = '';
+            if (document.getElementById('dateFrom')) document.getElementById('dateFrom').value = '';
+            if (document.getElementById('dateTo')) document.getElementById('dateTo').value = '';
+            if (document.getElementById('searchInputMine')) document.getElementById('searchInputMine').value = '';
+            if (document.getElementById('typeFilterMine')) document.getElementById('typeFilterMine').value = '';
+            if (document.getElementById('searchInputDone')) document.getElementById('searchInputDone').value = '';
+            if (document.getElementById('typeFilterDone')) document.getElementById('typeFilterDone').value = '';
+            renderApprovalList();
+        }
+
+        function viewDetail(id) {
+            var a = APPROVALS.find(function(x) { return x.id === id; });
+            if (!a) return;
+            var cfg = TYPE_CONFIG[a.type] || {};
+            document.getElementById('detailModalTitle').textContent = cfg.icon + ' ' + (cfg.label || a.type) + ' - ' + a.id;
+
+            var linkPage = OBJECT_LINK_MAP[a.type] || '#';
+            var objectLink = '<span class="detail-object-link" onclick="window.open(\'' + linkPage + '\', \'_blank\')">' + a.object + ' ' + a.objectName + ' ↗</span>';
+
+            var body = '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:14px;">';
+            body += '<div class="detail-info-item"><div class="info-label">审批编号</div><div class="info-value">' + a.id + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">审批类型</div><div class="info-value">' + a.type + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">关联对象</div><div class="info-value">' + objectLink + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">发起人</div><div class="info-value">' + a.applicant + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">发起时间</div><div class="info-value">' + a.applyTime + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">当前状态</div><div class="info-value"><span class="status-badge ' + getStatusClass(a.status) + '">' + a.status + '</span></div></div>';
+            body += '</div>';
+
+            body += '<div class="detail-section-title">审批流程</div>';
+            body += '<div class="timeline">';
+            a.steps.forEach(function(step) {
+                var dotClass = 'pending';
+                var titleClass = '';
+                if (step.status === '已完成') {
+                    dotClass = step.result === '驳回' ? 'rejected' : 'completed';
+                } else if (step.status === '当前') {
+                    dotClass = 'current';
+                } else {
+                    titleClass = ' pending-title';
+                }
+                body += '<div class="timeline-item">';
+                body += '<div class="timeline-dot ' + dotClass + '"></div>';
+                body += '<div class="timeline-title' + titleClass + '">' + step.title + '</div>';
+                if (step.user) body += '<div class="timeline-user">' + step.user + '</div>';
+                if (step.time) body += '<div class="timeline-time">' + step.time + '</div>';
+                if (step.status === '当前' && !step.time) body += '<div class="timeline-time" style="color:var(--primary);">待处理</div>';
+                if (step.status === '待处理') body += '<div class="timeline-time">待处理</div>';
+                if (step.result === '驳回' && step.reason) body += '<div class="timeline-reason">驳回原因: ' + step.reason + '</div>';
+                body += '</div>';
+            });
+            body += '</div>';
+
+            var typePermKey = APPROVAL_TYPE_PERM[a.type];
+            var canApproveThisType = typePermKey ? hasPermission(typePermKey) : false;
+            if (a.status === '审批中' && canApproveThisType && !_isReadOnly) {
+                body += '<div class="detail-section-title">审批意见</div>';
+                body += '<textarea id="approvalOpinion" class="opinion-input" rows="3" placeholder="请输入审批意见（选填）..."></textarea>';
+            }
+
+            document.getElementById('detailModalBody').innerHTML = body;
+            var footer = document.getElementById('detailModalFooter');
+            var isInitiator = a.applicant === _currentRoleLabel;
+            if (a.status === '审批中' && !_isReadOnly) {
+                var footerHtml = '<button class="btn btn-ghost" onclick="closeDetailModal()">关闭</button>';
+                if (canApproveThisType) {
+                    footerHtml += '<button class="btn btn-danger" onclick="closeDetailModal();openRejectModal(\'' + a.id + '\')">驳回</button>';
+                    footerHtml += '<button class="btn btn-primary" onclick="approveItem(\'' + a.id + '\')">通过</button>';
+                }
+                if (isInitiator) {
+                    footerHtml += '<button class="btn btn-withdraw" onclick="withdrawApproval(\'' + a.id + '\')">撤回</button>';
+                    footerHtml += '<button class="btn btn-ghost" onclick="closeDetailModal();openTerminateModal(\'' + a.id + '\')">终止</button>';
+                }
+                footer.innerHTML = footerHtml;
+            } else {
+                footer.innerHTML = '<button class="btn btn-ghost" onclick="closeDetailModal()">关闭</button>';
+            }
+            document.getElementById('detailModal').style.display = 'block';
+        }
+
+        function closeDetailModal() { document.getElementById('detailModal').style.display = 'none'; }
+
+        function approveItem(id) {
+            var a = APPROVALS.find(function(x) { return x.id === id; });
+            if (!a) return;
+            if (!confirm('确认通过该审批？')) return;
+            var currentStep = a.steps.find(function(s) { return s.status === '当前'; });
+            if (currentStep) {
+                currentStep.status = '已完成';
+                currentStep.time = new Date().toISOString().slice(0, 16).replace('T', ' ');
+                var opinionEl = document.getElementById('approvalOpinion');
+                if (opinionEl && opinionEl.value.trim()) {
+                    currentStep.opinion = opinionEl.value.trim();
+                }
+                var idx = a.steps.indexOf(currentStep);
+                var nextStep = null;
+                for (var i = idx + 1; i < a.steps.length; i++) {
+                    if (a.steps[i].status === '待处理') { nextStep = a.steps[i]; break; }
+                }
+                if (nextStep) {
+                    nextStep.status = '当前';
+                } else {
+                    a.status = '已通过';
+                    if (a.type === '产品入池审批') {
+                        var p = PRODUCTS.find(function(pp) { return pp.id === a.object; });
+                        if (p && p.status === '无计划') p.status = '无计划';
+                    }
+                }
+            }
+            if (a.steps.every(function(s) { return s.status === '已完成'; })) a.status = '已通过';
+            alert('审批已通过');
+            closeDetailModal();
+            renderApprovalList();
+        }
+
+        function openRejectModal(id) {
+            currentRejectId = id;
+            document.getElementById('rejectReason').value = '';
+            document.getElementById('rejectModal').style.display = 'block';
+        }
+
+        function closeRejectModal() { document.getElementById('rejectModal').style.display = 'none'; currentRejectId = null; }
+
+        function confirmReject() {
+            var reason = document.getElementById('rejectReason').value.trim();
+            if (!reason) { alert('请输入驳回原因'); return; }
+            var a = APPROVALS.find(function(x) { return x.id === currentRejectId; });
+            if (!a) return;
+            a.status = '已驳回';
+            var currentStep = a.steps.find(function(s) { return s.status === '当前'; });
+            if (currentStep) {
+                currentStep.status = '已完成';
+                currentStep.result = '驳回';
+                currentStep.reason = reason;
+                currentStep.time = new Date().toISOString().slice(0, 16).replace('T', ' ');
+            }
+            alert('已驳回');
+            closeRejectModal();
+            closeDetailModal();
+            renderApprovalList();
+        }
+
+        function withdrawApproval(id) {
+            var a = APPROVALS.find(function(x) { return x.id === id; });
+            if (!a) return;
+            if (!confirm('确认撤回该审批申请？')) return;
+            a.status = '已撤回';
+            var currentStep = a.steps.find(function(s) { return s.status === '当前'; });
+            if (currentStep) {
+                currentStep.status = '待处理';
+            }
+            alert('已撤回');
+            closeDetailModal();
+            renderApprovalList();
+        }
+
+        var currentTerminateId = null;
+        function openTerminateModal(id) {
+            currentTerminateId = id;
+            document.getElementById('terminateReason').value = '';
+            document.getElementById('terminateModal').style.display = 'block';
+        }
+        function closeTerminateModal() {
+            document.getElementById('terminateModal').style.display = 'none';
+            currentTerminateId = null;
+        }
+        function confirmTerminate() {
+            var reason = document.getElementById('terminateReason').value.trim();
+            if (!reason) { alert('请输入终止原因'); return; }
+            var a = APPROVALS.find(function(x) { return x.id === currentTerminateId; });
+            if (!a) return;
+            a.status = '已终止';
+            a.terminateReason = reason;
+            var currentStep = a.steps.find(function(s) { return s.status === '当前'; });
+            if (currentStep) currentStep.status = '待处理';
+            alert('已终止');
+            closeTerminateModal();
+            closeDetailModal();
+            renderApprovalList();
+        }
+
+        window.addEventListener('click', function(event) {
+            if (event.target === document.getElementById('detailModal')) closeDetailModal();
+            if (event.target === document.getElementById('rejectModal')) closeRejectModal();
+            if (event.target === document.getElementById('terminateModal')) closeTerminateModal();
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            renderApprovalList();
+        });
+    </script>
+</body>
+</html>

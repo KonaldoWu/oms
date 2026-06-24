@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>场外簿记OMS系统 - 系统管理</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .tab-bar {
+            display: flex;
+            gap: 0;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 14px;
+        }
+        .tab-item {
+            padding: 8px 20px;
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            color: var(--text-muted);
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.15s;
+        }
+        .tab-item:hover { color: var(--primary); }
+        .tab-item.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            font-weight: 600;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .config-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+        .config-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            cursor: pointer;
+            transition: background 0.15s;
+            user-select: none;
+        }
+        .config-card-header:hover { background: var(--border-light); }
+        .config-card-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: var(--font-size-md);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .config-card-title .config-icon {
+            font-size: 16px;
+        }
+        .config-card-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .config-card-summary {
+            font-size: var(--font-size-xs);
+            color: var(--text-muted);
+            margin-right: 8px;
+        }
+        .config-toggle-icon {
+            font-size: 12px;
+            color: var(--text-muted);
+            transition: transform 0.2s;
+        }
+        .config-card.expanded .config-toggle-icon {
+            transform: rotate(180deg);
+        }
+        .config-card-body {
+            display: none;
+            padding: 14px;
+            border-top: 1px solid var(--border-light);
+            background: var(--border-light);
+        }
+        .config-card.expanded .config-card-body {
+            display: block;
+        }
+        .config-form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .config-form-row .form-group { margin-bottom: 10px; }
+        .config-save-bar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+        }
+        .toast {
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            padding: 10px 20px;
+            background: var(--success);
+            color: white;
+            border-radius: var(--radius);
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            z-index: 2000;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s;
+            pointer-events: none;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .subject-list-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+        .subject-list-table th,
+        .subject-list-table td {
+            padding: 6px 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-light);
+            font-size: var(--font-size-sm);
+        }
+        .subject-list-table th {
+            background: var(--border-light);
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: var(--font-size-xs);
+        }
+        .log-type-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: var(--font-size-xs);
+            font-weight: 600;
+        }
+        .log-type-operation { background: var(--info-bg); color: #1E40AF; }
+        .log-type-system { background: #F5F3FF; color: #5B21B6; }
+        .log-type-email { background: var(--success-bg); color: #065F46; }
+        .log-type-nc { background: var(--warning-bg); color: #92400E; }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <nav class="sidebar"></nav>
+        <div class="main-area">
+            <div class="topbar"></div>
+            <div class="content">
+                <div class="financial-header"><h2>系统管理</h2></div>
+                <div class="tab-bar" data-logic-id="module_ibor_integration">
+                    <div class="tab-item active" onclick="switchTab('config')">系统配置</div>
+                    <div class="tab-item" onclick="switchTab('logs')">日志查询</div>
+                </div>
+
+                <div id="tab-config" class="tab-content active" data-logic-id="module_ibor_integration">
+                    <div id="configCards"></div>
+                </div>
+
+                <div id="tab-logs" class="tab-content">
+                    <div class="search-bar">
+                        <select class="search-input" id="logTypeFilter" style="flex:none;width:160px;" onchange="renderLogTable()">
+                            <option value="">所有日志类型</option>
+                            <option value="操作日志">操作日志</option>
+                            <option value="系统运行日志">系统运行日志</option>
+                            <option value="邮件解析日志">邮件解析日志</option>
+                            <option value="NC推送日志">NC推送日志</option>
+                        </select>
+                        <input type="date" id="logDateStart" class="search-input" style="flex:none;width:140px;" onchange="renderLogTable()">
+                        <span style="color:var(--text-muted);font-size:var(--font-size-sm);">至</span>
+                        <input type="date" id="logDateEnd" class="search-input" style="flex:none;width:140px;" onchange="renderLogTable()">
+                        <input type="text" id="logKeyword" placeholder="搜索关键词" class="search-input" style="flex:none;width:200px;">
+                        <button class="btn btn-primary" onclick="renderLogTable()">搜索</button>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">日志列表</span>
+                            <button class="btn btn-ghost btn-sm" onclick="exportLogs()">导出日志</button>
+                        </div>
+                        <div class="card-body-p0">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>时间</th>
+                                        <th>日志类型</th>
+                                        <th>操作人</th>
+                                        <th>操作内容</th>
+                                        <th>IP地址</th>
+                                        <th>操作结果</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="subjectModal" class="modal">
+        <div class="modal-content" style="width:500px;">
+            <div class="modal-header"><h3 id="subjectModalTitle">新增财务科目</h3></div>
+            <div class="modal-body">
+                <div class="form-group"><label>科目代码 *</label><input type="text" id="subjectCode" placeholder="如 1101"></div>
+                <div class="form-group"><label>科目名称 *</label><input type="text" id="subjectName" placeholder="如 交易性金融资产"></div>
+                <div class="form-group"><label>关联资产类型</label><select id="subjectAssetType">
+                    <option value="">请选择</option>
+                    <option value="专户资管产品">专户资管产品</option>
+                    <option value="ABS">ABS</option>
+                    <option value="信托">信托</option>
+                    <option value="碳金融">碳金融</option>
+                    <option value="通用">通用</option>
+                </select></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeSubjectModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveSubject()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="alertRuleModal" class="modal">
+        <div class="modal-content" style="width:500px;">
+            <div class="modal-header"><h3 id="alertRuleModalTitle">新增预警规则</h3></div>
+            <div class="modal-body">
+                <div class="form-group"><label>预警类型 *</label><select id="alertType">
+                    <option value="">请选择预警类型</option>
+                    <option value="净值异常波动">净值异常波动</option>
+                    <option value="交易金额超限">交易金额超限</option>
+                    <option value="NC推送失败">NC推送失败</option>
+                    <option value="邮件解析失败">邮件解析失败</option>
+                    <option value="审批超时">审批超时</option>
+                </select></div>
+                <div class="form-group"><label>阈值设置 *</label><input type="text" id="alertThreshold" placeholder="如 日波动>5% 或 金额>1000万"></div>
+                <div class="form-group"><label>通知方式</label>
+                    <div style="display:flex;gap:16px;margin-top:4px;">
+                        <label style="display:flex;align-items:center;gap:4px;font-size:var(--font-size-sm);color:var(--text-secondary);"><input type="checkbox" id="alertNotifyWechat" checked> 企微</label>
+                        <label style="display:flex;align-items:center;gap:4px;font-size:var(--font-size-sm);color:var(--text-secondary);"><input type="checkbox" id="alertNotifyEmail"> 邮件</label>
+                        <label style="display:flex;align-items:center;gap:4px;font-size:var(--font-size-sm);color:var(--text-secondary);"><input type="checkbox" id="alertNotifySms"> 短信</label>
+                    </div>
+                </div>
+                <div class="form-group"><label>通知人 *</label><input type="text" id="alertNotifyUser" placeholder="如 刘伟、孙磊"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeAlertRuleModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveAlertRule()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="js/script.js"></script>
+    <script>
+        initLayout('system.html', '系统管理');
+        if (getCurrentRoleKey() !== 'admin' && getCurrentRoleKey() !== 'demo') { alert('仅平台管理员可访问系统管理'); location.href = 'investment_manager.html'; }
+
+        var _roleKey = getCurrentRoleKey();
+        if (_roleKey !== 'admin' && _roleKey !== 'demo') {
+            location.replace('investment_manager.html');
+        }
+
+        var configData = {
+            email: {
+                protocol: 'IMAP',
+                address: 'imap.firstcapital.com.cn',
+                port: '993',
+                account: 'otc-notify@firstcapital.com.cn',
+                password: '••••••••',
+                receiveTime: '17:00'
+            },
+            nc: {
+                apiUrl: 'https://nc.firstcapital.com.cn/api/v1',
+                authKey: '••••••••••••',
+                timeout: '30',
+                retryCount: '3'
+            },
+            xml: {
+                templateFile: 'nc_voucher_template_v2.xml',
+                fieldMapping: '凭证日期→VoucherDate, 凭证字→VoucherType, 借方科目→DebitAccount, 贷方科目→CreditAccount, 金额→Amount, 摘要→Summary'
+            },
+            subjects: [
+                { code: '1101', name: '交易性金融资产', assetType: '专户资管产品' },
+                { code: '1122', name: '应收利息', assetType: '通用' },
+                { code: '1002', name: '银行存款', assetType: '通用' },
+                { code: '6001', name: '投资收益', assetType: '通用' },
+                { code: '6101', name: '公允价值变动损益', assetType: '通用' },
+                { code: '1101-ABS', name: '交易性金融资产-ABS', assetType: 'ABS(中保登)' }
+            ],
+            alertRules: [
+                { type: '净值异常波动', threshold: '日波动>5%', notify: ['企微'], notifyUser: '刘伟' },
+                { type: '交易金额超限', threshold: '单笔>5000万', notify: ['企微', '邮件'], notifyUser: '刘伟、孙磊' },
+                { type: 'NC推送失败', threshold: '连续失败>3次', notify: ['企微'], notifyUser: '管理员' },
+                { type: '邮件解析失败', threshold: '解析异常>0次', notify: ['企微'], notifyUser: '管理员' }
+            ],
+            wechat: {
+                webhook: 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+                template: '【OMS预警】${alertType} - ${detail}',
+                rules: '预警触发时推送, 工作日9:00-18:00'
+            },
+            backup: {
+                time: '02:00',
+                retainDays: '90',
+                storagePath: '/data/oms/backup'
+            }
+        };
+
+        var logData = [
+            { time: '2026-05-19 09:15:23', type: '操作日志', user: '管理员', content: '修改邮箱配置-接收时间由16:00改为17:00', ip: '192.168.1.100', result: '成功' },
+            { time: '2026-05-19 08:30:00', type: '系统运行日志', user: '系统', content: '定时任务-邮件自动接收执行完成，收到3封净值邮件', ip: '127.0.0.1', result: '成功' },
+            { time: '2026-05-18 17:30:15', type: '邮件解析日志', user: '系统', content: '解析天玑13号净值邮件，净值1.0234，日期2026-05-17', ip: '127.0.0.1', result: '成功' },
+            { time: '2026-05-18 17:31:02', type: '邮件解析日志', user: '系统', content: '解析盛乾同行2号净值邮件，净值0.9876，日期2026-05-17', ip: '127.0.0.1', result: '成功' },
+            { time: '2026-05-18 17:45:33', type: 'NC推送日志', user: '系统', content: '推送凭证VCH20260517001至NC系统', ip: '127.0.0.1', result: '成功' },
+            { time: '2026-05-18 17:46:10', type: 'NC推送日志', user: '系统', content: '推送凭证VCH20260517002至NC系统', ip: '127.0.0.1', result: '成功' },
+            { time: '2026-05-18 16:20:45', type: '操作日志', user: '张明', content: '提交投资计划书审批-ABS专项投资计划', ip: '192.168.1.52', result: '成功' },
+            { time: '2026-05-18 14:05:12', type: '操作日志', user: '李华', content: '发起交易-国君君得3640买入800万元', ip: '192.168.1.53', result: '成功' },
+            { time: '2026-05-18 10:00:00', type: '系统运行日志', user: '系统', content: '数据库备份完成，备份文件oms_backup_20260518.tar.gz', ip: '127.0.0.1', result: '成功' },
+            { time: '2026-05-17 17:50:22', type: 'NC推送日志', user: '系统', content: '推送凭证VCH20260515001至NC系统-首次推送超时，重试成功', ip: '127.0.0.1', result: '成功' },
+            { time: '2026-05-17 16:30:00', type: '邮件解析日志', user: '系统', content: '解析中信财富3791号FOF净值邮件-附件格式异常', ip: '127.0.0.1', result: '失败' },
+            { time: '2026-05-17 11:20:33', type: '操作日志', user: '刘伟', content: '审批通过-天玑13号赎回交易', ip: '192.168.1.55', result: '成功' },
+            { time: '2026-05-17 09:05:18', type: '系统运行日志', user: '系统', content: 'NC接口连接测试-响应时间28ms', ip: '127.0.0.1', result: '成功' },
+            { time: '2026-05-16 17:35:44', type: 'NC推送日志', user: '系统', content: '推送凭证VCH20260510001至NC系统-认证密钥过期', ip: '127.0.0.1', result: '失败' },
+            { time: '2026-05-16 08:45:00', type: '系统运行日志', user: '系统', content: '邮件服务连接异常-IMAP连接超时，自动切换备用线路', ip: '127.0.0.1', result: '成功' }
+        ];
+
+        var currentEditSubjectIndex = null;
+        var currentEditAlertRuleIndex = null;
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-item').forEach(function(t) { t.classList.remove('active'); });
+            document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+        }
+
+        function showToast(msg) {
+            var toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(function() { toast.classList.remove('show'); }, 2000);
+        }
+
+        function toggleConfigCard(id) {
+            var card = document.getElementById(id);
+            card.classList.toggle('expanded');
+        }
+
+        function renderConfigCards() {
+            var container = document.getElementById('configCards');
+            var html = '';
+
+            html += '<div class="config-card" id="configEmail" data-logic-id="module_ibor_integration">';
+            html += '<div class="config-card-header" onclick="toggleConfigCard(\'configEmail\')">';
+            html += '<div class="config-card-title"><span class="config-icon">📧</span>邮箱配置</div>';
+            html += '<div class="config-card-actions"><span class="config-card-summary">' + configData.email.address + ':' + configData.email.port + '</span><span class="config-toggle-icon">▼</span></div>';
+            html += '</div>';
+            html += '<div class="config-card-body">';
+            html += '<div class="config-form-row">';
+            html += '<div class="form-group"><label>协议类型</label><select id="cfgEmailProtocol"><option value="POP3"' + (configData.email.protocol === 'POP3' ? ' selected' : '') + '>POP3</option><option value="IMAP"' + (configData.email.protocol === 'IMAP' ? ' selected' : '') + '>IMAP</option></select></div>';
+            html += '<div class="form-group"><label>服务器地址</label><input type="text" id="cfgEmailAddress" value="' + configData.email.address + '"></div>';
+            html += '<div class="form-group"><label>端口</label><input type="text" id="cfgEmailPort" value="' + configData.email.port + '"></div>';
+            html += '<div class="form-group"><label>账号</label><input type="text" id="cfgEmailAccount" value="' + configData.email.account + '"></div>';
+            html += '<div class="form-group"><label>密码</label><input type="password" id="cfgEmailPassword" value="' + configData.email.password + '"></div>';
+            html += '<div class="form-group"><label>接收时间（每日）</label><input type="time" id="cfgEmailReceiveTime" value="' + configData.email.receiveTime + '"></div>';
+            html += '</div>';
+            html += '<div class="config-save-bar"><button class="btn btn-ghost" onclick="cancelConfig(\'configEmail\',\'email\')">取消</button><button class="btn btn-primary" onclick="saveEmailConfig()">保存</button></div>';
+            html += '</div></div>';
+
+            html += '<div class="config-card" id="configNC" data-logic-id="module_ibor_integration">';
+            html += '<div class="config-card-header" onclick="toggleConfigCard(\'configNC\')">';
+            html += '<div class="config-card-title"><span class="config-icon">🔗</span>NC接口配置</div>';
+            html += '<div class="config-card-actions"><span class="config-card-summary">超时' + configData.nc.timeout + 's / 重试' + configData.nc.retryCount + '次</span><span class="config-toggle-icon">▼</span></div>';
+            html += '</div>';
+            html += '<div class="config-card-body">';
+            html += '<div class="config-form-row">';
+            html += '<div class="form-group"><label>API地址</label><input type="text" id="cfgNcApiUrl" value="' + configData.nc.apiUrl + '"></div>';
+            html += '<div class="form-group"><label>认证密钥</label><input type="password" id="cfgNcAuthKey" value="' + configData.nc.authKey + '"></div>';
+            html += '<div class="form-group"><label>超时时间（秒）</label><input type="number" id="cfgNcTimeout" value="' + configData.nc.timeout + '"></div>';
+            html += '<div class="form-group"><label>重试次数</label><input type="number" id="cfgNcRetryCount" value="' + configData.nc.retryCount + '"></div>';
+            html += '</div>';
+            html += '<div class="config-save-bar"><button class="btn btn-ghost" onclick="cancelConfig(\'configNC\',\'nc\')">取消</button><button class="btn btn-primary" onclick="saveNcConfig()">保存</button></div>';
+            html += '</div></div>';
+
+            html += '<div class="config-card" id="configXML">';
+            html += '<div class="config-card-header" onclick="toggleConfigCard(\'configXML\')">';
+            html += '<div class="config-card-title"><span class="config-icon">📄</span>XML模板配置</div>';
+            html += '<div class="config-card-actions"><span class="config-card-summary">' + configData.xml.templateFile + '</span><span class="config-toggle-icon">▼</span></div>';
+            html += '</div>';
+            html += '<div class="config-card-body">';
+            html += '<div class="form-group"><label>模板文件</label><input type="text" id="cfgXmlTemplate" value="' + configData.xml.templateFile + '"></div>';
+            html += '<div class="form-group"><label>字段映射规则</label><textarea id="cfgXmlMapping" rows="3" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);resize:vertical;">' + configData.xml.fieldMapping + '</textarea></div>';
+            html += '<div class="config-save-bar"><button class="btn btn-ghost" onclick="cancelConfig(\'configXML\',\'xml\')">取消</button><button class="btn btn-primary" onclick="saveXmlConfig()">保存</button></div>';
+            html += '</div></div>';
+
+            html += '<div class="config-card" id="configSubject">';
+            html += '<div class="config-card-header" onclick="toggleConfigCard(\'configSubject\')">';
+            html += '<div class="config-card-title"><span class="config-icon">📊</span>财务科目配置</div>';
+            html += '<div class="config-card-actions"><span class="config-card-summary">共' + configData.subjects.length + '个科目</span><span class="config-toggle-icon">▼</span></div>';
+            html += '</div>';
+            html += '<div class="config-card-body">';
+            html += '<div style="margin-bottom:8px;"><button class="btn btn-primary btn-sm" onclick="openSubjectModal()">新增科目</button></div>';
+            html += '<table class="subject-list-table"><thead><tr><th>科目代码</th><th>科目名称</th><th>关联资产类型</th><th>操作</th></tr></thead><tbody id="subjectTableBody"></tbody></table>';
+            html += '</div></div>';
+
+            html += '<div class="config-card" id="configAlert">';
+            html += '<div class="config-card-header" onclick="toggleConfigCard(\'configAlert\')">';
+            html += '<div class="config-card-title"><span class="config-icon">⚠️</span>预警规则配置</div>';
+            html += '<div class="config-card-actions"><span class="config-card-summary">共' + configData.alertRules.length + '条规则</span><span class="config-toggle-icon">▼</span></div>';
+            html += '</div>';
+            html += '<div class="config-card-body">';
+            html += '<div style="margin-bottom:8px;"><button class="btn btn-primary btn-sm" onclick="openAlertRuleModal()">新增规则</button></div>';
+            html += '<table class="subject-list-table"><thead><tr><th>预警类型</th><th>阈值</th><th>通知方式</th><th>通知人</th><th>操作</th></tr></thead><tbody id="alertRuleTableBody"></tbody></table>';
+            html += '</div></div>';
+
+            html += '<div class="config-card" id="configWechat">';
+            html += '<div class="config-card-header" onclick="toggleConfigCard(\'configWechat\')">';
+            html += '<div class="config-card-title"><span class="config-icon">💬</span>企微通知配置</div>';
+            html += '<div class="config-card-actions"><span class="config-card-summary">Webhook已配置</span><span class="config-toggle-icon">▼</span></div>';
+            html += '</div>';
+            html += '<div class="config-card-body">';
+            html += '<div class="form-group"><label>Webhook地址</label><input type="text" id="cfgWechatWebhook" value="' + configData.wechat.webhook + '"></div>';
+            html += '<div class="config-form-row">';
+            html += '<div class="form-group"><label>通知模板</label><input type="text" id="cfgWechatTemplate" value="' + configData.wechat.template + '"></div>';
+            html += '<div class="form-group"><label>通知规则</label><input type="text" id="cfgWechatRules" value="' + configData.wechat.rules + '"></div>';
+            html += '</div>';
+            html += '<div class="config-save-bar"><button class="btn btn-ghost" onclick="cancelConfig(\'configWechat\',\'wechat\')">取消</button><button class="btn btn-primary" onclick="saveWechatConfig()">保存</button></div>';
+            html += '</div></div>';
+
+            html += '<div class="config-card" id="configBackup">';
+            html += '<div class="config-card-header" onclick="toggleConfigCard(\'configBackup\')">';
+            html += '<div class="config-card-title"><span class="config-icon">💾</span>数据备份配置</div>';
+            html += '<div class="config-card-actions"><span class="config-card-summary">每日' + configData.backup.time + ' / 保留' + configData.backup.retainDays + '天</span><span class="config-toggle-icon">▼</span></div>';
+            html += '</div>';
+            html += '<div class="config-card-body">';
+            html += '<div class="config-form-row">';
+            html += '<div class="form-group"><label>备份时间</label><input type="time" id="cfgBackupTime" value="' + configData.backup.time + '"></div>';
+            html += '<div class="form-group"><label>保留天数</label><input type="number" id="cfgBackupRetainDays" value="' + configData.backup.retainDays + '"></div>';
+            html += '</div>';
+            html += '<div class="form-group"><label>存储路径</label><input type="text" id="cfgBackupPath" value="' + configData.backup.storagePath + '"></div>';
+            html += '<div class="config-save-bar"><button class="btn btn-ghost" onclick="cancelConfig(\'configBackup\',\'backup\')">取消</button><button class="btn btn-primary" onclick="saveBackupConfig()">保存</button></div>';
+            html += '</div></div>';
+
+            container.innerHTML = html;
+            renderSubjectTable();
+            renderAlertRuleTable();
+        }
+
+        function cancelConfig(cardId, key) {
+            var card = document.getElementById(cardId);
+            card.classList.remove('expanded');
+        }
+
+        function saveEmailConfig() {
+            configData.email.protocol = document.getElementById('cfgEmailProtocol').value;
+            configData.email.address = document.getElementById('cfgEmailAddress').value;
+            configData.email.port = document.getElementById('cfgEmailPort').value;
+            configData.email.account = document.getElementById('cfgEmailAccount').value;
+            configData.email.receiveTime = document.getElementById('cfgEmailReceiveTime').value;
+            showToast('保存成功');
+            renderConfigCards();
+        }
+
+        function saveNcConfig() {
+            configData.nc.apiUrl = document.getElementById('cfgNcApiUrl').value;
+            configData.nc.authKey = document.getElementById('cfgNcAuthKey').value;
+            configData.nc.timeout = document.getElementById('cfgNcTimeout').value;
+            configData.nc.retryCount = document.getElementById('cfgNcRetryCount').value;
+            showToast('保存成功');
+            renderConfigCards();
+        }
+
+        function saveXmlConfig() {
+            configData.xml.templateFile = document.getElementById('cfgXmlTemplate').value;
+            configData.xml.fieldMapping = document.getElementById('cfgXmlMapping').value;
+            showToast('保存成功');
+            renderConfigCards();
+        }
+
+        function saveWechatConfig() {
+            configData.wechat.webhook = document.getElementById('cfgWechatWebhook').value;
+            configData.wechat.template = document.getElementById('cfgWechatTemplate').value;
+            configData.wechat.rules = document.getElementById('cfgWechatRules').value;
+            showToast('保存成功');
+            renderConfigCards();
+        }
+
+        function saveBackupConfig() {
+            configData.backup.time = document.getElementById('cfgBackupTime').value;
+            configData.backup.retainDays = document.getElementById('cfgBackupRetainDays').value;
+            configData.backup.storagePath = document.getElementById('cfgBackupPath').value;
+            showToast('保存成功');
+            renderConfigCards();
+        }
+
+        function renderSubjectTable() {
+            var tbody = document.getElementById('subjectTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = configData.subjects.map(function(s, i) {
+                return '<tr><td class="text-mono">' + s.code + '</td><td>' + s.name + '</td><td>' + (s.assetType || '-') + '</td><td><button class="btn btn-primary btn-sm" onclick="editSubject(' + i + ')">编辑</button> <button class="btn btn-danger btn-sm" onclick="deleteSubject(' + i + ')">删除</button></td></tr>';
+            }).join('');
+        }
+
+        function openSubjectModal(editIndex) {
+            currentEditSubjectIndex = (editIndex !== undefined) ? editIndex : null;
+            document.getElementById('subjectModalTitle').textContent = (currentEditSubjectIndex !== null) ? '编辑财务科目' : '新增财务科目';
+            if (currentEditSubjectIndex !== null) {
+                var s = configData.subjects[currentEditSubjectIndex];
+                document.getElementById('subjectCode').value = s.code;
+                document.getElementById('subjectName').value = s.name;
+                document.getElementById('subjectAssetType').value = s.assetType || '';
+            } else {
+                document.getElementById('subjectCode').value = '';
+                document.getElementById('subjectName').value = '';
+                document.getElementById('subjectAssetType').value = '';
+            }
+            document.getElementById('subjectModal').style.display = 'block';
+        }
+
+        function closeSubjectModal() {
+            document.getElementById('subjectModal').style.display = 'none';
+            currentEditSubjectIndex = null;
+        }
+
+        function saveSubject() {
+            var code = document.getElementById('subjectCode').value;
+            var name = document.getElementById('subjectName').value;
+            var assetType = document.getElementById('subjectAssetType').value;
+            if (!code || !name) { alert('请填写科目代码和科目名称'); return; }
+            if (currentEditSubjectIndex !== null) {
+                configData.subjects[currentEditSubjectIndex] = { code: code, name: name, assetType: assetType };
+            } else {
+                configData.subjects.push({ code: code, name: name, assetType: assetType });
+            }
+            closeSubjectModal();
+            renderSubjectTable();
+            showToast('保存成功');
+        }
+
+        function editSubject(index) { openSubjectModal(index); }
+
+        function deleteSubject(index) {
+            if (!confirm('确定要删除该科目吗？')) return;
+            configData.subjects.splice(index, 1);
+            renderSubjectTable();
+            showToast('删除成功');
+        }
+
+        function renderAlertRuleTable() {
+            var tbody = document.getElementById('alertRuleTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = configData.alertRules.map(function(r, i) {
+                return '<tr><td>' + r.type + '</td><td>' + r.threshold + '</td><td>' + r.notify.join('、') + '</td><td>' + r.notifyUser + '</td><td><button class="btn btn-primary btn-sm" onclick="editAlertRule(' + i + ')">编辑</button> <button class="btn btn-danger btn-sm" onclick="deleteAlertRule(' + i + ')">删除</button></td></tr>';
+            }).join('');
+        }
+
+        function openAlertRuleModal(editIndex) {
+            currentEditAlertRuleIndex = (editIndex !== undefined) ? editIndex : null;
+            document.getElementById('alertRuleModalTitle').textContent = (currentEditAlertRuleIndex !== null) ? '编辑预警规则' : '新增预警规则';
+            if (currentEditAlertRuleIndex !== null) {
+                var r = configData.alertRules[currentEditAlertRuleIndex];
+                document.getElementById('alertType').value = r.type;
+                document.getElementById('alertThreshold').value = r.threshold;
+                document.getElementById('alertNotifyWechat').checked = r.notify.indexOf('企微') >= 0;
+                document.getElementById('alertNotifyEmail').checked = r.notify.indexOf('邮件') >= 0;
+                document.getElementById('alertNotifySms').checked = r.notify.indexOf('短信') >= 0;
+                document.getElementById('alertNotifyUser').value = r.notifyUser;
+            } else {
+                document.getElementById('alertType').value = '';
+                document.getElementById('alertThreshold').value = '';
+                document.getElementById('alertNotifyWechat').checked = true;
+                document.getElementById('alertNotifyEmail').checked = false;
+                document.getElementById('alertNotifySms').checked = false;
+                document.getElementById('alertNotifyUser').value = '';
+            }
+            document.getElementById('alertRuleModal').style.display = 'block';
+        }
+
+        function closeAlertRuleModal() {
+            document.getElementById('alertRuleModal').style.display = 'none';
+            currentEditAlertRuleIndex = null;
+        }
+
+        function saveAlertRule() {
+            var type = document.getElementById('alertType').value;
+            var threshold = document.getElementById('alertThreshold').value;
+            var notifyUser = document.getElementById('alertNotifyUser').value;
+            if (!type || !threshold) { alert('请填写预警类型和阈值'); return; }
+            var notify = [];
+            if (document.getElementById('alertNotifyWechat').checked) notify.push('企微');
+            if (document.getElementById('alertNotifyEmail').checked) notify.push('邮件');
+            if (document.getElementById('alertNotifySms').checked) notify.push('短信');
+            if (notify.length === 0) { alert('请选择至少一种通知方式'); return; }
+            var rule = { type: type, threshold: threshold, notify: notify, notifyUser: notifyUser || '-' };
+            if (currentEditAlertRuleIndex !== null) {
+                configData.alertRules[currentEditAlertRuleIndex] = rule;
+            } else {
+                configData.alertRules.push(rule);
+            }
+            closeAlertRuleModal();
+            renderAlertRuleTable();
+            showToast('保存成功');
+        }
+
+        function editAlertRule(index) { openAlertRuleModal(index); }
+
+        function deleteAlertRule(index) {
+            if (!confirm('确定要删除该预警规则吗？')) return;
+            configData.alertRules.splice(index, 1);
+            renderAlertRuleTable();
+            showToast('删除成功');
+        }
+
+        function getLogTypeClass(type) {
+            var map = { '操作日志': 'log-type-operation', '系统运行日志': 'log-type-system', '邮件解析日志': 'log-type-email', 'NC推送日志': 'log-type-nc' };
+            return map[type] || 'log-type-operation';
+        }
+
+        function renderLogTable() {
+            var typeFilter = document.getElementById('logTypeFilter').value;
+            var dateStart = document.getElementById('logDateStart').value;
+            var dateEnd = document.getElementById('logDateEnd').value;
+            var keyword = (document.getElementById('logKeyword').value || '').toLowerCase();
+            var filtered = logData.filter(function(log) {
+                var matchType = !typeFilter || log.type === typeFilter;
+                var matchDateStart = !dateStart || log.time >= dateStart;
+                var matchDateEnd = !dateEnd || log.time <= dateEnd + ' 23:59:59';
+                var matchKeyword = !keyword || log.content.toLowerCase().indexOf(keyword) >= 0 || log.user.toLowerCase().indexOf(keyword) >= 0;
+                return matchType && matchDateStart && matchDateEnd && matchKeyword;
+            });
+            var tbody = document.getElementById('logTableBody');
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:20px;">暂无日志数据</td></tr>';
+                return;
+            }
+            tbody.innerHTML = filtered.map(function(log) {
+                var resultClass = log.result === '成功' ? 'status-active' : 'status-rejected';
+                return '<tr><td class="text-mono">' + log.time + '</td><td><span class="log-type-badge ' + getLogTypeClass(log.type) + '">' + log.type + '</span></td><td>' + log.user + '</td><td>' + log.content + '</td><td class="text-mono">' + log.ip + '</td><td><span class="status-badge ' + resultClass + '">' + log.result + '</span></td></tr>';
+            }).join('');
+        }
+
+        function exportLogs() {
+            showToast('日志导出成功');
+        }
+
+        window.addEventListener('click', function(event) {
+            ['subjectModal', 'alertRuleModal'].forEach(function(id) {
+                if (event.target === document.getElementById(id)) document.getElementById(id).style.display = 'none';
+            });
+        });
+
+        renderConfigCards();
+        renderLogTable();
+    </script>
+</body>
+</html>
