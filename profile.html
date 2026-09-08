@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>场外簿记OMS系统 - 个人中心</title>
+    <title>委外投资业务一体化订单管理平台 - 个人中心</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
         .profile-layout {
@@ -480,6 +480,7 @@
     </div>
 
     <script src="js/script.js"></script>
+    <script src="js/approval-detail.js"></script>
     <script>
         var AVATAR_EMOJIS = ['😀','😎','🤓','🧑‍💼','👨‍💻','👩‍💻','🦊','🐱','🐶','🐼','🦁','🐯','🦄','🐸','🦉'];
         var userNickname = '';
@@ -655,6 +656,10 @@
                 html += '<div class="notif-item-meta"><span class="notif-type-tag ' + n.level + '">' + n.type + '</span><span>' + n.time + '</span></div>';
                 html += '</div>';
                 html += '<div class="notif-item-actions">';
+                // 审批类通知增加"去审批中心"按钮，可跳转到审批中心列表页
+                if (n.page && n.page.indexOf('approval.html') >= 0) {
+                    html += '<button class="btn btn-ghost btn-sm" onclick="goToApprovalList(event)" title="前往审批中心列表">去审批中心</button>';
+                }
                 if (!n.read) {
                     html += '<button class="btn btn-ghost btn-sm" onclick="markReadSingle(event,\'' + n.id + '\')">已读</button>';
                 }
@@ -692,7 +697,20 @@
             if (!n) return;
             n.read = true;
             updateNavBadge();
-            if (n.page) { location.href = n.page; } else { renderNotifList(); renderNotifStats(); }
+            // 审批类通知（投资计划书/产品交易/兑息兑付）就地打开审批详情弹窗
+            if (n.object && n.page && n.page.indexOf('approval.html') >= 0 && typeof openApprovalDetail === 'function') {
+                openApprovalDetail(n.object);
+                renderNotifList(); renderNotifStats();
+            } else if (n.page) {
+                location.href = n.page;
+            } else {
+                renderNotifList(); renderNotifStats();
+            }
+        }
+
+        function goToApprovalList(event) {
+            event.stopPropagation();
+            location.href = 'approval.html';
         }
 
         function markReadSingle(event, id) {

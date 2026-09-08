@@ -163,17 +163,17 @@ body {
 }
 
 .sidebar-brand {
-    height: var(--topbar-height);
+    min-height: 60px;
     display: flex;
     align-items: center;
-    padding: 0 14px;
+    padding: 8px 12px;
     border-bottom: 1px solid var(--dark-border);
     flex-shrink: 0;
 }
 
 .sidebar-brand .brand-icon {
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     background: var(--primary);
     border-radius: var(--radius);
     display: flex;
@@ -188,11 +188,10 @@ body {
 .sidebar-brand .brand-text {
     margin-left: 10px;
     color: var(--dark-text);
-    font-size: var(--font-size-md);
+    font-size: 12px;
     font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    letter-spacing: 0.3px;
+    line-height: 1.4;
+    letter-spacing: 0.2px;
 }
 
 .sidebar-nav {
@@ -881,21 +880,34 @@ table tr:hover td {
     background-color: rgba(11, 17, 32, 0.6);
     z-index: 1000;
     backdrop-filter: blur(2px);
+    align-items: center;
+    justify-content: center;
+}
+.modal[style*="display: block"],
+.modal[style*="display:block"] {
+    display: flex !important;
+}
+.show-modal {
+    display: flex !important;
 }
 
 .modal-content {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    position: relative;
     background: var(--surface);
     padding: 0;
     border-radius: var(--radius-lg);
     width: 600px;
-    max-height: 80vh;
-    overflow-y: auto;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     border: 1px solid var(--border);
     box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+.modal-content.dragging {
+    user-select: none;
+    opacity: 0.92;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.3);
 }
 
 .modal-header {
@@ -904,6 +916,8 @@ table tr:hover td {
     align-items: center;
     padding: 12px 16px;
     border-bottom: 1px solid var(--border);
+    cursor: move;
+    user-select: none;
 }
 
 .modal-header h3 {
@@ -915,6 +929,8 @@ table tr:hover td {
 
 .modal-body {
     padding: 16px;
+    overflow-y: auto;
+    flex: 1;
 }
 
 .modal-footer {
@@ -1338,12 +1354,12 @@ table tr:hover td {
 }
 
 .modal-content {
-    animation: modalSlideIn 0.25s ease;
+    animation: modalContentIn 0.25s ease;
 }
 
-@keyframes modalSlideIn {
-    from { opacity: 0; transform: translate(-50%, -48%); }
-    to { opacity: 1; transform: translate(-50%, -50%); }
+@keyframes modalContentIn {
+    from { opacity: 0; transform: scale(0.97) translateY(-8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .data-table tbody tr {

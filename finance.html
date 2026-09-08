@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>财务核算 - 场外簿记OMS系统</title>
+    <title>财务核算 - 委外投资业务一体化订单管理平台</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
         .tab-bar { display: flex; gap: 0; margin-bottom: 14px; border-bottom: 2px solid var(--border); }
@@ -46,6 +46,7 @@
 
                 <div class="tab-bar">
                     <div class="tab-item active" onclick="switchTab('voucher')">凭证列表</div>
+                    <div class="tab-item" onclick="switchTab('dividend')">兑息兑付流程</div>
                     <div class="tab-item" onclick="switchTab('push')">NC推送记录</div>
                 </div>
 
@@ -81,6 +82,7 @@
                                         <th>记录编号</th>
                                         <th>产品名称</th>
                                         <th>变更类型</th>
+                                        <th>关联交易</th>
                                         <th>变更日期</th>
                                         <th>变更金额</th>
                                         <th>凭证状态</th>
@@ -89,6 +91,47 @@
                                     </tr>
                                 </thead>
                                 <tbody id="voucherTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-dividend" class="tab-content">
+                    <div class="stats-row" id="dividendStats"></div>
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="search-bar">
+                                <select class="search-input" id="divStatusFilter" style="flex:0 0 150px;" onchange="renderDividendTable()">
+                                    <option value="">全部状态</option>
+                                    <option value="待交易员确认">待交易员确认</option>
+                                    <option value="交易员已确认">交易员已确认</option>
+                                    <option value="已完成">已完成</option>
+                                    <option value="已驳回">已驳回</option>
+                                </select>
+                                <select class="search-input" id="divTypeFilter" style="flex:0 0 130px; display:none;" onchange="renderDividendTable()">
+                                </select>
+                                <input type="text" placeholder="搜索产品名称或流程编号" class="search-input" id="divSearchInput" onkeyup="if(event.key==='Enter')renderDividendTable()">
+                                <button class="btn btn-primary btn-sm" onclick="renderDividendTable()">查询</button>
+                                <button class="btn btn-ghost btn-sm" onclick="resetDividendFilters()">重置</button>
+                            </div>
+                        </div>
+                        <div class="card-body-p0">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>流程编号</th>
+                                        <th>产品名称</th>
+                                        <th>每百元应付利息(元)</th>
+                                        <th>每百元应付本金(元)</th>
+                                        <th>兑付日期</th>
+                                        <th>发起人</th>
+                                        <th>当前状态</th>
+                                        <th>凭证编号</th>
+                                        <th>iBor推送</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dividendTableBody"></tbody>
                             </table>
                         </div>
                     </div>
@@ -128,6 +171,12 @@
                 <button class="btn btn-ghost btn-sm" onclick="closeCreateVoucherModal()">✕</button>
             </div>
             <div class="modal-body">
+                <div class="form-group">
+                    <label>关联交易（可选）</label>
+                    <select id="cvTradeId" onchange="onTradeSelectForVoucher()">
+                        <option value="">请选择已成交交易（选填）</option>
+                    </select>
+                </div>
                 <div class="grid-2">
                     <div class="form-group">
                         <label>关联产品 *</label>
@@ -240,6 +289,19 @@
         </div>
     </div>
 
+    <div id="dividendModal" class="modal">
+        <div class="modal-content" style="width:680px;">
+            <div class="modal-header">
+                <h3 id="dividendDetailTitle">兑息兑付流程详情</h3>
+                <button class="btn btn-ghost btn-sm" onclick="closeDividendModal()">✕</button>
+            </div>
+            <div class="modal-body" id="dividendDetailBody"></div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeDividendModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
     <script src="js/script.js"></script>
     <script>
         initLayout('finance.html', '财务核算');
@@ -329,12 +391,13 @@
         function switchTab(tab) {
             document.querySelectorAll('.tab-item').forEach(function(t) { t.classList.remove('active'); });
             document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
-            if (tab === 'voucher') {
-                document.querySelectorAll('.tab-item')[0].classList.add('active');
-                document.getElementById('tab-voucher').classList.add('active');
-            } else {
-                document.querySelectorAll('.tab-item')[1].classList.add('active');
-                document.getElementById('tab-push').classList.add('active');
+            var tabMap = { voucher: 0, dividend: 1, push: 2 };
+            var idx = tabMap[tab] !== undefined ? tabMap[tab] : 0;
+            document.querySelectorAll('.tab-item')[idx].classList.add('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+            if (tab === 'dividend') {
+                renderDividendTable();
+                renderDividendStats();
             }
         }
 
@@ -354,6 +417,17 @@
             document.getElementById('voucherStats').innerHTML = html;
         }
 
+        function getRecordTradeId(r) {
+            if (r.tradeId) return r.tradeId;
+            if (r.source === '交易确认') {
+                var matched = TRADES.find(function(t) {
+                    return t.productId === r.productId && t.status === '已成交';
+                });
+                return matched ? matched.id : '';
+            }
+            return '';
+        }
+
         function renderVoucherTable() {
             var keyword = document.getElementById('searchInput').value.toLowerCase();
             var typeVal = document.getElementById('typeFilter').value;
@@ -366,13 +440,17 @@
             });
             var tbody = document.getElementById('voucherTableBody');
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:40px;">暂无记录</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:40px;">暂无记录</td></tr>';
                 return;
             }
             tbody.innerHTML = filtered.map(function(r) {
                 var amountStr = r.changeAmount < 0
                     ? '<span class="text-danger text-mono">' + formatMoney(r.changeAmount) + '</span>'
                     : '<span class="text-mono">' + formatMoney(r.changeAmount) + '</span>';
+                var tradeId = getRecordTradeId(r);
+                var tradeCell = tradeId
+                    ? '<span class="text-mono" style="font-size:var(--font-size-xs);color:var(--primary);">' + tradeId + '</span>'
+                    : '<span style="color:var(--text-muted);">-</span>';
                 var actionHtml = '';
                 if (r.voucherStatus === '待确认' && !_isReadOnly) {
                     actionHtml = '<button class="btn btn-info btn-sm" onclick="openEditVoucher(\'' + r.id + '\')">编辑</button> ';
@@ -393,6 +471,7 @@
                     + '<td class="text-mono" style="font-size:var(--font-size-xs);">' + r.id + '</td>'
                     + '<td style="font-weight:500;color:var(--primary);">' + r.productName + '</td>'
                     + '<td><span class="type-badge ' + getChangeTypeClass(r.changeType) + '">' + r.changeType + '</span></td>'
+                    + '<td>' + tradeCell + '</td>'
                     + '<td>' + r.changeDate + '</td>'
                     + '<td>' + amountStr + '</td>'
                     + '<td><span class="status-badge ' + getStatusClass(r.voucherStatus) + '">' + r.voucherStatus + '</span></td>'
@@ -457,9 +536,21 @@
             }).join('');
         }
 
+        function fillTradeSelect(selectedTradeId) {
+            var tradeSelect = document.getElementById('cvTradeId');
+            var html = '<option value="">请选择已成交交易（选填）</option>';
+            TRADES.filter(function(t) { return t.status === '已成交'; }).forEach(function(t) {
+                var amount = t.actualDealAmount || t.dealAmount || 0;
+                html += '<option value="' + t.id + '"' + (selectedTradeId === t.id ? ' selected' : '') + '>'
+                    + t.id + ' - ' + t.productName + ' ' + t.type + ' (' + formatMoneyFull(amount) + ')</option>';
+            });
+            tradeSelect.innerHTML = html;
+        }
+
         function openCreateVoucherModal() {
             currentEditRecordId = null;
             document.getElementById('createVoucherTitle').textContent = '创建凭证';
+            fillTradeSelect('');
             var productSelect = document.getElementById('cvProduct');
             productSelect.innerHTML = '<option value="">请选择产品</option>' + FIN_PRODUCTS.map(function(p) {
                 return '<option value="' + p.id + '">' + p.id + ' ' + p.name + '</option>';
@@ -477,15 +568,51 @@
             document.getElementById('createVoucherModal').style.display = 'block';
         }
 
+        function onTradeSelectForVoucher() {
+            var tradeId = document.getElementById('cvTradeId').value;
+            if (!tradeId) return;
+            var trade = TRADES.find(function(t) { return t.id === tradeId; });
+            if (!trade) return;
+            // 若产品下拉中不存在该交易对应的产品，则动态追加选项
+            var productSelect = document.getElementById('cvProduct');
+            var exists = false;
+            for (var i = 0; i < productSelect.options.length; i++) {
+                if (productSelect.options[i].value === trade.productId) { exists = true; break; }
+            }
+            if (!exists) {
+                var opt = document.createElement('option');
+                opt.value = trade.productId;
+                opt.text = trade.productId + ' ' + trade.productName;
+                productSelect.appendChild(opt);
+            }
+            productSelect.value = trade.productId;
+            document.getElementById('cvChangeType').value = trade.type === '赎回' ? '赎回' : '申购';
+            document.getElementById('cvChangeDate').value = trade.traderConfirmTime ? trade.traderConfirmTime.slice(0, 10) : '';
+            var amount = trade.actualDealAmount || trade.dealAmount || 0;
+            document.getElementById('cvDebitAmount').value = amount;
+            document.getElementById('cvCreditAmount').value = amount;
+            autoFillAccounts();
+        }
+
         function openEditVoucher(recordId) {
             var r = FIN_RECORDS.find(function(x) { return x.id === recordId; });
             if (!r) return;
             currentEditRecordId = recordId;
             document.getElementById('createVoucherTitle').textContent = '编辑凭证';
+            var editTradeId = r.tradeId || getRecordTradeId(r);
+            fillTradeSelect(editTradeId);
             var productSelect = document.getElementById('cvProduct');
             productSelect.innerHTML = '<option value="">请选择产品</option>' + FIN_PRODUCTS.map(function(p) {
                 return '<option value="' + p.id + '"' + (p.id === r.productId ? ' selected' : '') + '>' + p.id + ' ' + p.name + '</option>';
             }).join('');
+            // 若产品不在 FIN_PRODUCTS 列表中（如来源于交易），动态补齐选项以保证回填展示正确
+            if (r.productId && productSelect.value !== r.productId) {
+                var opt = document.createElement('option');
+                opt.value = r.productId;
+                opt.text = r.productId + ' ' + r.productName;
+                productSelect.appendChild(opt);
+                productSelect.value = r.productId;
+            }
             document.getElementById('cvChangeType').value = r.changeType;
             document.getElementById('cvChangeDate').value = r.changeDate;
             var v = FIN_VOUCHERS.find(function(x) { return x.id === r.voucherId; });
@@ -533,6 +660,8 @@
             var debitAmount = document.getElementById('cvDebitAmount').value;
             var creditAmount = document.getElementById('cvCreditAmount').value;
             var summary = document.getElementById('cvSummary').value;
+            var tradeId = document.getElementById('cvTradeId').value;
+            var trade = tradeId ? TRADES.find(function(t) { return t.id === tradeId; }) : null;
             if (!product || !changeType || !changeDate) {
                 alert('请填写产品、变更类型和变更日期');
                 return;
@@ -542,14 +671,17 @@
                 return;
             }
             var p = FIN_PRODUCTS.find(function(x) { return x.id === product; });
+            // 若产品不在 FIN_PRODUCTS 中但来自关联交易，则使用交易的产品名称
+            var productName = p ? p.name : (trade ? trade.productName : '');
             if (currentEditRecordId) {
                 var r = FIN_RECORDS.find(function(x) { return x.id === currentEditRecordId; });
                 if (r) {
                     r.productId = product;
-                    r.productName = p ? p.name : '';
+                    r.productName = productName;
                     r.changeType = changeType;
                     r.changeDate = changeDate;
                     r.changeAmount = (parseFloat(debitAmount) || parseFloat(creditAmount) || 0);
+                    r.tradeId = tradeId || '';
                     var v = FIN_VOUCHERS.find(function(x) { return x.id === r.voucherId; });
                     if (v) {
                         v.debitAccount = debitAccount;
@@ -572,18 +704,19 @@
                 FIN_RECORDS.push({
                     id: newId,
                     productId: product,
-                    productName: p ? p.name : '',
+                    productName: productName,
                     changeType: changeType,
                     changeDate: changeDate,
                     changeAmount: (parseFloat(debitAmount) || parseFloat(creditAmount) || 0),
                     voucherStatus: '待确认',
                     createMethod: '手动创建',
-                    source: '手动录入',
-                    voucherId: newVid
+                    source: tradeId ? '交易确认' : '手动录入',
+                    voucherId: newVid,
+                    tradeId: tradeId || ''
                 });
                 FIN_VOUCHERS.push({
                     id: newVid,
-                    summary: summary || (p ? p.name : '') + changeType,
+                    summary: summary || (productName + changeType),
                     debitAccount: debitAccount,
                     creditAccount: creditAccount,
                     debitAmount: parseFloat(debitAmount),
@@ -850,10 +983,141 @@
             document.getElementById('detailModal').style.display = 'block';
         }
 
+        function renderDividendTable() {
+            var statusVal = document.getElementById('divStatusFilter').value;
+            var search = (document.getElementById('divSearchInput').value || '').toLowerCase();
+            var list = DIVIDENDS.filter(function(d) {
+                if (statusVal && d.status !== statusVal) return false;
+                if (search) {
+                    var hay = (d.id + d.productName + d.initiator).toLowerCase();
+                    if (hay.indexOf(search) < 0) return false;
+                }
+                return true;
+            });
+            // 按创建时间倒序
+            list.sort(function(a, b) { return b.createTime > a.createTime ? 1 : -1; });
+
+            var tbody = document.getElementById('dividendTableBody');
+            if (list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:30px;">暂无兑息兑付流程记录</td></tr>';
+                return;
+            }
+            tbody.innerHTML = list.map(function(d) {
+                var statusClass = d.status === '已完成' ? 'success' : d.status === '已驳回' ? 'danger' : 'info';
+                var voucherCell = d.voucherId || '-';
+                var pushCell = d.pushIborStatus === '已推送' ? '<span class="status-badge success">已推送</span>' :
+                               d.pushIborStatus === '推送失败' ? '<span class="status-badge danger">推送失败</span>' :
+                               '<span class="status-badge warning">未推送</span>';
+                var actions = '<button class="btn btn-info btn-sm" onclick="viewDividendDetail(\'' + d.id + '\')">查看详情</button>';
+                // 已完成且未推送的，可以推送iBor（仅财务人员/demo）
+                if (d.status === '已完成' && d.pushIborStatus !== '已推送' && (!_isReadOnly)) {
+                    actions += ' <button class="btn btn-primary btn-sm" onclick="pushDividendToIbor(\'' + d.id + '\')">推送iBor</button>';
+                }
+                return '<tr>' +
+                    '<td class="text-mono">' + d.id + '</td>' +
+                    '<td>' + d.productName + '</td>' +
+                    '<td class="text-mono">' + d.interestPer100.toFixed(4) + '</td>' +
+                    '<td class="text-mono">' + d.principalPer100.toFixed(4) + '</td>' +
+                    '<td class="text-mono">' + d.divDate + '</td>' +
+                    '<td>' + d.initiator + '</td>' +
+                    '<td><span class="status-badge ' + statusClass + '">' + d.status + '</span></td>' +
+                    '<td class="text-mono">' + voucherCell + '</td>' +
+                    '<td>' + pushCell + '</td>' +
+                    '<td>' + actions + '</td>' +
+                    '</tr>';
+            }).join('');
+        }
+
+        function renderDividendStats() {
+            var pending = 0, completed = 0, rejected = 0, totalAmount = 0;
+            DIVIDENDS.forEach(function(d) {
+                if (d.status === '待交易员确认' || d.status === '交易员已确认') pending++;
+                if (d.status === '已完成') { completed++; totalAmount += (d.interestPer100 + d.principalPer100); }
+                if (d.status === '已驳回') rejected++;
+            });
+            var html = '<div class="stat-card"><div class="stat-icon blue">💵</div><div class="stat-info"><div class="stat-label">进行中</div><div class="stat-value">' + pending + '</div></div></div>';
+            html += '<div class="stat-card"><div class="stat-icon green">✓</div><div class="stat-info"><div class="stat-label">已完成</div><div class="stat-value">' + completed + '</div></div></div>';
+            html += '<div class="stat-card"><div class="stat-icon red">✗</div><div class="stat-info"><div class="stat-label">已驳回</div><div class="stat-value">' + rejected + '</div></div></div>';
+            html += '<div class="stat-card"><div class="stat-icon yellow">¥</div><div class="stat-info"><div class="stat-label">已完成金额(每百元)</div><div class="stat-value">' + totalAmount.toFixed(4) + '</div></div></div>';
+            document.getElementById('dividendStats').innerHTML = html;
+        }
+
+        function viewDividendDetail(dividendId) {
+            var d = DIVIDENDS.find(function(x) { return x.id === dividendId; });
+            if (!d) return;
+            var statusClass = d.status === '已完成' ? 'success' : d.status === '已驳回' ? 'danger' : 'info';
+            var html = '<div class="detail-section-title">基本信息</div>';
+            html += '<div class="detail-info-grid">';
+            html += '<div><label>流程编号</label><div class="text-mono">' + d.id + '</div></div>';
+            html += '<div><label>产品名称</label><div>' + d.productName + '</div></div>';
+            html += '<div><label>产品内部编码</label><div class="text-mono">' + (d.innerCode || '-') + '</div></div>';
+            html += '<div><label>产品外部编码</label><div class="text-mono">' + (d.externalCode || '-') + '</div></div>';
+            html += '<div><label>兑付日期</label><div class="text-mono">' + d.divDate + '</div></div>';
+            html += '<div><label>每百元应付利息</label><div class="text-mono">' + d.interestPer100.toFixed(4) + ' 元</div></div>';
+            html += '<div><label>每百元应付本金</label><div class="text-mono">' + d.principalPer100.toFixed(4) + ' 元</div></div>';
+            html += '<div><label>发起人</label><div>' + d.initiator + '</div></div>';
+            html += '<div><label>当前状态</label><div><span class="status-badge ' + statusClass + '">' + d.status + '</span></div></div>';
+            html += '<div><label>创建时间</label><div class="text-mono">' + d.createTime + '</div></div>';
+            html += '<div><label>凭证编号</label><div class="text-mono">' + (d.voucherId || '-') + '</div></div>';
+            html += '<div><label>iBor推送</label><div>' + (d.pushIborStatus === '已推送' ? '已推送 (' + d.pushIborTime + ')' : d.pushIborStatus) + '</div></div>';
+            html += '</div>';
+            if (d.remark) {
+                html += '<div class="detail-section-title">备注</div><div>' + d.remark + '</div>';
+            }
+            // 时间线
+            html += '<div class="detail-section-title">流程时间线</div>';
+            html += '<div class="timeline">';
+            d.history.forEach(function(h, idx) {
+                var dotClass = 'completed';
+                if (h.action.indexOf('驳回') >= 0) dotClass = 'rejected';
+                else if (idx === d.history.length - 1 && d.status !== '已完成' && d.status !== '已驳回') dotClass = 'current';
+                html += '<div class="timeline-item">';
+                html += '<div class="timeline-dot ' + dotClass + '"></div>';
+                html += '<div class="timeline-title">' + h.action + '</div>';
+                html += '<div class="timeline-user">' + h.user + '</div>';
+                html += '<div class="timeline-time">' + h.time + '</div>';
+                if (h.remark) html += '<div class="timeline-reason">' + h.remark + '</div>';
+                html += '</div>';
+            });
+            html += '</div>';
+
+            // 写入弹窗
+            document.getElementById('dividendDetailBody').innerHTML = html;
+            document.getElementById('dividendDetailTitle').textContent = '兑息兑付流程详情 - ' + d.id;
+            document.getElementById('dividendModal').style.display = 'block';
+        }
+
+        function pushDividendToIbor(dividendId) {
+            if (!confirm('确认将该兑息兑付记录推送到iBor系统？')) return;
+            var d = DIVIDENDS.find(function(x) { return x.id === dividendId; });
+            if (!d) return;
+            var role = getCurrentRole();
+            var now = new Date();
+            var nowStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+            d.pushIborStatus = '已推送';
+            d.pushIborTime = nowStr;
+            d.history.push({ user: role.label, action: '推送iBor', time: nowStr, remark: '推送成功' });
+            renderDividendTable();
+            renderDividendStats();
+            alert('已成功推送到iBor系统！\n推送时间：' + nowStr);
+        }
+
+        function resetDividendFilters() {
+            document.getElementById('divStatusFilter').value = '';
+            document.getElementById('divTypeFilter').value = '';
+            document.getElementById('divSearchInput').value = '';
+            renderDividendTable();
+        }
+
+        function closeDividendModal() {
+            document.getElementById('dividendModal').style.display = 'none';
+        }
+
         window.addEventListener('click', function(event) {
             if (event.target === document.getElementById('createVoucherModal')) closeCreateVoucherModal();
             if (event.target === document.getElementById('detailModal')) closeDetailModal();
             if (event.target === document.getElementById('xmlModal')) closeXmlModal();
+            if (event.target === document.getElementById('dividendModal')) closeDividendModal();
         });
 
         if (_isReadOnly) {

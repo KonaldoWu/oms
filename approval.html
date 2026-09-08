@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>场外簿记OMS系统 - 审批中心</title>
+    <title>委外投资业务一体化订单管理平台 - 审批中心</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
         .tab-bar { display: flex; gap: 0; margin-bottom: 14px; border-bottom: 2px solid var(--border); }
@@ -84,6 +84,8 @@
                                     <option value="">所有审批类型</option>
                                     <option value="产品入池审批">产品入池审批</option>
                                     <option value="投资计划书审批">投资计划书审批</option>
+                                    <option value="交易审批">交易审批</option>
+                                    <option value="兑息兑付确认">兑息兑付确认</option>
                                 </select>
                                 <input type="date" class="search-input" id="dateFrom" style="flex:0 0 150px;" placeholder="开始日期">
                                 <input type="date" class="search-input" id="dateTo" style="flex:0 0 150px;" placeholder="结束日期">
@@ -103,6 +105,8 @@
                                     <option value="">所有审批类型</option>
                                     <option value="产品入池审批">产品入池审批</option>
                                     <option value="投资计划书审批">投资计划书审批</option>
+                                    <option value="交易审批">交易审批</option>
+                                    <option value="兑息兑付确认">兑息兑付确认</option>
                                 </select>
                                 <input type="text" placeholder="搜索编号、名称" class="search-input" id="searchInputMine">
                                 <button class="btn btn-primary btn-sm" onclick="renderApprovalList()">搜索</button>
@@ -120,6 +124,8 @@
                                     <option value="">所有审批类型</option>
                                     <option value="产品入池审批">产品入池审批</option>
                                     <option value="投资计划书审批">投资计划书审批</option>
+                                    <option value="交易审批">交易审批</option>
+                                    <option value="兑息兑付确认">兑息兑付确认</option>
                                 </select>
                                 <input type="text" placeholder="搜索编号、名称" class="search-input" id="searchInputDone">
                                 <button class="btn btn-primary btn-sm" onclick="renderApprovalList()">搜索</button>
@@ -194,19 +200,24 @@
 
         var APPROVAL_TYPE_PERM = {
             '投资计划书审批': 'approvePlan',
-            '产品入池审批': 'approveProduct'
+            '产品入池审批': 'approveProduct',
+            '交易审批': 'approvePlan'
         };
 
         var currentRejectId = null;
 
         var TYPE_CONFIG = {
             '投资计划书审批': { key: 'plan', icon: '📋', iconClass: 'icon-plan', label: '计划书审批' },
-            '产品入池审批': { key: 'product', icon: '📦', iconClass: 'icon-product', label: '产品入池' }
+            '产品入池审批': { key: 'product', icon: '📦', iconClass: 'icon-product', label: '产品入池' },
+            '交易审批': { key: 'trade', icon: '💱', iconClass: 'icon-trade', label: '交易审批' },
+            '兑息兑付确认': { key: 'dividend', icon: '💵', iconClass: 'icon-finance', label: '兑息兑付' }
         };
 
         var OBJECT_LINK_MAP = {
             '投资计划书审批': 'trade.html',
-            '产品入池审批': 'product.html'
+            '产品入池审批': 'product.html',
+            '交易审批': 'trade.html',
+            '兑息兑付确认': 'finance.html'
         };
 
         var currentTab = 'todo';
@@ -239,7 +250,14 @@
                 typeFilter = document.getElementById('typeFilterDone').value;
                 searchInput = document.getElementById('searchInputDone').value.toLowerCase();
             }
-            return APPROVALS.filter(function(a) {
+            var dividendApprovals = DIVIDENDS.filter(function(d) {
+                return d.status === '待交易员确认' || d.status === '交易员已确认';
+            }).map(function(d) {
+                return buildDividendApproval(d);
+            });
+            var allApprovals = APPROVALS.concat(dividendApprovals);
+            var roleKey = getCurrentRoleKey();
+            return allApprovals.filter(function(a) {
                 if (!TYPE_CONFIG[a.type]) return false;
                 if (typeFilter && a.type !== typeFilter) return false;
                 if (searchInput) {
@@ -250,10 +268,20 @@
                 if (dateTo && a.applyTime > dateTo + ' 23:59') return false;
                 if (tab === 'todo') {
                     if (a.status !== '审批中') return false;
-                    var permKey = APPROVAL_TYPE_PERM[a.type];
-                    if (!permKey || !hasPermission(permKey)) return false;
                     var currentStep = a.steps.find(function(s) { return s.status === '当前'; });
                     if (!currentStep) return false;
+                    if (a.type === '兑息兑付确认') {
+                        if (currentStep.title === '交易员确认') {
+                            if (roleKey !== 'trader' && roleKey !== 'demo') return false;
+                        } else if (currentStep.title === '财务最终确认') {
+                            if (roleKey !== 'financial_staff' && roleKey !== 'demo') return false;
+                        } else {
+                            return false;
+                        }
+                    } else {
+                        var permKey = APPROVAL_TYPE_PERM[a.type];
+                        if (!permKey || !hasPermission(permKey)) return false;
+                    }
                 } else if (tab === 'mine') {
                     if (a.applicant !== _currentRoleLabel) return false;
                 } else if (tab === 'done') {
@@ -290,7 +318,8 @@
                 var isInitiator = a.applicant === _currentRoleLabel;
                 if (isPending && !_isReadOnly) {
                     if (canApproveThisType) {
-                        btns += ' <button class="btn btn-success btn-sm" data-logic-id="page_approval_list" onclick="approveItem(\'' + a.id + '\')">通过</button>';
+                        var approveBtnText = currentStep.indexOf('ERP流程') >= 0 ? '模拟完成' : '通过';
+                        btns += ' <button class="btn btn-success btn-sm" data-logic-id="page_approval_list" onclick="approveItem(\'' + a.id + '\')">' + approveBtnText + '</button>';
                         btns += ' <button class="btn btn-danger btn-sm" onclick="openRejectModal(\'' + a.id + '\')">驳回</button>';
                     }
                     if (isInitiator) {
@@ -332,7 +361,15 @@
 
         function viewDetail(id) {
             var a = APPROVALS.find(function(x) { return x.id === id; });
+            if (!a) {
+                var d = DIVIDENDS.find(function(x) { return x.id === id; });
+                if (d) a = buildDividendApproval(d);
+            }
             if (!a) return;
+            if (a.type === '兑息兑付确认') {
+                renderDividendDetail(a);
+                return;
+            }
             var cfg = TYPE_CONFIG[a.type] || {};
             document.getElementById('detailModalTitle').textContent = cfg.icon + ' ' + (cfg.label || a.type) + ' - ' + a.id;
 
@@ -383,10 +420,12 @@
             var footer = document.getElementById('detailModalFooter');
             var isInitiator = a.applicant === _currentRoleLabel;
             if (a.status === '审批中' && !_isReadOnly) {
+                var curStep = a.steps.find(function(s) { return s.status === '当前'; });
+                var approveBtnText = (curStep && curStep.title.indexOf('ERP流程') >= 0) ? '模拟完成' : '通过';
                 var footerHtml = '<button class="btn btn-ghost" onclick="closeDetailModal()">关闭</button>';
                 if (canApproveThisType) {
                     footerHtml += '<button class="btn btn-danger" onclick="closeDetailModal();openRejectModal(\'' + a.id + '\')">驳回</button>';
-                    footerHtml += '<button class="btn btn-primary" onclick="approveItem(\'' + a.id + '\')">通过</button>';
+                    footerHtml += '<button class="btn btn-primary" onclick="approveItem(\'' + a.id + '\')">' + approveBtnText + '</button>';
                 }
                 if (isInitiator) {
                     footerHtml += '<button class="btn btn-withdraw" onclick="withdrawApproval(\'' + a.id + '\')">撤回</button>';
@@ -401,6 +440,193 @@
 
         function closeDetailModal() { document.getElementById('detailModal').style.display = 'none'; }
 
+        function buildDividendApproval(d) {
+            var steps = [];
+            steps.push({ title: '财务发起', user: d.initiator, time: d.createTime, status: '已完成' });
+            if (d.status === '待交易员确认') {
+                steps.push({ title: '交易员确认', user: d.traderConfirmUser || '待分配', time: '', status: '当前' });
+                steps.push({ title: '财务最终确认', user: d.initiator, time: '', status: '待处理' });
+            } else if (d.status === '交易员已确认') {
+                steps.push({ title: '交易员确认', user: d.traderConfirmUser, time: d.traderConfirmTime, status: '已完成', result: d.traderModified ? '已修改' : '确认', reason: d.traderRemark });
+                steps.push({ title: '财务最终确认', user: d.initiator, time: '', status: '当前' });
+            }
+            steps.push({ title: '生成凭证', user: '系统', time: '', status: '待处理' });
+            steps.push({ title: '推送iBor', user: '系统', time: '', status: '待处理' });
+            return {
+                id: d.id,
+                type: '兑息兑付确认',
+                object: d.id,
+                objectName: d.productName + ' - 利息' + d.interestPer100 + '/本金' + d.principalPer100 + '(每百元)',
+                applicant: d.initiator,
+                applyTime: d.createTime,
+                status: '审批中',
+                steps: steps,
+                _dividendData: d
+            };
+        }
+
+        function renderDividendDetail(a) {
+            var d = a._dividendData;
+            var cfg = TYPE_CONFIG[a.type] || {};
+            document.getElementById('detailModalTitle').textContent = cfg.icon + ' ' + (cfg.label || a.type) + ' - ' + a.id;
+            var roleKey = getCurrentRoleKey();
+            var canEdit = !_isReadOnly;
+            var isTraderStep = (d.status === '待交易员确认' && (roleKey === 'trader' || roleKey === 'demo'));
+            var isFinanceStep = (d.status === '交易员已确认' && (roleKey === 'financial_staff' || roleKey === 'demo'));
+
+            var body = '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:14px;">';
+            body += '<div class="detail-info-item"><div class="info-label">审批编号</div><div class="info-value">' + a.id + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">审批类型</div><div class="info-value">' + a.type + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">发起人</div><div class="info-value">' + d.initiator + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">发起时间</div><div class="info-value">' + d.createTime + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">当前状态</div><div class="info-value"><span class="status-badge ' + getStatusClass(d.status) + '">' + d.status + '</span></div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">关联产品</div><div class="info-value">' + d.productName + ' (' + d.productId + ')</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">产品内部编码</div><div class="info-value">' + (d.innerCode || '-') + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">产品外部编码</div><div class="info-value">' + (d.externalCode || '-') + '</div></div>';
+            body += '</div>';
+
+            body += '<div class="detail-section-title">兑息兑付信息（iBor兑息兑付字段）</div>';
+            if (isTraderStep && canEdit) {
+                body += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;">';
+                body += '<div class="form-group"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">兑付日期</label><input type="date" id="divEditDate" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);" value="' + d.divDate + '"></div>';
+                body += '<div class="form-group"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">每百元应付利息(元)</label><input type="number" step="0.0001" id="divEditInterest" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);" value="' + d.interestPer100 + '"></div>';
+                body += '<div class="form-group"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">每百元应付本金(元)</label><input type="number" step="0.0001" id="divEditPrincipal" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);" value="' + d.principalPer100 + '"></div>';
+                body += '<div class="form-group"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">备注</label><input type="text" id="divEditRemark" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);" value="' + (d.remark || '') + '"></div>';
+                body += '<div class="form-group" style="grid-column:1/3;"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">确认备注 / 驳回原因</label><textarea id="divTraderRemark" rows="2" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);resize:vertical;" placeholder="选填；确认时作为备注，驳回时作为驳回原因"></textarea></div>';
+                body += '</div>';
+                body += '<input type="hidden" id="divRejectReason" value="">';
+            } else {
+                body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:6px;">';
+                body += '<div class="detail-info-item"><div class="info-label">兑付日期</div><div class="info-value">' + d.divDate + '</div></div>';
+                body += '<div class="detail-info-item"><div class="info-label">每百元应付利息</div><div class="info-value">' + d.interestPer100.toFixed(4) + ' 元</div></div>';
+                body += '<div class="detail-info-item"><div class="info-label">每百元应付本金</div><div class="info-value">' + d.principalPer100.toFixed(4) + ' 元</div></div>';
+                body += '<div class="detail-info-item" style="grid-column:1/3;"><div class="info-label">备注</div><div class="info-value">' + (d.remark || '-') + '</div></div>';
+                body += '</div>';
+                if (d.traderConfirmUser) {
+                    body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:6px;">';
+                    body += '<div class="detail-info-item"><div class="info-label">交易员确认</div><div class="info-value">' + d.traderConfirmUser + ' ' + d.traderConfirmTime + (d.traderModified ? '（已修改字段）' : '') + '</div></div>';
+                    body += '<div class="detail-info-item" style="grid-column:1/3;"><div class="info-label">交易员备注</div><div class="info-value">' + (d.traderRemark || '-') + '</div></div>';
+                    body += '</div>';
+                }
+                if (isFinanceStep && canEdit) {
+                    body += '<div class="detail-section-title">驳回原因</div>';
+                    body += '<textarea id="divRejectReason" rows="3" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);resize:vertical;" placeholder="如需驳回请填写原因..."></textarea>';
+                    body += '<input type="hidden" id="divTraderRemark" value="">';
+                }
+            }
+
+            body += '<div class="detail-section-title">处理记录</div>';
+            body += '<div class="timeline">';
+            d.history.forEach(function(h) {
+                body += '<div class="timeline-item">';
+                body += '<div class="timeline-dot completed"></div>';
+                body += '<div class="timeline-title">' + h.action + '</div>';
+                if (h.user) body += '<div class="timeline-user">' + h.user + '</div>';
+                if (h.time) body += '<div class="timeline-time">' + h.time + '</div>';
+                if (h.remark) body += '<div class="timeline-time" style="color:var(--text-secondary);">' + h.remark + '</div>';
+                body += '</div>';
+            });
+            body += '</div>';
+
+            document.getElementById('detailModalBody').innerHTML = body;
+            var footer = document.getElementById('detailModalFooter');
+            var footerHtml = '<button class="btn btn-ghost" onclick="closeDetailModal()">关闭</button>';
+            if (canEdit) {
+                if (isTraderStep) {
+                    footerHtml += '<button class="btn btn-danger" onclick="rejectDividend(\'' + d.id + '\')">驳回</button>';
+                    footerHtml += '<button class="btn btn-primary" onclick="confirmDividend(\'' + d.id + '\', false)">确认</button>';
+                } else if (isFinanceStep) {
+                    footerHtml += '<button class="btn btn-danger" onclick="rejectDividend(\'' + d.id + '\')">驳回</button>';
+                    footerHtml += '<button class="btn btn-success" onclick="confirmDividend(\'' + d.id + '\', true)">最终确认</button>';
+                }
+            }
+            footer.innerHTML = footerHtml;
+            document.getElementById('detailModal').style.display = 'block';
+        }
+
+        function confirmDividend(dividendId, isFinal) {
+            var d = DIVIDENDS.find(function(x) { return x.id === dividendId; });
+            if (!d) return;
+            var role = getCurrentRole();
+            var now = new Date();
+            var nowStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+
+            if (!isFinal) {
+                var modified = false;
+                var modifyRemark = [];
+                var newDate = document.getElementById('divEditDate').value;
+                var newInterest = parseFloat(document.getElementById('divEditInterest').value);
+                var newPrincipal = parseFloat(document.getElementById('divEditPrincipal').value);
+                var newRemark = document.getElementById('divEditRemark').value;
+                var traderRemark = document.getElementById('divTraderRemark').value;
+
+                if (newDate !== d.divDate) { modifyRemark.push('兑付日期从' + d.divDate + '改为' + newDate); d.divDate = newDate; modified = true; }
+                if (newInterest !== d.interestPer100) { modifyRemark.push('每百元应付利息从' + d.interestPer100 + '调整为' + newInterest); d.interestPer100 = newInterest; modified = true; }
+                if (newPrincipal !== d.principalPer100) { modifyRemark.push('每百元应付本金从' + d.principalPer100 + '调整为' + newPrincipal); d.principalPer100 = newPrincipal; modified = true; }
+                if (newRemark !== d.remark) { d.remark = newRemark; modified = true; }
+
+                d.traderConfirmUser = role.label;
+                d.traderConfirmTime = nowStr;
+                d.traderModified = modified;
+                d.traderRemark = traderRemark || (modified ? modifyRemark.join('，') : '确认无误');
+                d.status = '交易员已确认';
+                d.history.push({ user: role.label, action: '交易员确认' + (modified ? '（已修改字段）' : ''), time: nowStr, remark: d.traderRemark });
+            } else {
+                d.financeConfirmUser = role.label;
+                d.financeConfirmTime = nowStr;
+                d.status = '已完成';
+                d.history.push({ user: role.label, action: '财务最终确认', time: nowStr, remark: '' });
+
+                var voucherSeq = 1;
+                VOUCHERS.forEach(function(v) { if (v.id && v.id.indexOf('VCH' + d.divDate.replace(/-/g,'')) === 0) voucherSeq++; });
+                var voucherId = 'VCH' + d.divDate.replace(/-/g,'') + String(voucherSeq).padStart(3,'0');
+                VOUCHERS.push({
+                    id: voucherId,
+                    summary: d.productName + '兑息兑付(利息' + d.interestPer100 + '/本金' + d.principalPer100 + '每百元)',
+                    debitAccount: '1122-应收利息',
+                    creditAccount: '6001-投资收益',
+                    amount: d.interestPer100 + d.principalPer100,
+                    maker: role.label,
+                    makeTime: nowStr
+                });
+                d.voucherId = voucherId;
+                d.history.push({ user: '系统', action: '生成凭证' + voucherId, time: nowStr, remark: '' });
+
+                var frSeq = 1;
+                FINANCES.forEach(function(f) { if (f.id && f.id.indexOf('FR' + d.divDate.replace(/-/g,'')) === 0) frSeq++; });
+                FINANCES.push({
+                    id: 'FR' + d.divDate.replace(/-/g,'') + String(frSeq).padStart(3,'0'),
+                    productId: d.productId,
+                    productName: d.productName,
+                    changeType: '兑息兑付',
+                    changeDate: d.divDate,
+                    changeAmount: d.interestPer100 + d.principalPer100,
+                    voucherStatus: '待确认',
+                    createMethod: '系统自动生成',
+                    source: '兑息兑付流程',
+                    voucherId: voucherId
+                });
+            }
+            closeDetailModal();
+            renderApprovalList();
+            alert(isFinal ? '财务最终确认成功！已自动生成凭证' + d.voucherId + '。\n可在【财务核算】模块查看并推送到iBor。' : '交易员确认成功！已转交财务最终确认。');
+        }
+
+        function rejectDividend(dividendId) {
+            var reason = document.getElementById('divRejectReason').value || document.getElementById('divTraderRemark').value;
+            if (!reason) { alert('请填写驳回原因'); return; }
+            var d = DIVIDENDS.find(function(x) { return x.id === dividendId; });
+            if (!d) return;
+            var role = getCurrentRole();
+            var now = new Date();
+            var nowStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+            d.status = '已驳回';
+            d.history.push({ user: role.label, action: '驳回', time: nowStr, remark: reason });
+            closeDetailModal();
+            renderApprovalList();
+            alert('已驳回该兑息兑付申请。');
+        }
+
         function approveItem(id) {
             var a = APPROVALS.find(function(x) { return x.id === id; });
             if (!a) return;
@@ -412,6 +638,9 @@
                 var opinionEl = document.getElementById('approvalOpinion');
                 if (opinionEl && opinionEl.value.trim()) {
                     currentStep.opinion = opinionEl.value.trim();
+                }
+                if (a.type === '交易审批') {
+                    syncTradeOnStepComplete(a, currentStep);
                 }
                 var idx = a.steps.indexOf(currentStep);
                 var nextStep = null;
@@ -432,6 +661,39 @@
             alert('审批已通过');
             closeDetailModal();
             renderApprovalList();
+        }
+
+        function syncTradeOnStepComplete(approval, completedStep) {
+            var trade = TRADES.find(function(t) { return t.id === approval.object; });
+            if (!trade) return;
+            var title = completedStep.title;
+            var now = completedStep.time;
+            // 交易员发起后直接进入ERP流程，无OMS内3级审批
+            if (title.indexOf('ERP流程-资金划拨') === 0) {
+                // ERP步骤1完成 → 交易执行中（申购）或 还款审批中（赎回）
+                trade.erpStep1Status = '已完成';
+                trade.erpStep1Time = now;
+                if (trade.type === '赎回') {
+                    trade.status = '待到账';
+                } else {
+                    trade.status = '交易执行中';
+                }
+                if (trade.erpStep2Status === '待执行') trade.erpStep2Status = '执行中';
+            } else if (title.indexOf('ERP流程-创新金融') === 0) {
+                trade.erpStep2Status = '已完成';
+                trade.erpStep2Time = now;
+                if (trade.type === '赎回') {
+                    trade.status = '还款审批中';
+                }
+            } else if (title.indexOf('交易员线') === 0) {
+                // traderConfirmStatus 保持"待确认"，不修改
+            } else if (title === '交易员确认结束') {
+                trade.traderConfirmStatus = '已确认';
+                trade.status = '已结束';
+                trade.actualDealAmount = trade.applyAmount;
+                trade.traderConfirmTime = now;
+                trade.voucherStatus = '待生成';
+            }
         }
 
         function openRejectModal(id) {
@@ -455,6 +717,10 @@
                 currentStep.reason = reason;
                 currentStep.time = new Date().toISOString().slice(0, 16).replace('T', ' ');
             }
+            if (a.type === '交易审批') {
+                var trade = TRADES.find(function(t) { return t.id === a.object; });
+                if (trade) trade.status = '已驳回';
+            }
             alert('已驳回');
             closeRejectModal();
             closeDetailModal();
@@ -469,6 +735,10 @@
             var currentStep = a.steps.find(function(s) { return s.status === '当前'; });
             if (currentStep) {
                 currentStep.status = '待处理';
+            }
+            if (a.type === '交易审批') {
+                var trade = TRADES.find(function(t) { return t.id === a.object; });
+                if (trade) trade.status = '已撤回';
             }
             alert('已撤回');
             closeDetailModal();
@@ -494,6 +764,10 @@
             a.terminateReason = reason;
             var currentStep = a.steps.find(function(s) { return s.status === '当前'; });
             if (currentStep) currentStep.status = '待处理';
+            if (a.type === '交易审批') {
+                var trade = TRADES.find(function(t) { return t.id === a.object; });
+                if (trade) trade.status = '已终止';
+            }
             alert('已终止');
             closeTerminateModal();
             closeDetailModal();
@@ -508,6 +782,21 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             renderApprovalList();
+            // 支持从通知中心跳转过来自动打开审批详情弹窗
+            // openApproval 参数值为业务对象ID（TP/TRX/DV开头）
+            var match = location.search.match(/[?&]openApproval=([^&]+)/);
+            if (match) {
+                var openObj = decodeURIComponent(match[1]);
+                var aprId = openObj;
+                if (openObj.indexOf('DV') !== 0) {
+                    // 投资计划书(TP)/产品交易(TRX)：在APPROVALS中按object字段查找对应审批ID
+                    var apr = APPROVALS.find(function(a) { return a.object === openObj; });
+                    if (!apr) return;
+                    aprId = apr.id;
+                }
+                // DV开头为兑息兑付，viewDetail内部会自动用DIVIDENDS查找
+                viewDetail(aprId);
+            }
         });
     </script>
 </body>

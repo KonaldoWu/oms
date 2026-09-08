@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>场外簿记OMS系统 - 产品管理</title>
+    <title>委外投资业务一体化订单管理平台 - 产品管理</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
         .product-name-link { font-weight: 500; color: var(--primary); cursor: pointer; text-decoration: none; }
@@ -17,12 +17,53 @@
         .toggle-btn.enable:hover { background: var(--success); color: white; }
         .toggle-btn.disable { background: var(--danger-bg); color: var(--danger); }
         .toggle-btn.disable:hover { background: var(--danger); color: white; }
-        .modal-content.wide { width: 800px; }
+        .modal-content.wide { width: 640px; }
+        .cascade-check { display: flex; align-items: center; gap: 6px; }
+        .cascade-check input[type="checkbox"] { margin: 0; cursor: pointer; flex: none; }
         .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .detail-section-title { font-size:13px;font-weight:600;color:var(--text-primary);padding:8px 0 6px;border-bottom:1px solid var(--border-light);margin-bottom:8px; }
         .form-hint { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
         .form-group .required-star { color: red; }
+        /* PRD：账套类型专属字段区域（黄色区域） */
+        .account-type-fields { background: #FFFBEB; border: 1px solid #FDE68A; border-radius: var(--radius); padding: 12px; margin-top: 12px; }
+        .account-type-fields .account-type-fields-title { font-size: 12px; font-weight: 600; color: #B45309; margin-bottom: 8px; }
+        /* 年化收益率：输入框右侧百分号，仅填数值 */
+        .input-suffix-wrap { position: relative; }
+        .input-suffix-wrap input { width: 100%; padding-right: 30px; }
+        .input-suffix { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 12px; pointer-events: none; }
         .btn-group { display: flex; gap: 8px; justify-content: flex-end; }
         .btn-group .btn { min-width: 90px; }
+
+        .cascade-filter { position: relative; flex: none; width: 220px; }
+        .cascade-trigger { display: flex; align-items: center; justify-content: space-between; width: 100%; cursor: pointer; text-align: left; background: var(--surface); }
+        .cascade-trigger:disabled, .cascade-trigger.disabled { background: var(--border-light); cursor: not-allowed; color: var(--text-muted); }
+        .cascade-trigger .caret { font-size: 10px; color: var(--text-muted); margin-left: 6px; }
+        .cascade-panel { display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 50; flex-direction: row; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); min-width: 320px; max-height: 280px; overflow: hidden; }
+        .cascade-panel.show { display: flex; }
+        .cascade-col { min-width: 150px; width: 160px; max-height: 280px; overflow-y: auto; border-right: 1px solid var(--border-light); }
+        .cascade-col:last-child { border-right: none; }
+        .cascade-col-header { padding: 6px 12px; font-size: var(--font-size-xs); color: var(--text-muted); background: var(--border-light); position: sticky; top: 0; }
+        .cascade-item { padding: 7px 12px; font-size: var(--font-size-sm); cursor: pointer; white-space: nowrap; color: var(--text-secondary); }
+        .cascade-item:hover { background: var(--info-bg); color: var(--primary); }
+        .cascade-item.active { background: var(--info-bg); color: var(--primary); font-weight: 600; }
+        .cascade-item.all { color: var(--text-muted); }
+
+        th.sortable { cursor: pointer; user-select: none; }
+        th.sortable:hover { color: var(--primary); }
+        .sort-indicator { display: inline-block; margin-left: 2px; color: var(--text-muted); font-size: 10px; min-width: 10px; }
+        th.sortable.sorted { color: var(--primary); }
+        th.sortable.sorted .sort-indicator { color: var(--primary); }
+
+        .table-pagination { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-top: 1px solid var(--border-light); flex-wrap: wrap; gap: 8px; }
+        .page-info { font-size: var(--font-size-xs); color: var(--text-muted); }
+        .page-size-wrap { display: flex; align-items: center; gap: 6px; font-size: var(--font-size-xs); color: var(--text-muted); }
+        .page-size-select { padding: 3px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: var(--font-size-xs); background: var(--surface); cursor: pointer; }
+        .page-buttons { display: flex; align-items: center; gap: 4px; }
+        .page-btn { min-width: 26px; padding: 3px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text-secondary); font-size: var(--font-size-xs); cursor: pointer; transition: all 0.15s; }
+        .page-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+        .page-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+        .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .page-ellipsis { padding: 0 4px; color: var(--text-muted); font-size: var(--font-size-xs); }
     </style>
 </head>
 <body>
@@ -48,26 +89,51 @@
                     <div class="card-header"><span class="card-title">筛选条件</span></div>
                     <div class="card-body">
                         <div class="search-bar">
-                            <select class="search-input" id="filterAccountType" style="flex:none;width:150px;">
+                            <select class="search-input" id="filterAccountType" style="flex:none;width:160px;">
                                 <option value="">全部账套类型</option>
-                                <option value="专户资管">专户资管</option>
-                                <option value="ABS">ABS</option>
-                                <option value="信托">信托</option>
-                                <option value="票据">票据</option>
+                                <option value="结构化（保交所）">结构化（保交所）</option>
+                                <option value="专户（资管计划）">专户（资管计划）</option>
+                                <option value="信托计划">信托计划</option>
                                 <option value="碳金融">碳金融</option>
                             </select>
-                            <select class="search-input" id="filterDept" style="flex:none;width:180px;">
-                                <option value="">全部部门</option>
-                                <option value="创新金融业务总部">创新金融业务总部</option>
-                                <option value="FICC固定收益业务总部">FICC固定收益业务总部</option>
-                                <option value="证券投资部">证券投资部</option>
+                            <div class="cascade-filter" id="investorCascade">
+                                <button type="button" class="search-input cascade-trigger" id="investorTrigger" onclick="toggleCascade(event)">
+                                    <span id="investorLabel">全部投资组</span>
+                                    <span class="caret">▼</span>
+                                </button>
+                                <div class="cascade-panel" id="investorPanel">
+                                    <div class="cascade-col">
+                                        <div class="cascade-col-header">部门</div>
+                                        <div id="cascadeDeptList"></div>
+                                    </div>
+                                    <div class="cascade-col">
+                                        <div class="cascade-col-header">投资组</div>
+                                        <div id="cascadeGroupList"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <select class="search-input" id="filterProductType" style="flex:none;width:150px;">
+                                <option value="">全部产品类型</option>
+                                <option value="其它类基金">其它类基金</option>
+                                <option value="另类投资基金">另类投资基金</option>
+                                <option value="FOF基金">FOF基金</option>
+                                <option value="理财">理财</option>
+                                <option value="非标准资产支持证券">非标准资产支持证券</option>
+                                <option value="信托计划">信托计划</option>
+                                <option value="碳金融">碳金融</option>
                             </select>
-                            <select class="search-input" id="filterStatus" style="flex:none;width:120px;">
-                                <option value="">全部状态</option>
-                                <option value="在投">在投</option>
-                                <option value="无计划">无计划</option>
-                            </select>
-                            <input type="text" placeholder="搜索产品名称/ID/内部编码/外部编码" class="search-input" id="filterKeyword">
+                            <div class="cascade-filter" id="statusCascade" style="width:140px;">
+                                <button type="button" class="search-input cascade-trigger" id="statusTrigger" onclick="toggleStatusCascade(event)">
+                                    <span id="statusLabel">全部状态</span>
+                                    <span class="caret">▼</span>
+                                </button>
+                                <div class="cascade-panel" id="statusPanel" style="left:0;right:0;min-width:auto;flex-direction:column;">
+                                    <div class="cascade-col" style="width:auto;border-right:none;">
+                                        <div id="statusCheckList"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <input type="text" placeholder="搜索产品名称/内部编码/外部编码" class="search-input" id="filterKeyword">
                             <button class="btn btn-primary btn-sm" onclick="applyFilters()">搜索</button>
                             <button class="btn btn-ghost btn-sm" onclick="resetFilters()">重置</button>
                         </div>
@@ -84,7 +150,6 @@
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>产品ID</th>
                                         <th>产品名称</th>
                                         <th>内部编码</th>
                                         <th>外部编码</th>
@@ -92,15 +157,16 @@
                                         <th>账套类型</th>
                                         <th>投资状态</th>
                                         <th>单位净值</th>
-                                        <th>最新净值日期</th>
+                                        <th class="sortable" onclick="toggleSort('navDate')">最新净值日期<span class="sort-indicator" id="sort-navDate"></span></th>
                                         <th>投资组</th>
-                                        <th>入池日期</th>
+                                        <th class="sortable" onclick="toggleSort('poolTime')">入池日期<span class="sort-indicator" id="sort-poolTime"></span></th>
                                         <th>操作</th>
                                     </tr>
                                 </thead>
                                 <tbody id="productTableBody"></tbody>
                             </table>
                         </div>
+                        <div class="table-pagination" id="tablePagination"></div>
                     </div>
                 </div>
             </div>
@@ -108,21 +174,26 @@
     </div>
 
     <div id="productModal" class="modal" data-logic-id="modal_add_product">
-        <div class="modal-content wide">
+        <div class="modal-content" style="width:820px;max-height:85vh;overflow-y:auto;">
             <div class="modal-header">
                 <h3 id="modalTitle">产品入池</h3>
                 <button class="btn btn-ghost btn-sm" onclick="closeProductModal()">✕</button>
             </div>
             <div class="modal-body">
-                <div class="grid-3" style="gap:10px;">
-                    <div class="form-group"><label>产品名称 <span class="required-star">*</span></label><input type="text" id="fName" required maxlength="100"></div>
-                    <div class="form-group"><label>内部编码</label><input type="text" id="fHengtaiCode" readonly style="background:var(--border-light);"><div class="form-hint">系统自动生成</div></div>
+                <div class="detail-section-title">基础信息</div>
+                <div class="grid-3">
+                    <div class="form-group"><label>产品名称 <span class="required-star">*</span></label><input type="text" id="fName" required maxlength="100" placeholder="资管计划全称/合同全称"></div>
+                    <div class="form-group"><label>产品简称</label><input type="text" id="fShortName" placeholder="选填，报表及交易展示名称"></div>
                     <div class="form-group"><label>外部编码</label><input type="text" id="fExternalCode" placeholder="选填，对接外部系统"></div>
-                    <div class="form-group"><label>产品类型 <span class="required-star">*</span></label><select id="fProductType" required><option value="">请选择</option><option value="权益类">权益类</option><option value="固收类">固收类</option><option value="混合型">混合型</option><option value="FOF">FOF</option></select></div>
-                    <div class="form-group"><label>账套类型 <span class="required-star">*</span></label><select id="fAccountType" required onchange="onAccountTypeChange()"><option value="">请选择</option><option value="专户资管">专户资管</option><option value="ABS">ABS</option><option value="信托">信托</option><option value="票据">票据</option><option value="碳金融">碳金融</option></select><div class="form-hint">从iBor同步</div></div>
-                    <div class="form-group"><label>投资组 <span class="required-star">*</span></label><select id="fGroup" required><option value="">请选择投资组</option></select><div class="form-hint">按用户权限过滤</div></div>
-                    <div class="form-group" style="grid-column:span 3;"><label>产品描述</label><textarea id="fDescription" rows="3" maxlength="500" placeholder="选填，最多500字符" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);resize:vertical;"></textarea></div>
+                    <div class="form-group"><label>账套类型 <span class="required-star">*</span></label><select id="fAccountType" required onchange="onAccountTypeChange()"><option value="">请选择</option><option value="结构化（保交所）">结构化（保交所）</option><option value="专户（资管计划）">专户（资管计划）</option><option value="信托计划">信托计划</option><option value="碳金融">碳金融</option></select><div class="form-hint">选择后展示对应黄色区域字段</div></div>
+                    <div class="form-group"><label>产品类型 <span class="required-star">*</span></label><select id="fProductType" required disabled><option value="">请先选择账套类型</option></select><div class="form-hint" id="fProductTypeHint">账套类型确认后自动限定枚举</div></div>
+                    <div class="form-group"><label>资产类型映射</label><input type="text" id="fAssetType" readonly style="background:var(--border-light);" placeholder="选择账套类型后自动映射"></div>
+                    <div class="form-group"><label>内部编码</label><input type="text" id="fHengtaiCode" readonly style="background:var(--border-light);"><div class="form-hint">系统自动生成</div></div>
+                    <div class="form-group"><label>备注</label><input type="text" id="fRemark" placeholder="选填" maxlength="200"></div>
                 </div>
+
+                <!-- PRD（一）产品入池信息补充：确认账套类型后，展示对应黄色区域字段 -->
+                <div id="fAssetTypeFields"></div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-ghost" onclick="closeProductModal()">取消</button>
@@ -143,6 +214,7 @@
                     <input type="file" id="batchFileInput" accept=".xlsx">
                     <label for="batchFileInput">选择Excel文件</label>
                     <p>支持 .xlsx 格式，<a href="javascript:void(0)" onclick="downloadTemplate()" style="color:var(--primary);">下载导入模板</a></p>
+                    <p class="form-hint">模板按账套类型分为4个sheet：专户（资管计划）/ 信托计划 / 结构化（保交所）/ 碳金融，字段与单个入池一致</p>
                 </div>
                 <div id="batchResult" style="display:none;"></div>
                 <div id="batchPreview" style="display:none;"></div>
@@ -150,6 +222,60 @@
             <div class="modal-footer">
                 <button class="btn btn-ghost" onclick="closeBatchImportModal()">取消</button>
                 <button class="btn btn-primary" id="btnConfirmBatch" onclick="confirmBatchImport()" disabled>确认入池</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 兑息兑付弹窗（仅信托/ABS中保登产品展示，字段来自iBor兑息兑付数据主题） -->
+    <div id="dividendModal" class="modal" data-logic-id="modal_dividend">
+        <div class="modal-content" style="width:560px;">
+            <div class="modal-header">
+                <h3>兑息兑付登记</h3>
+                <button class="btn btn-ghost btn-sm" onclick="closeDividendModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>产品名称 <span class="required-star">*</span></label>
+                    <input type="text" id="divProductName" readonly style="background:var(--border-light);">
+                    <input type="hidden" id="divProductId">
+                </div>
+                <div class="grid-2" style="gap:10px;">
+                    <div class="form-group">
+                        <label>产品内部编码</label>
+                        <input type="text" id="divInnerCode" readonly style="background:var(--border-light);">
+                    </div>
+                    <div class="form-group">
+                        <label>产品外部编码</label>
+                        <input type="text" id="divExternalCode" readonly style="background:var(--border-light);">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:6px;padding:8px 10px;background:var(--info-bg);border-radius:var(--radius);font-size:12px;color:var(--text-secondary);">
+                    <span id="divAssetTypeHint"></span>
+                </div>
+                <div class="grid-2" style="gap:10px;margin-top:10px;">
+                    <div class="form-group">
+                        <label>兑付日期 <span class="required-star">*</span></label>
+                        <input type="date" id="divDate">
+                    </div>
+                    <div class="form-group">
+                        <label>每百元应付利息(元) <span class="required-star">*</span></label>
+                        <input type="number" id="divInterestPer100" step="0.0001" placeholder="iBor字段，需转换为每百元">
+                    </div>
+                </div>
+                <div class="grid-2" style="gap:10px;">
+                    <div class="form-group">
+                        <label>每百元应付本金(元) <span class="required-star">*</span></label>
+                        <input type="number" id="divPrincipalPer100" step="0.0001" placeholder="iBor字段，需转换为每百元">
+                    </div>
+                    <div class="form-group">
+                        <label>备注</label>
+                        <input type="text" id="divRemark" placeholder="选填">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeDividendModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveDividend()">保存</button>
             </div>
         </div>
     </div>
@@ -162,9 +288,17 @@
             canAddProduct: hasPermission('addProduct'),
             canEditProduct: hasPermission('editProduct'),
             canBatchImport: hasPermission('batchImportProduct'),
+            canCreateTrade: hasPermission('createTrade'),
+            isTrader: getCurrentRoleKey() === 'trader' || getCurrentRoleKey() === 'demo',
+            isFinance: getCurrentRoleKey() === 'financial_staff' || getCurrentRoleKey() === 'demo',
+            isDemo: getCurrentRoleKey() === 'demo',
             isReadOnly: isReadOnly()
         };
         var editingId = null;
+
+        var _sort = { field: 'navDate', order: 'desc' };
+        var _page = { current: 1, size: 20 };
+        var _cascade = { dept: '', groups: [] };
 
         function renderStats() {
             var counts = { '在投': 0, '无计划': 0 };
@@ -187,35 +321,65 @@
             document.getElementById('statsRow').innerHTML = html;
         }
 
+        var _statusSelected = [];
         function getFilteredProducts() {
             var accountType = document.getElementById('filterAccountType').value;
-            var dept = document.getElementById('filterDept').value;
-            var status = document.getElementById('filterStatus').value;
+            var productType = document.getElementById('filterProductType').value;
             var keyword = document.getElementById('filterKeyword').value.toLowerCase().trim();
             return PRODUCTS.filter(function(p) {
                 if (accountType && p.accountType !== accountType) return false;
-                if (dept && p.dept !== dept) return false;
-                if (status && p.status !== status) return false;
+                if (_cascade.dept && p.dept !== _cascade.dept) return false;
+                if (_cascade.groups.length > 0 && _cascade.groups.indexOf(p.group) === -1) return false;
+                if (productType && p.productType !== productType) return false;
+                if (_statusSelected.length > 0 && _statusSelected.indexOf(p.status) === -1) return false;
                 if (keyword) {
-                    var haystack = (p.id + p.name + p.hengtaiCode + (p.externalCode||'')).toLowerCase();
+                    var haystack = (p.name + (p.hengtaiCode||'') + (p.externalCode||'')).toLowerCase();
                     if (haystack.indexOf(keyword) === -1) return false;
                 }
                 return true;
             });
         }
 
+        function navSortKey(p) {
+            return p.navDate || p.poolTime || '';
+        }
+        function getSortedProducts(list) {
+            var sorted = list.slice();
+            if (!_sort.field) return sorted;
+            var field = _sort.field;
+            var dir = _sort.order === 'desc' ? -1 : 1;
+            sorted.sort(function(a, b) {
+                var va = field === 'navDate' ? navSortKey(a) : (a[field] || '');
+                var vb = field === 'navDate' ? navSortKey(b) : (b[field] || '');
+                if (va < vb) return -1 * dir;
+                if (va > vb) return 1 * dir;
+                return 0;
+            });
+            return sorted;
+        }
+
         function renderTable() {
-            var list = getFilteredProducts();
+            var list = getSortedProducts(getFilteredProducts());
             document.getElementById('productCount').textContent = '共 ' + list.length + ' 个产品';
+            var total = list.length;
+            var totalPages = Math.max(1, Math.ceil(total / _page.size));
+            if (_page.current > totalPages) _page.current = totalPages;
+            if (_page.current < 1) _page.current = 1;
+            var start = (_page.current - 1) * _page.size;
+            var pageData = list.slice(start, start + _page.size);
             var tbody = document.getElementById('productTableBody');
-            if (list.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:30px;">暂无匹配产品</td></tr>';
+            if (pageData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--text-muted);padding:30px;">暂无匹配产品</td></tr>';
+                renderPagination(total, totalPages);
                 return;
             }
             var html = '';
-            list.forEach(function(p) {
+            pageData.forEach(function(p) {
                 var statusBadge = '<span class="status-badge ' + getStatusClass(p.status) + '">' + p.status + '</span>';
                 var navStr = p.nav ? p.nav.toFixed(4) : '-';
+                var navCell = p.nav
+                    ? '<td class="text-mono" title="真实值：' + p.nav + '">' + navStr + '</td>'
+                    : '<td class="text-mono">' + navStr + '</td>';
                 var nameLink = '<a class="product-name-link" href="product_detail.html?id=' + p.id + '">' + p.name + '</a>';
                 var actionHtml = '<a class="btn btn-info btn-sm" href="product_detail.html?id=' + p.id + '">详情</a> ';
                 if (!_perm.isReadOnly) {
@@ -224,19 +388,21 @@
                             actionHtml += '<button class="btn btn-ghost btn-sm" data-logic-id="modal_edit_product" onclick="openEditModal(\'' + p.id + '\')">编辑</button> ';
                         }
                     }
-                    if (hasPermission('createTrade') && (p.status === '在投' || p.status === '无计划')) {
-                        actionHtml += '<button class="btn btn-primary btn-sm" onclick="alert(\'本期暂不涉及交易功能\')">发起交易</button>';
+                    if ((_perm.canCreateTrade || _perm.isDemo) && (p.status === '在投' || p.status === '无计划')) {
+                        actionHtml += '<button class="btn btn-primary btn-sm" onclick="initiateTradeFromProduct(\'' + p.id + '\')">发起交易</button>';
+                    }
+                    if ((_perm.isFinance || _perm.isDemo) && p.status === '在投' && (p.assetType === '信托' || p.assetType === 'ABS(中保登)')) {
+                        actionHtml += ' <button class="btn btn-info btn-sm" onclick="openDividendModal(\'' + p.id + '\')">兑息兑付</button>';
                     }
                 }
                 html += '<tr>' +
-                    '<td class="text-mono">' + p.id + '</td>' +
                     '<td>' + nameLink + '</td>' +
                     '<td class="text-mono">' + (p.hengtaiCode || '-') + '</td>' +
                     '<td class="text-mono">' + (p.externalCode || '-') + '</td>' +
                     '<td>' + p.productType + '</td>' +
                     '<td><span class="type-badge type-plan-notice">' + (p.accountType || '-') + '</span></td>' +
                     '<td>' + statusBadge + '</td>' +
-                    '<td class="text-mono">' + navStr + '</td>' +
+                    navCell +
                     '<td>' + (p.navDate || '-') + '</td>' +
                     '<td>' + (p.group || '-') + '</td>' +
                     '<td>' + (p.poolTime || '-') + '</td>' +
@@ -244,29 +410,221 @@
                     '</tr>';
             });
             tbody.innerHTML = html;
+            renderPagination(total, totalPages);
         }
 
-        function applyFilters() { renderTable(); }
+        function renderPagination(total, totalPages) {
+            var el = document.getElementById('tablePagination');
+            if (total === 0) { el.innerHTML = ''; return; }
+            var startIdx = (_page.current - 1) * _page.size + 1;
+            var endIdx = Math.min(_page.current * _page.size, total);
+            var sizes = [20, 50, 100];
+            var sizeHtml = '<div class="page-size-wrap">每页<select class="page-size-select" onchange="changePageSize(this.value)">';
+            sizes.forEach(function(s) {
+                sizeHtml += '<option value="' + s + '"' + (s === _page.size ? ' selected' : '') + '>' + s + '</option>';
+            });
+            sizeHtml += '</select>条</div>';
+            var infoHtml = '<div class="page-info">第 ' + startIdx + '-' + endIdx + ' 条 / 共 ' + total + ' 条</div>';
+            var btnHtml = '<div class="page-buttons">';
+            btnHtml += '<button class="page-btn" onclick="goPage(1)"' + (_page.current <= 1 ? ' disabled' : '') + '>首页</button>';
+            btnHtml += '<button class="page-btn" onclick="goPage(' + (_page.current - 1) + ')"' + (_page.current <= 1 ? ' disabled' : '') + '>上一页</button>';
+            var from = Math.max(1, _page.current - 2);
+            var to = Math.min(totalPages, _page.current + 2);
+            if (from > 1) { btnHtml += '<span class="page-ellipsis">…</span>'; }
+            for (var i = from; i <= to; i++) {
+                btnHtml += '<button class="page-btn' + (i === _page.current ? ' active' : '') + '" onclick="goPage(' + i + ')">' + i + '</button>';
+            }
+            if (to < totalPages) { btnHtml += '<span class="page-ellipsis">…</span>'; }
+            btnHtml += '<button class="page-btn" onclick="goPage(' + (_page.current + 1) + ')"' + (_page.current >= totalPages ? ' disabled' : '') + '>下一页</button>';
+            btnHtml += '<button class="page-btn" onclick="goPage(' + totalPages + ')"' + (_page.current >= totalPages ? ' disabled' : '') + '>末页</button>';
+            btnHtml += '</div>';
+            el.innerHTML = sizeHtml + infoHtml + btnHtml;
+        }
+
+        function goPage(page) {
+            var total = getFilteredProducts().length;
+            var totalPages = Math.max(1, Math.ceil(total / _page.size));
+            if (page < 1 || page > totalPages) return;
+            _page.current = page;
+            renderTable();
+        }
+
+        function changePageSize(size) {
+            _page.size = parseInt(size, 10) || 20;
+            _page.current = 1;
+            renderTable();
+        }
+
+        function toggleSort(field) {
+            if (_sort.field === field) {
+                _sort.order = _sort.order === 'asc' ? 'desc' : (_sort.order === 'desc' ? '' : 'asc');
+                if (_sort.order === '') _sort.field = '';
+            } else {
+                _sort.field = field;
+                _sort.order = 'asc';
+            }
+            updateSortIndicators();
+            renderTable();
+        }
+
+        function updateSortIndicators() {
+            ['navDate', 'poolTime'].forEach(function(f) {
+                var el = document.getElementById('sort-' + f);
+                var th = el ? el.parentElement : null;
+                if (_sort.field === f) {
+                    el.textContent = _sort.order === 'asc' ? '▲' : '▼';
+                    if (th) th.classList.add('sorted');
+                } else {
+                    el.textContent = '⇅';
+                    if (th) th.classList.remove('sorted');
+                }
+            });
+        }
+
+        function applyFilters() { _page.current = 1; renderTable(); }
         function resetFilters() {
             document.getElementById('filterAccountType').value = '';
-            document.getElementById('filterDept').value = '';
-            document.getElementById('filterStatus').value = '';
+            _cascade.dept = '';
+            _cascade.groups = [];
+            updateInvestorLabel();
+            renderCascadeList();
+            document.getElementById('filterProductType').value = '';
+            _statusSelected = [];
+            updateStatusLabel();
+            renderStatusCheckList();
             document.getElementById('filterKeyword').value = '';
+            _sort.field = 'navDate';
+            _sort.order = 'desc';
+            updateSortIndicators();
+            _page.current = 1;
             renderTable();
         }
 
         function openAddModal() {
             editingId = null;
             document.getElementById('modalTitle').textContent = '产品入池';
+            document.getElementById('fAssetTypeFields').innerHTML = '';
             document.getElementById('fName').value = '';
+            document.getElementById('fShortName').value = '';
             document.getElementById('fHengtaiCode').value = '';
             document.getElementById('fExternalCode').value = '';
             document.getElementById('fProductType').value = '';
             document.getElementById('fAccountType').value = '';
-            populateGroupSelect();
-            document.getElementById('fGroup').value = '';
-            document.getElementById('fDescription').value = '';
+            document.getElementById('fAssetType').value = '';
+            document.getElementById('fRemark').value = '';
+            document.getElementById('fName').readOnly = false;
+            document.getElementById('fAccountType').disabled = false;
+            onAccountTypeChange();
             document.getElementById('productModal').style.display = 'block';
+        }
+
+        // 从产品列表发起交易：跳转到交易管理页面并携带产品ID
+        function initiateTradeFromProduct(productId) {
+            var p = PRODUCTS.find(function(x) { return x.id === productId; });
+            if (!p) return;
+            // PRD 3.4.1 入口二：产品列表页对"在投"状态且有已通过计划书的产品显示"发起交易"按钮
+            // 校验是否存在已通过的计划书
+            var passedPlans = PLANS.filter(function(pl) {
+                return pl.status === '已通过' && pl.products.indexOf(productId) >= 0;
+            });
+            if (passedPlans.length === 0) {
+                if (!confirm('该产品暂无已通过的投资计划书。\n\n是否仍要跳转到交易管理页面手工选择计划书发起交易？\n（建议先在交易管理-投资计划书中提交并审批通过计划书）')) return;
+            }
+            // 跳转到 trade.html，URL参数自动打开交易发起弹窗
+            window.location.href = 'trade.html?productId=' + encodeURIComponent(productId);
+        }
+
+        // ============ 兑息兑付登记（仅信托/ABS中保登，字段来自iBor兑息兑付数据主题） ============
+        function openDividendModal(productId) {
+            var p = PRODUCTS.find(function(x) { return x.id === productId; });
+            if (!p) { alert('未找到产品'); return; }
+            document.getElementById('divProductId').value = productId;
+            document.getElementById('divProductName').value = p.name;
+            document.getElementById('divInnerCode').value = p.hengtaiCode || '';
+            document.getElementById('divExternalCode').value = p.externalCode || '';
+            document.getElementById('divAssetTypeHint').textContent = '资产类型：' + p.assetType + '（iBor兑息兑付字段：兑付日期、每百元应付利息、每百元应付本金）';
+            // 默认值：今天日期
+            var today = new Date();
+            var yyyy = today.getFullYear();
+            var mm = String(today.getMonth() + 1).padStart(2, '0');
+            var dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('divDate').value = yyyy + '-' + mm + '-' + dd;
+            document.getElementById('divInterestPer100').value = '';
+            document.getElementById('divPrincipalPer100').value = '';
+            document.getElementById('divRemark').value = '';
+            document.getElementById('dividendModal').style.display = 'block';
+        }
+
+        function closeDividendModal() {
+            document.getElementById('dividendModal').style.display = 'none';
+        }
+
+        function saveDividend() {
+            var productId = document.getElementById('divProductId').value;
+            var productName = document.getElementById('divProductName').value;
+            var innerCode = document.getElementById('divInnerCode').value;
+            var externalCode = document.getElementById('divExternalCode').value;
+            var divDate = document.getElementById('divDate').value;
+            var interestPer100 = document.getElementById('divInterestPer100').value;
+            var principalPer100 = document.getElementById('divPrincipalPer100').value;
+            var divRemark = document.getElementById('divRemark').value;
+
+            if (!productId) { alert('产品信息缺失'); return; }
+            if (!divDate) { alert('请选择兑付日期'); return; }
+            if (interestPer100 === '' || parseFloat(interestPer100) < 0) { alert('请输入有效的每百元应付利息'); return; }
+            if (principalPer100 === '' || parseFloat(principalPer100) < 0) { alert('请输入有效的每百元应付本金'); return; }
+
+            // 生成流程编号：DV + 日期 + 三位序号
+            var dateStr = divDate.replace(/-/g, '');
+            var seq = 1;
+            DIVIDENDS.forEach(function(d) {
+                if (d.id && d.id.indexOf('DV' + dateStr) === 0) seq++;
+            });
+            var seqStr = String(seq).padStart(3, '0');
+            var recordId = 'DV' + dateStr + seqStr;
+
+            var role = getCurrentRole();
+            var now = new Date();
+            var nowStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+
+            // 新增兑息兑付流程记录到 DIVIDENDS 数组（状态=待交易员确认）
+            var newRecord = {
+                id: recordId,
+                productId: productId,
+                productName: productName,
+                innerCode: innerCode,
+                externalCode: externalCode,
+                initiator: role.label,
+                divDate: divDate,
+                interestPer100: parseFloat(interestPer100),
+                principalPer100: parseFloat(principalPer100),
+                remark: divRemark,
+                status: '待交易员确认',
+                traderConfirmUser: '',
+                traderConfirmTime: '',
+                traderModified: false,
+                traderRemark: '',
+                financeConfirmUser: '',
+                financeConfirmTime: '',
+                voucherId: '',
+                pushIborStatus: '未推送',
+                pushIborTime: '',
+                createTime: nowStr,
+                history: [{ user: role.label, action: '发起兑息兑付', time: nowStr, remark: divRemark }]
+            };
+            DIVIDENDS.push(newRecord);
+
+            closeDividendModal();
+            var msg = '兑息兑付流程已发起！\n\n' +
+                      '流程编号：' + recordId + '\n' +
+                      '产品：' + productName + '\n' +
+                      '兑付日期：' + divDate + '\n' +
+                      '每百元应付利息：' + parseFloat(interestPer100).toFixed(4) + ' 元\n' +
+                      '每百元应付本金：' + parseFloat(principalPer100).toFixed(4) + ' 元\n' +
+                      '当前状态：待交易员确认\n\n' +
+                      '流程：财务发起 → 交易员确认 → 财务最终确认 → 生成凭证 → 推送iBor\n' +
+                      '交易员可在【审批中心】处理，财务可在【财务核算-兑息兑付流程】查看进度。';
+            alert(msg);
         }
 
         function openEditModal(pid) {
@@ -275,24 +633,73 @@
             editingId = pid;
             document.getElementById('modalTitle').textContent = '编辑产品';
             document.getElementById('fName').value = p.name;
+            document.getElementById('fShortName').value = p.shortName || '';
             document.getElementById('fHengtaiCode').value = p.hengtaiCode || '';
             document.getElementById('fExternalCode').value = p.externalCode || '';
-            document.getElementById('fProductType').value = p.productType;
             document.getElementById('fAccountType').value = p.accountType || '';
-            populateGroupSelect();
-            document.getElementById('fGroup').value = p.group || '';
-            document.getElementById('fDescription').value = p.description || '';
+            document.getElementById('fRemark').value = p.remark || '';
             if (p.status === '在投') {
                 document.getElementById('fName').readOnly = true;
-                document.getElementById('fProductType').disabled = true;
                 document.getElementById('fAccountType').disabled = true;
-                document.getElementById('fGroup').disabled = true;
             } else {
                 document.getElementById('fName').readOnly = false;
-                document.getElementById('fProductType').disabled = false;
                 document.getElementById('fAccountType').disabled = false;
-                document.getElementById('fGroup').disabled = false;
             }
+            // 先按账套类型渲染专属字段与产品类型枚举，再回填产品类型和各字段值
+            onAccountTypeChange();
+            var productTypeEl = document.getElementById('fProductType');
+            if (productTypeEl) {
+                if (p.accountType === '专户（资管计划）') {
+                    productTypeEl.disabled = p.status === '在投';
+                    productTypeEl.value = p.productType || '';
+                } else {
+                    productTypeEl.value = FIXED_PRODUCT_TYPE_MAP[p.accountType] || p.productType || '';
+                }
+            }
+            var establishDateEl = document.getElementById('fEstablishDate');
+            if (establishDateEl) establishDateEl.value = p.establishDate || '';
+            var startDateEl = document.getElementById('fStartDate');
+            if (startDateEl) startDateEl.value = p.startDate || p.establishDate || '';
+            var expireDateEl = document.getElementById('fExpireDate');
+            if (expireDateEl) expireDateEl.value = p.expireDate || '';
+            var tradeMarketEl = document.getElementById('fTradeMarket');
+            if (tradeMarketEl) tradeMarketEl.value = p.tradeMarket || tradeMarketEl.value;
+            var currencyEl = document.getElementById('fCurrency');
+            if (currencyEl) currencyEl.value = p.currency || 'CNY';
+            var managerEl = document.getElementById('fManager');
+            if (managerEl) managerEl.value = p.manager || '';
+            var faceValueEl = document.getElementById('fFaceValue');
+            if (faceValueEl) faceValueEl.value = p.faceValue || '';
+            var totalScaleEl = document.getElementById('fTotalScale');
+            if (totalScaleEl) totalScaleEl.value = p.totalScale || '';
+            var financierEl = document.getElementById('fFinancier');
+            if (financierEl) financierEl.value = p.financier || '';
+            var financierCodeEl = document.getElementById('fFinancierCode');
+            if (financierCodeEl) financierCodeEl.value = p.financierCode || '';
+            var managerCodeEl = document.getElementById('fManagerCode');
+            if (managerCodeEl) managerCodeEl.value = p.managerCode || '';
+            var guarantorEl = document.getElementById('fGuarantor');
+            if (guarantorEl) guarantorEl.value = p.guarantor || '';
+            var guarantorCodeEl = document.getElementById('fGuarantorCode');
+            if (guarantorCodeEl) guarantorCodeEl.value = p.guarantorCode || '';
+            var actualMaturityDateEl = document.getElementById('fActualMaturityDate');
+            if (actualMaturityDateEl) actualMaturityDateEl.value = p.actualMaturityDate || '';
+            var concentrationEl = document.getElementById('fConcentration');
+            if (concentrationEl) concentrationEl.value = p.concentration || '';
+            var creditRatingEl = document.getElementById('fCreditRating');
+            if (creditRatingEl) creditRatingEl.value = p.creditRating || '';
+            var originatorEl = document.getElementById('fOriginator');
+            if (originatorEl) originatorEl.value = p.originator || '';
+            var underlyingAssetTypeEl = document.getElementById('fUnderlyingAssetType');
+            if (underlyingAssetTypeEl) underlyingAssetTypeEl.value = p.underlyingAssetType || '';
+            var trancheLevelEl = document.getElementById('fTrancheLevel');
+            if (trancheLevelEl) trancheLevelEl.value = p.trancheLevel || '';
+            var annualYieldEl = document.getElementById('fAnnualYield');
+            if (annualYieldEl) annualYieldEl.value = p.annualYield || '';
+            var regionalMarketEl = document.getElementById('fRegionalMarket');
+            if (regionalMarketEl) regionalMarketEl.value = p.regionalMarket || '';
+            var counterpartyEl = document.getElementById('fCounterparty');
+            if (counterpartyEl) counterpartyEl.value = p.counterpartyIbor || '';
             document.getElementById('productModal').style.display = 'block';
         }
 
@@ -301,17 +708,98 @@
             editingId = null;
         }
 
+        function getElVal(id) {
+            var el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+        function getElNum(id) {
+            var el = document.getElementById(id);
+            if (!el || el.value === '') return 0;
+            var v = parseFloat(el.value);
+            return isNaN(v) ? 0 : v;
+        }
+
         function saveProduct(mode) {
             var name = document.getElementById('fName').value.trim();
             var productType = document.getElementById('fProductType').value;
             var accountType = document.getElementById('fAccountType').value;
-            var group = document.getElementById('fGroup').value;
-            if (!name || !productType || !accountType || !group) {
+
+            if (!name || !accountType) {
                 alert('请填写所有必填字段（标记 * 的项）');
                 return;
             }
-            var externalCode = document.getElementById('fExternalCode').value.trim();
-            var description = document.getElementById('fDescription').value.trim();
+            // 产品类型：专户为4枚举可选，其他账套由账套类型决定固定值
+            if (accountType === '专户（资管计划）') {
+                if (!productType) { alert('请选择产品类型（其它类基金/另类投资基金/FOF基金/理财）'); return; }
+            } else {
+                productType = FIXED_PRODUCT_TYPE_MAP[accountType] || productType;
+                if (!productType) { alert('请先选择账套类型'); return; }
+            }
+
+            // 公共字段
+            var externalCode = getElVal('fExternalCode');
+            var shortName = getElVal('fShortName') || (name.length > 8 ? name.slice(0,8) : name);
+            var remark = getElVal('fRemark');
+
+            // 各账套专属字段
+            var tradeMarket = getElVal('fTradeMarket');
+            var currency = getElVal('fCurrency') || 'CNY';
+            var establishDate = getElVal('fEstablishDate');
+            var startDate = getElVal('fStartDate');
+            var expireDate = getElVal('fExpireDate');
+            var manager = getElVal('fManager');
+            var managerCode = getElVal('fManagerCode');
+            var faceValue = getElNum('fFaceValue');
+            var totalScale = getElNum('fTotalScale');
+            var financier = getElVal('fFinancier');
+            var financierCode = getElVal('fFinancierCode');
+            var guarantor = getElVal('fGuarantor');
+            var guarantorCode = getElVal('fGuarantorCode');
+            var actualMaturityDate = getElVal('fActualMaturityDate');
+            var concentration = getElNum('fConcentration');
+            var creditRating = getElVal('fCreditRating');
+            var originator = getElVal('fOriginator');
+            var underlyingAssetType = getElVal('fUnderlyingAssetType');
+            var trancheLevel = getElVal('fTrancheLevel');
+            var annualYield = getElNum('fAnnualYield');
+            var regionalMarket = getElVal('fRegionalMarket');
+            var counterpartyIbor = getElVal('fCounterparty');
+
+            // 按账套类型校验必填字段（PRD（一）产品入池信息补充）
+            if (accountType === '专户（资管计划）') {
+                if (!establishDate) { alert('请填写【成立/发行日】（必填）'); return; }
+                if (!manager) { alert('请填写【管理人】（必填）'); return; }
+                if (mode === 'submit' && !shortName) { /* 产品简称选填，可用名称截断 */ }
+            } else if (accountType === '信托计划') {
+                if (!startDate) { alert('请填写【开始日期】（必填）'); return; }
+                if (!expireDate) { alert('请填写【到期日】（必填）'); return; }
+                if (!faceValue) { alert('请填写【面值】（必填）'); return; }
+                if (!totalScale) { alert('请填写【产品总规模】（必填）'); return; }
+                if (!financier) { alert('请填写【融资人】（必填，多个使用逗号分隔）'); return; }
+                if (!manager) { alert('请填写【管理人】（必填，多个使用逗号分隔）'); return; }
+                if (!guarantor) { alert('请填写【担保人】（必填，多个使用逗号分隔）'); return; }
+            } else if (accountType === '结构化（保交所）') {
+                if (!startDate) { alert('请填写【开始日期】（必填）'); return; }
+                if (!actualMaturityDate) { alert('请填写【实际到期日】（必填）'); return; }
+                if (!faceValue) { alert('请填写【面值】（必填）'); return; }
+                if (!totalScale) { alert('请填写【产品总规模】（必填）'); return; }
+                if (!concentration) { alert('请填写【集中度】（必填）'); return; }
+                if (!creditRating) { alert('请填写【信用评级】（必填）'); return; }
+                if (CREDIT_RATINGS.indexOf(creditRating) === -1) { alert('信用评级枚举值不正确，请从下拉列表选择（AAA~B-、NR）'); return; }
+                if (!trancheLevel) { alert('请选择【产品层级】（优先/夹层/次级）'); return; }
+                if (!annualYield) { alert('请填写【年化收益率】（必填，仅填数值）'); return; }
+            } else if (accountType === '碳金融') {
+                if (!regionalMarket) { alert('请填写【区域市场】（必填）'); return; }
+                if (!counterpartyIbor) { alert('请填写【交易对手方】（必填）'); return; }
+                if (!annualYield) { alert('请填写【年化收益率】（必填，仅填数值）'); return; }
+                if (!expireDate) { alert('请填写【预期到期日】（必填）'); return; }
+            }
+
+            // 日期字段归一化：非专户账套的开始日期同步作为成立/发行日
+            if (accountType !== '专户（资管计划）') establishDate = startDate;
+
+            var assetType = ASSET_TYPE_MAP[accountType] || '专户资管产品';
+
             if (editingId) {
                 var p = PRODUCTS.find(function(x) { return x.id === editingId; });
                 if (p) {
@@ -319,10 +807,33 @@
                         p.name = name;
                         p.productType = productType;
                         p.accountType = accountType;
-                        p.group = group;
+                        p.assetType = assetType;
                     }
+                    p.shortName = shortName;
                     p.externalCode = externalCode;
-                    p.description = description;
+                    p.remark = remark;
+                    p.establishDate = establishDate;
+                    p.startDate = startDate;
+                    p.expireDate = expireDate;
+                    p.currency = currency;
+                    p.tradeMarket = tradeMarket;
+                    p.manager = manager;
+                    p.managerCode = managerCode;
+                    p.faceValue = faceValue;
+                    p.totalScale = totalScale;
+                    p.financier = financier;
+                    p.financierCode = financierCode;
+                    p.guarantor = guarantor;
+                    p.guarantorCode = guarantorCode;
+                    p.actualMaturityDate = actualMaturityDate;
+                    p.concentration = concentration;
+                    p.creditRating = creditRating;
+                    p.originator = originator;
+                    p.underlyingAssetType = underlyingAssetType;
+                    p.trancheLevel = trancheLevel;
+                    p.annualYield = annualYield;
+                    p.regionalMarket = regionalMarket;
+                    p.counterpartyIbor = counterpartyIbor;
                 }
                 alert('产品已更新');
             } else {
@@ -333,24 +844,23 @@
                 });
                 var newId = 'P' + String(maxNum + 1).padStart(3, '0');
                 var today = new Date().toISOString().slice(0,10).replace(/-/g,'');
-                var prefix = accountType === 'ABS' ? 'ABS' : accountType === '信托' ? 'XT' : 'XT';
+                var prefix = accountType === '结构化（保交所）' ? 'ABS' : accountType === '信托计划' ? 'XT' : (accountType === '碳金融' ? 'TJ' : 'XT');
                 var seq = String(PRODUCTS.filter(function(x){return x.accountType===accountType;}).length + 1).padStart(3,'0');
                 var newCode = prefix + today + seq;
-                var role = getCurrentRole();
-                var newStatus = mode === 'submit' ? '无计划' : '无计划';
+                var newStatus = '无计划';
                 PRODUCTS.push({
                     id: newId,
                     name: name,
-                    shortName: name.length > 8 ? name.slice(0,8) : name,
-                    assetType: accountType === 'ABS' ? 'ABS(中保登)' : accountType === '信托' ? '信托' : '专户资管产品',
+                    shortName: shortName,
+                    assetType: assetType,
                     productType: productType,
                     accountType: accountType,
                     hengtaiCode: newCode,
                     externalCode: externalCode,
-                    dept: role.dept,
-                    group: group,
-                    expireDate: '',
-                    redeemable: true,
+                    remark: remark,
+                    establishDate: establishDate,
+                    startDate: startDate,
+                    expireDate: expireDate,
                     status: newStatus,
                     nav: 1.0000,
                     navDate: '',
@@ -360,13 +870,30 @@
                     usedAmount: 0,
                     counterparty: '',
                     tradeLimit: 0,
-                    accountMapping: '',
-                    poolUser: role.label,
+                    poolUser: 'oms',
                     poolTime: new Date().toISOString().slice(0,10),
-                    description: description
+                    currency: currency,
+                    tradeMarket: tradeMarket,
+                    manager: manager,
+                    managerCode: managerCode,
+                    faceValue: faceValue,
+                    totalScale: totalScale,
+                    financier: financier,
+                    financierCode: financierCode,
+                    guarantor: guarantor,
+                    guarantorCode: guarantorCode,
+                    actualMaturityDate: actualMaturityDate,
+                    concentration: concentration,
+                    creditRating: creditRating,
+                    originator: originator,
+                    underlyingAssetType: underlyingAssetType,
+                    trancheLevel: trancheLevel,
+                    annualYield: annualYield,
+                    regionalMarket: regionalMarket,
+                    counterpartyIbor: counterpartyIbor
                 });
                 if (mode === 'submit') {
-                    alert('产品已提交入池，审批流程已触发，ID: ' + newId);
+                    alert('产品已提交入池，ID: ' + newId);
                 } else {
                     alert('产品已保存为草稿，ID: ' + newId);
                 }
@@ -376,20 +903,243 @@
             renderTable();
         }
 
-        function populateGroupSelect() {
-            var sel = document.getElementById('fGroup');
-            sel.innerHTML = '<option value="">请选择投资组</option>';
-            var role = getCurrentRole();
-            var groups = role.investGroups && role.investGroups.length > 0 ? role.investGroups : ['专户投资组','xn账户','fb账户','理财投资组','权益投资组'];
-            groups.forEach(function(g) {
-                var opt = document.createElement('option');
-                opt.value = g;
-                opt.textContent = g;
-                sel.appendChild(opt);
-            });
+        // ============ PRD（一）产品入池信息补充：枚举定义 ============
+        // 信用评级：下拉单选，支持搜索（18个枚举值）
+        var CREDIT_RATINGS = ['AAA','AA+','AA','AA-','A+','A','A-','BBB+','BBB','BBB-','BB+','BB','BB-','B+','B','B-','NR'];
+        // 基础资产类型：可编辑下拉组件，支持搜索
+        var UNDERLYING_ASSET_TYPES = ['抖音月付','借呗（信用贷）','美团生活费','对公贷款','应收账款','花呗（信用购）','消费贷','京东金条','美团月付','小微企业贷','美团生意贷','京东白条','京东企业主贷','融资租赁款','抖音放心借','滴水贷','抵押贷款','对公租赁','经营贷','财付通分付'];
+        // 专户（资管计划）产品类型枚举
+        var ZH_PRODUCT_TYPES = ['其它类基金','另类投资基金','FOF基金','理财'];
+        // 非专户账套的产品类型由账套类型决定（固定值）
+        var FIXED_PRODUCT_TYPE_MAP = { '信托计划': '信托计划', '结构化（保交所）': '非标准资产支持证券', '碳金融': '碳金融' };
+        // 交易市场 -> iBor编码
+        var IBOR_TRADE_MARKET_MAP = { '场外市场': 'OF', '银行间': 'IB', '上交所': 'SH', '深交所': 'SZ', '其他': 'OTH' };
+        var ASSET_TYPE_MAP = {
+            '结构化（保交所）': 'ABS(中保登)',
+            '专户（资管计划）': '专户资管产品',
+            '信托计划': '信托',
+            '碳金融': '碳金融'
+        };
+
+        function buildProductTypeOptions(accountType) {
+            var sel = document.getElementById('fProductType');
+            var hint = document.getElementById('fProductTypeHint');
+            if (!accountType) {
+                sel.disabled = true;
+                sel.innerHTML = '<option value="">请先选择账套类型</option>';
+                hint.textContent = '账套类型确认后自动限定枚举';
+                return '';
+            }
+            if (accountType === '专户（资管计划）') {
+                sel.disabled = false;
+                var html = '<option value="">请选择</option>';
+                ZH_PRODUCT_TYPES.forEach(function(t) { html += '<option value="' + t + '">' + t + '</option>'; });
+                sel.innerHTML = html;
+                hint.textContent = '枚举：其它类基金/另类投资基金/FOF基金/理财';
+                return '';
+            }
+            var fixed = FIXED_PRODUCT_TYPE_MAP[accountType];
+            sel.innerHTML = '<option value="' + fixed + '">' + fixed + '</option>';
+            sel.value = fixed;
+            sel.disabled = true;
+            hint.textContent = '由账套类型决定，固定为：' + fixed;
+            return fixed;
         }
 
-        function onAccountTypeChange() {}
+        function buildCreditRatingDatalist() {
+            var opts = '';
+            CREDIT_RATINGS.forEach(function(r) { opts += '<option value="' + r + '">'; });
+            return '<datalist id="dlCreditRating">' + opts + '</datalist>';
+        }
+
+        function buildUnderlyingAssetDatalist() {
+            var opts = '';
+            UNDERLYING_ASSET_TYPES.forEach(function(t) { opts += '<option value="' + t + '">'; });
+            return '<datalist id="dlUnderlyingAsset">' + opts + '</datalist>';
+        }
+
+        function buildAnnualYieldInput(required) {
+            return '<div class="form-group"><label>年化收益率 ' + (required ? '<span class="required-star">*</span>' : '') + '</label>' +
+                '<div class="input-suffix-wrap"><input type="number" id="fAnnualYield" step="0.0001" min="0" placeholder="仅填数值"' + (required ? ' required' : '') + '><span class="input-suffix">%</span></div>' +
+                '<div class="form-hint">输入框右侧展示百分号，仅填入数值；同步iBor仅提供数值</div></div>';
+        }
+
+        function buildTradeMarketSelect(defaultMarket, iborCode) {
+            var opts = '';
+            ['场外市场','上交所','深交所','银行间','其他'].forEach(function(m) {
+                opts += '<option value="' + m + '"' + (m === defaultMarket ? ' selected' : '') + '>' + m + '</option>';
+            });
+            return '<div class="form-group"><label>交易市场</label><select id="fTradeMarket">' + opts + '</select>' +
+                '<div class="form-hint">默认【' + defaultMarket + '】，同步iBor使用' + iborCode + '</div></div>';
+        }
+
+        function onAccountTypeChange() {
+            var accountType = document.getElementById('fAccountType').value;
+            var assetTypeEl = document.getElementById('fAssetType');
+            var fieldsEl = document.getElementById('fAssetTypeFields');
+
+            assetTypeEl.value = ASSET_TYPE_MAP[accountType] || '';
+            buildProductTypeOptions(accountType);
+
+            var html = '';
+            if (accountType === '专户（资管计划）') {
+                html = '<div class="account-type-fields"><div class="account-type-fields-title">专户（资管计划）专属信息</div><div class="grid-3">' +
+                    buildTradeMarketSelect('场外市场', 'OF') +
+                    '<div class="form-group"><label>币种</label><select id="fCurrency"><option value="CNY" selected>人民币</option></select><div class="form-hint">当前仅人民币，默认选中；同步iBor使用CNY</div></div>' +
+                    '<div class="form-group"><label>成立/发行日 <span class="required-star">*</span></label><input type="date" id="fEstablishDate" required></div>' +
+                    '<div class="form-group"><label>预计到期日</label><input type="date" id="fExpireDate"></div>' +
+                    '<div class="form-group"><label>管理人 <span class="required-star">*</span></label><input type="text" id="fManager" placeholder="管理机构标准名称" required></div>' +
+                    '</div></div>';
+            } else if (accountType === '信托计划') {
+                html = '<div class="account-type-fields"><div class="account-type-fields-title">信托计划专属信息</div><div class="grid-3">' +
+                    buildTradeMarketSelect('银行间', 'IB') +
+                    '<div class="form-group"><label>开始日期 <span class="required-star">*</span></label><input type="date" id="fStartDate" required></div>' +
+                    '<div class="form-group"><label>到期日 <span class="required-star">*</span></label><input type="date" id="fExpireDate" required></div>' +
+                    '<div class="form-group"><label>面值 <span class="required-star">*</span></label><input type="number" id="fFaceValue" step="0.01" placeholder="单份/每张面值" required></div>' +
+                    '<div class="form-group"><label>产品总规模 <span class="required-star">*</span></label><input type="number" id="fTotalScale" step="10000" placeholder="信托规模(万元)" required></div>' +
+                    '<div class="form-group"><label>融资人 <span class="required-star">*</span></label><input type="text" id="fFinancier" placeholder="填写多个时，使用逗号分隔" required></div>' +
+                    '<div class="form-group"><label>融资人代码</label><input type="text" id="fFinancierCode" placeholder="填写多个时，使用逗号分隔"></div>' +
+                    '<div class="form-group"><label>管理人 <span class="required-star">*</span></label><input type="text" id="fManager" placeholder="填写多个时，使用逗号分隔" required></div>' +
+                    '<div class="form-group"><label>管理人代码</label><input type="text" id="fManagerCode" placeholder="填写多个时，使用逗号分隔"></div>' +
+                    '<div class="form-group"><label>担保人 <span class="required-star">*</span></label><input type="text" id="fGuarantor" placeholder="填写多个时，使用逗号分隔" required></div>' +
+                    '<div class="form-group"><label>担保人代码</label><input type="text" id="fGuarantorCode" placeholder="填写多个时，使用逗号分隔"></div>' +
+                    '</div></div>';
+            } else if (accountType === '结构化（保交所）') {
+                html = '<div class="account-type-fields"><div class="account-type-fields-title">结构化（保交所资产支持证券）专属信息</div><div class="grid-3">' +
+                    buildTradeMarketSelect('场外市场', 'OF') +
+                    '<div class="form-group"><label>开始日期 <span class="required-star">*</span></label><input type="date" id="fStartDate" required></div>' +
+                    '<div class="form-group"><label>预计到期日</label><input type="date" id="fExpireDate"></div>' +
+                    '<div class="form-group"><label>实际到期日 <span class="required-star">*</span></label><input type="date" id="fActualMaturityDate" required></div>' +
+                    '<div class="form-group"><label>面值 <span class="required-star">*</span></label><input type="number" id="fFaceValue" step="0.01" required></div>' +
+                    '<div class="form-group"><label>产品总规模 <span class="required-star">*</span></label><input type="number" id="fTotalScale" step="10000" required></div>' +
+                    '<div class="form-group"><label>集中度 <span class="required-star">*</span></label><input type="number" id="fConcentration" step="0.01" required></div>' +
+                    '<div class="form-group"><label>信用评级 <span class="required-star">*</span></label><input type="text" id="fCreditRating" list="dlCreditRating" placeholder="下拉单选，支持搜索" required>' + buildCreditRatingDatalist() + '<div class="form-hint">枚举：AAA~B-及NR，共18项</div></div>' +
+                    '<div class="form-group"><label>原始权益人</label><input type="text" id="fOriginator"></div>' +
+                    '<div class="form-group"><label>基础资产类型</label><input type="text" id="fUnderlyingAssetType" list="dlUnderlyingAsset" placeholder="可编辑下拉，支持搜索">' + buildUnderlyingAssetDatalist() + '<div class="form-hint">支持选择或自定义输入</div></div>' +
+                    '<div class="form-group"><label>产品层级 <span class="required-star">*</span></label><select id="fTrancheLevel" required><option value="">请选择</option><option value="优先">优先</option><option value="夹层">夹层</option><option value="次级">次级</option></select></div>' +
+                    buildAnnualYieldInput(true) +
+                    '</div></div>';
+            } else if (accountType === '碳金融') {
+                html = '<div class="account-type-fields"><div class="account-type-fields-title">碳金融专属信息</div><div class="grid-3">' +
+                    '<div class="form-group"><label>区域市场 <span class="required-star">*</span></label><input type="text" id="fRegionalMarket" list="dlRegionalMarket" placeholder="可编辑下拉，初始为空" required><datalist id="dlRegionalMarket"></datalist><div class="form-hint">可编辑下拉组件，支持自定义输入</div></div>' +
+                    '<div class="form-group"><label>交易对手方 <span class="required-star">*</span></label><input type="text" id="fCounterparty" placeholder="交易对手方" required></div>' +
+                    buildAnnualYieldInput(true) +
+                    '<div class="form-group"><label>预期到期日 <span class="required-star">*</span></label><input type="date" id="fExpireDate" required></div>' +
+                    '</div></div>';
+            }
+            fieldsEl.innerHTML = html;
+        }
+
+        function getInvestorTree() {
+            var tree = {};
+            PRODUCTS.forEach(function(p) {
+                if (!p.dept) return;
+                if (!tree[p.dept]) tree[p.dept] = [];
+                if (p.group && tree[p.dept].indexOf(p.group) === -1) tree[p.dept].push(p.group);
+            });
+            return tree;
+        }
+
+        function renderCascadeList() {
+            var tree = getInvestorTree();
+            var depts = Object.keys(tree);
+            var deptHtml = '<div class="cascade-item all' + (!_cascade.dept ? ' active' : '') + '" onclick="selectCascadeDept(\'\')">全部部门</div>';
+            depts.forEach(function(d) {
+                deptHtml += '<div class="cascade-item' + (_cascade.dept === d ? ' active' : '') + '" onclick="selectCascadeDept(\'' + d.replace(/'/g, "\\'") + '\')">' + d + '</div>';
+            });
+            document.getElementById('cascadeDeptList').innerHTML = deptHtml;
+
+            var groups = _cascade.dept ? (tree[_cascade.dept] || []) : [];
+            var allGroups = [];
+            depts.forEach(function(d) { (tree[d] || []).forEach(function(g) { if (allGroups.indexOf(g) === -1) allGroups.push(g); }); });
+            if (!_cascade.dept) groups = allGroups;
+            var groupHtml = '<div class="cascade-item all' + (_cascade.groups.length === 0 ? ' active' : '') + '" onclick="clearCascadeGroups()">全部投资组</div>';
+            groups.forEach(function(g) {
+                var checked = _cascade.groups.indexOf(g) !== -1 ? ' checked' : '';
+                groupHtml += '<label class="cascade-item cascade-check"><input type="checkbox" value="' + g + '"' + checked + ' onchange="toggleCascadeGroup(\'' + g.replace(/'/g, "\\'") + '\')">' + g + '</label>';
+            });
+            document.getElementById('cascadeGroupList').innerHTML = groupHtml;
+        }
+
+        function selectCascadeDept(dept) {
+            _cascade.dept = dept;
+            if (dept) {
+                var tree = getInvestorTree();
+                _cascade.groups = _cascade.groups.filter(function(g) { return tree[dept] && tree[dept].indexOf(g) !== -1; });
+            }
+            updateInvestorLabel();
+            renderCascadeList();
+        }
+
+        function toggleCascadeGroup(group) {
+            var idx = _cascade.groups.indexOf(group);
+            if (idx === -1) _cascade.groups.push(group);
+            else _cascade.groups.splice(idx, 1);
+            updateInvestorLabel();
+            renderCascadeList();
+        }
+
+        function clearCascadeGroups() {
+            _cascade.groups = [];
+            updateInvestorLabel();
+            renderCascadeList();
+        }
+
+        function updateInvestorLabel() {
+            var label = '全部投资组';
+            if (_cascade.dept && _cascade.groups.length > 0) {
+                label = _cascade.dept + ' / ' + _cascade.groups.join('、');
+            } else if (_cascade.dept) {
+                label = _cascade.dept + '（全部投资组）';
+            } else if (_cascade.groups.length > 0) {
+                label = '全部部门 / ' + _cascade.groups.join('、');
+            }
+            document.getElementById('investorLabel').textContent = label;
+        }
+
+        function toggleCascade(e) {
+            if (e) e.stopPropagation();
+            var panel = document.getElementById('investorPanel');
+            panel.classList.toggle('show');
+        }
+
+        function renderStatusCheckList() {
+            var opts = ['在投', '无计划'];
+            var html = '';
+            opts.forEach(function(s) {
+                var checked = _statusSelected.indexOf(s) !== -1 ? ' checked' : '';
+                html += '<label class="cascade-item cascade-check"><input type="checkbox" value="' + s + '"' + checked + ' onchange="toggleStatus(\'' + s + '\')">' + s + '</label>';
+            });
+            document.getElementById('statusCheckList').innerHTML = html;
+        }
+
+        function toggleStatus(s) {
+            var idx = _statusSelected.indexOf(s);
+            if (idx === -1) _statusSelected.push(s);
+            else _statusSelected.splice(idx, 1);
+            updateStatusLabel();
+        }
+
+        function updateStatusLabel() {
+            var label = _statusSelected.length === 0 ? '全部状态' : _statusSelected.join('、');
+            document.getElementById('statusLabel').textContent = label;
+        }
+
+        function toggleStatusCascade(e) {
+            if (e) e.stopPropagation();
+            document.getElementById('statusPanel').classList.toggle('show');
+        }
+
+        document.addEventListener('click', function(e) {
+            var cascade = document.getElementById('investorCascade');
+            if (cascade && !cascade.contains(e.target)) {
+                document.getElementById('investorPanel').classList.remove('show');
+            }
+            var statusCascade = document.getElementById('statusCascade');
+            if (statusCascade && !statusCascade.contains(e.target)) {
+                document.getElementById('statusPanel').classList.remove('show');
+            }
+        });
 
         function openBatchImportModal() {
             document.getElementById('batchFileInput').value = '';
@@ -404,7 +1154,94 @@
         }
 
         function downloadTemplate() {
-            alert('模板下载：oms产品批量入池模板.xlsx');
+            alert('模板下载：oms产品批量入池模板.xlsx\n\n模板按账套类型分4个sheet：\n1. 专户（资管计划）\n2. 信托计划\n3. 结构化（保交所）\n4. 碳金融\n\n（模板文件待产品方提供，当前为演示提示）');
+        }
+
+        var BATCH_IMPORT_DATA = [];
+        var VALID_ACCOUNT_TYPES = ['结构化（保交所）', '专户（资管计划）', '信托计划', '碳金融'];
+        var VALID_PRODUCT_TYPES = ['其它类基金', '另类投资基金', 'FOF基金', '理财', '非标准资产支持证券', '信托计划', '碳金融'];
+        var VALID_TRANCHE_LEVELS = ['优先', '夹层', '次级'];
+
+        // 模拟解析4个sheet的数据（字段与单个入池一致）
+        function getMockBatchRows() {
+            return [
+                { sheet: '专户（资管计划）', row: 2, name: '测试产品A', productType: 'FOF基金', accountType: '专户（资管计划）', group: '专户投资组', hengtaiCode: 'XT20260907001', externalCode: '', tradeMarket: '场外市场', currency: '人民币', establishDate: '2026-01-15', manager: 'XX资产管理有限公司' },
+                { sheet: '专户（资管计划）', row: 3, name: '测试产品A2', productType: '混合型', accountType: '专户（资管计划）', group: '专户投资组', hengtaiCode: 'XT20260907002', externalCode: '', tradeMarket: '场外市场', currency: '人民币', establishDate: '2026-02-20', manager: 'YY基金管理有限公司' },
+                { sheet: '信托计划', row: 2, name: '测试产品B', productType: '信托计划', accountType: '信托计划', group: '理财投资组', hengtaiCode: 'XT20260907003', externalCode: '', tradeMarket: '银行间', startDate: '2026-02-01', expireDate: '2027-02-01', faceValue: 100, totalScale: 5000, financier: 'XX融资集团', manager: 'XX信托有限公司', guarantor: 'XX担保股份有限公司' },
+                { sheet: '信托计划', row: 3, name: '', productType: '信托计划', accountType: '信托计划', group: '理财投资组', hengtaiCode: 'XT20260907004', externalCode: '', tradeMarket: '银行间', startDate: '2026-03-01', expireDate: '2028-03-01', faceValue: 100, totalScale: 8000, financier: 'YY控股集团', manager: 'YY信托有限公司', guarantor: 'YY担保有限公司' },
+                { sheet: '结构化（保交所）', row: 2, name: '测试产品C', productType: '非标准资产支持证券', accountType: '结构化（保交所）', group: 'fb账户', hengtaiCode: 'ABS20260907001', externalCode: '1101010905', tradeMarket: '场外市场', startDate: '2026-03-01', actualMaturityDate: '2028-03-01', faceValue: 100, totalScale: 20000, concentration: 12.5, creditRating: 'AA+', originator: 'XX保理有限公司', underlyingAssetType: '京东白条', trancheLevel: '优先', annualYield: 4.85 },
+                { sheet: '结构化（保交所）', row: 3, name: '测试产品C2', productType: '非标准资产支持证券', accountType: '结构化（保交所）', group: 'fb账户', hengtaiCode: 'ABS20260907002', externalCode: '', tradeMarket: '场外市场', startDate: '2026-04-01', actualMaturityDate: '2029-04-01', faceValue: 100, totalScale: 30000, concentration: 8.2, creditRating: 'CCC', originator: 'YY商业保理公司', underlyingAssetType: '应收账款', trancheLevel: '劣后', annualYield: 6.5 },
+                { sheet: '碳金融', row: 2, name: '测试产品D', productType: '碳金融', accountType: '碳金融', group: 'fb账户', hengtaiCode: 'TJ20260907001', externalCode: '', regionalMarket: '全国碳市场', counterparty: 'XX碳排放权交易中心', annualYield: 3.5, expireDate: '2027-06-30' }
+            ];
+        }
+
+        // 按sheet（账套类型）校验必填字段与枚举值；任一条件或枚举值不满足即拒绝提交
+        function validateBatchRows(rows) {
+            var errors = [];
+            var codeMap = {};
+            rows.forEach(function(r) {
+                var sheetName = r.sheet || '未知sheet';
+                if (!r.sheet) errors.push({ sheet: sheetName, row: r.row, reason: 'sheet名为空（无法识别账套类型）' });
+                if (VALID_ACCOUNT_TYPES.indexOf(r.sheet) === -1 && r.sheet) {
+                    errors.push({ sheet: sheetName, row: r.row, reason: 'sheet名【' + r.sheet + '】不在四个标准sheet范围内（专户（资管计划）/信托计划/结构化（保交所）/碳金融）' });
+                }
+                if (!r.name) errors.push({ sheet: sheetName, row: r.row, reason: '产品名称为空（必填字段缺失）' });
+                if (!r.productType) errors.push({ sheet: sheetName, row: r.row, reason: '产品类型为空（必填字段缺失）' });
+                if (!r.accountType) errors.push({ sheet: sheetName, row: r.row, reason: '账套类型为空（必填字段缺失）' });
+                if (!r.group) errors.push({ sheet: sheetName, row: r.row, reason: '投资组为空（必填字段缺失）' });
+                if (r.hengtaiCode) {
+                    var codeOk = /^(XT|ABS|TJ)\d{11}$/.test(r.hengtaiCode);
+                    if (!codeOk) errors.push({ sheet: sheetName, row: r.row, reason: '内部编码格式不正确（应为XT/ABS/TJ+11位数字）' });
+                    if (codeMap[r.hengtaiCode]) errors.push({ sheet: sheetName, row: r.row, reason: '内部编码与【' + codeMap[r.hengtaiCode].sheet + '】第' + codeMap[r.hengtaiCode].row + '行重复' });
+                    else codeMap[r.hengtaiCode] = { sheet: sheetName, row: r.row };
+                } else {
+                    errors.push({ sheet: sheetName, row: r.row, reason: '内部编码为空（必填字段缺失）' });
+                }
+                if (r.productType && VALID_PRODUCT_TYPES.indexOf(r.productType) === -1) {
+                    errors.push({ sheet: sheetName, row: r.row, reason: '产品类型枚举值不满足（' + r.productType + '不在iBor同步范围内）' });
+                }
+                if (r.accountType && VALID_ACCOUNT_TYPES.indexOf(r.accountType) === -1) {
+                    errors.push({ sheet: sheetName, row: r.row, reason: '账套类型枚举值不满足（' + r.accountType + '不在iBor同步范围内）' });
+                }
+                // sheet名与账套类型一致性校验
+                if (r.sheet && r.accountType && r.sheet !== r.accountType) {
+                    errors.push({ sheet: sheetName, row: r.row, reason: 'sheet名【' + r.sheet + '】与账套类型【' + r.accountType + '】不一致' });
+                }
+                // 按sheet类型校验专属必填字段与枚举
+                var at = r.sheet || r.accountType;
+                if (at === '专户（资管计划）') {
+                    if (!r.establishDate) errors.push({ sheet: sheetName, row: r.row, reason: '成立/发行日为空（必填字段缺失）' });
+                    if (!r.manager) errors.push({ sheet: sheetName, row: r.row, reason: '管理人为空（必填字段缺失）' });
+                    if (r.productType && ZH_PRODUCT_TYPES.indexOf(r.productType) === -1) {
+                        errors.push({ sheet: sheetName, row: r.row, reason: '产品类型枚举值不满足（专户sheet仅允许：其它类基金/另类投资基金/FOF基金/理财）' });
+                    }
+                } else if (at === '信托计划') {
+                    if (!r.startDate) errors.push({ sheet: sheetName, row: r.row, reason: '开始日期为空（必填字段缺失）' });
+                    if (!r.expireDate) errors.push({ sheet: sheetName, row: r.row, reason: '到期日为空（必填字段缺失）' });
+                    if (!r.faceValue) errors.push({ sheet: sheetName, row: r.row, reason: '面值为空（必填字段缺失）' });
+                    if (!r.totalScale) errors.push({ sheet: sheetName, row: r.row, reason: '产品总规模为空（必填字段缺失）' });
+                    if (!r.financier) errors.push({ sheet: sheetName, row: r.row, reason: '融资人为空（必填字段缺失）' });
+                    if (!r.manager) errors.push({ sheet: sheetName, row: r.row, reason: '管理人为空（必填字段缺失）' });
+                    if (!r.guarantor) errors.push({ sheet: sheetName, row: r.row, reason: '担保人为空（必填字段缺失）' });
+                } else if (at === '结构化（保交所）') {
+                    if (!r.startDate) errors.push({ sheet: sheetName, row: r.row, reason: '开始日期为空（必填字段缺失）' });
+                    if (!r.actualMaturityDate) errors.push({ sheet: sheetName, row: r.row, reason: '实际到期日为空（必填字段缺失）' });
+                    if (!r.faceValue) errors.push({ sheet: sheetName, row: r.row, reason: '面值为空（必填字段缺失）' });
+                    if (!r.totalScale) errors.push({ sheet: sheetName, row: r.row, reason: '产品总规模为空（必填字段缺失）' });
+                    if (!r.concentration) errors.push({ sheet: sheetName, row: r.row, reason: '集中度为空（必填字段缺失）' });
+                    if (!r.creditRating) errors.push({ sheet: sheetName, row: r.row, reason: '信用评级为空（必填字段缺失）' });
+                    else if (CREDIT_RATINGS.indexOf(r.creditRating) === -1) errors.push({ sheet: sheetName, row: r.row, reason: '信用评级枚举值不满足（' + r.creditRating + '不在AAA~B-、NR范围内）' });
+                    if (!r.trancheLevel) errors.push({ sheet: sheetName, row: r.row, reason: '产品层级为空（必填字段缺失）' });
+                    else if (VALID_TRANCHE_LEVELS.indexOf(r.trancheLevel) === -1) errors.push({ sheet: sheetName, row: r.row, reason: '产品层级枚举值不满足（' + r.trancheLevel + '不在优先/夹层/次级范围内）' });
+                    if (!r.annualYield) errors.push({ sheet: sheetName, row: r.row, reason: '年化收益率为空（必填字段缺失）' });
+                } else if (at === '碳金融') {
+                    if (!r.regionalMarket) errors.push({ sheet: sheetName, row: r.row, reason: '区域市场为空（必填字段缺失）' });
+                    if (!r.counterparty) errors.push({ sheet: sheetName, row: r.row, reason: '交易对手方为空（必填字段缺失）' });
+                    if (!r.annualYield) errors.push({ sheet: sheetName, row: r.row, reason: '年化收益率为空（必填字段缺失）' });
+                    if (!r.expireDate) errors.push({ sheet: sheetName, row: r.row, reason: '预期到期日为空（必填字段缺失）' });
+                }
+            });
+            return errors;
         }
 
         document.getElementById('batchFileInput').addEventListener('change', function(e) {
@@ -415,26 +1252,47 @@
             var fileName = file.name.toLowerCase();
             if (!fileName.endsWith('.xlsx')) {
                 resultEl.style.display = 'block';
-                resultEl.innerHTML = '<div style="color:var(--danger);padding:10px;background:#FEF2F2;border-radius:var(--radius);">❌ 文件格式不正确，请上传 .xlsx 格式文件</div>';
-                document.getElementById('btnConfirmBatch').disabled = true;
+                resultEl.innerHTML = '<div style="color:var(--danger);padding:10px;background:#FEF2F2;border-radius:var(--radius);">❌ 校验失败，共1个错误</div>' +
+                    '<div style="margin-top:8px;"><table class="data-table"><thead><tr><th>行号</th><th>错误原因</th></tr></thead><tbody>' +
+                    '<tr><td>文件</td><td>文件格式不正确，请上传 .xlsx 格式文件</td></tr>' +
+                    '</tbody></table></div>';
                 previewEl.style.display = 'none';
+                document.getElementById('btnConfirmBatch').disabled = true;
+                BATCH_IMPORT_DATA = [];
+                return;
+            }
+            var rows = getMockBatchRows();
+            BATCH_IMPORT_DATA = rows;
+            var errors = validateBatchRows(rows);
+            if (errors.length > 0) {
+                // PRD：任一条件或枚举值不满足，展示对应错误信息，拒绝提交；错误表格首列为sheet名
+                resultEl.style.display = 'block';
+                resultEl.innerHTML = '<div style="color:var(--danger);padding:10px;background:#FEF2F2;border-radius:var(--radius);">❌ 校验失败，共' + errors.length + '个错误，已拒绝提交</div>' +
+                    '<div style="margin-top:8px;"><table class="data-table"><thead><tr><th>sheet名</th><th>行号</th><th>错误原因</th></tr></thead><tbody>';
+                errors.forEach(function(er) {
+                    resultEl.innerHTML += '<tr><td>' + (er.sheet || '-') + '</td><td>第' + er.row + '行</td><td>' + er.reason + '</td></tr>';
+                });
+                resultEl.innerHTML += '</tbody></table></div>';
+                previewEl.style.display = 'none';
+                document.getElementById('btnConfirmBatch').disabled = true;
                 return;
             }
             resultEl.style.display = 'block';
-            resultEl.innerHTML = '<div style="color:var(--success);padding:10px;background:#F0FDF4;border-radius:var(--radius);">✅ 校验通过，共3条数据</div>';
+            resultEl.innerHTML = '<div style="color:var(--success);padding:10px;background:#F0FDF4;border-radius:var(--radius);">✅ 校验通过，共' + rows.length + '条数据</div>';
             previewEl.style.display = 'block';
-            previewEl.innerHTML = '<div style="font-size:var(--font-size-sm);font-weight:600;margin-bottom:8px;">数据预览（前10行）</div>' +
-                '<table class="data-table"><thead><tr><th>产品名称</th><th>产品类型</th><th>账套类型</th><th>投资组</th><th>外部编码</th></tr></thead><tbody>' +
-                '<tr><td>测试产品A</td><td>混合型</td><td>专户资管</td><td>专户投资组</td><td>-</td></tr>' +
-                '<tr><td>测试产品B</td><td>FOF</td><td>信托</td><td>理财投资组</td><td>-</td></tr>' +
-                '<tr><td>测试产品C</td><td>固收类</td><td>ABS</td><td>fb账户</td><td>1101010905</td></tr>' +
-                '</tbody></table>';
+            previewEl.innerHTML = '<div style="font-size:var(--font-size-sm);font-weight:600;margin-bottom:8px;">数据预览（全部' + rows.length + '条）</div>' +
+                '<table class="data-table"><thead><tr><th>sheet名</th><th>行号</th><th>产品名称</th><th>产品类型</th><th>账套类型</th><th>投资组</th><th>内部编码</th><th>外部编码</th></tr></thead><tbody>';
+            rows.forEach(function(r) {
+                previewEl.innerHTML += '<tr><td>' + (r.sheet || '-') + '</td><td>第' + r.row + '行</td><td>' + (r.name || '-') + '</td><td>' + (r.productType || '-') + '</td><td>' + (r.accountType || '-') + '</td><td>' + (r.group || '-') + '</td><td class="text-mono">' + (r.hengtaiCode || '-') + '</td><td class="text-mono">' + (r.externalCode || '-') + '</td></tr>';
+            });
+            previewEl.innerHTML += '</tbody></table>';
             document.getElementById('btnConfirmBatch').disabled = false;
         });
 
         function confirmBatchImport() {
-            if (!confirm('确认批量提交3个产品入池申请？')) return;
-            alert('已批量提交3个产品入池申请');
+            if (!BATCH_IMPORT_DATA || BATCH_IMPORT_DATA.length === 0) return;
+            if (!confirm('确认批量提交' + BATCH_IMPORT_DATA.length + '个产品入池申请？')) return;
+            alert('已批量提交' + BATCH_IMPORT_DATA.length + '个产品入池申请');
             closeBatchImportModal();
             renderStats();
             renderTable();
@@ -448,10 +1306,12 @@
         }
 
         renderStats();
+        renderCascadeList();
+        renderStatusCheckList();
+        updateSortIndicators();
         renderTable();
 
         window.addEventListener('click', function(event) {
-            if (event.target === document.getElementById('productModal')) closeProductModal();
             if (event.target === document.getElementById('batchImportModal')) closeBatchImportModal();
         });
     </script>

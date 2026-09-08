@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>场外簿记OMS系统 - 产品详情</title>
+    <title>委外投资业务一体化订单管理平台 - 产品详情</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         .tab-nav { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
         .tab-btn { padding: 8px 18px; font-size: var(--font-size-sm); font-weight: 500; color: var(--text-muted); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.15s; }
@@ -15,11 +14,6 @@
         .tab-panel.active { display: block; }
         .product-name-link { font-weight: 500; color: var(--primary); cursor: pointer; text-decoration: none; }
         .product-name-link:hover { text-decoration: underline; }
-        .toggle-btn { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: var(--radius-sm); font-size: var(--font-size-xs); font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
-        .toggle-btn.enable { background: var(--success-bg); color: var(--success); }
-        .toggle-btn.enable:hover { background: var(--success); color: white; }
-        .toggle-btn.disable { background: var(--danger-bg); color: var(--danger); }
-        .toggle-btn.disable:hover { background: var(--danger); color: white; }
         .change-log-table td:last-child { min-width: 280px; }
         .log-type-badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius-sm); font-size: var(--font-size-xs); font-weight: 600; }
         .log-type-info { background: var(--border-light); color: var(--text-secondary); }
@@ -73,60 +67,54 @@
                     </div>
                 </div>
 
-                <div class="tab-panel" id="panel-chart">
-                    <div class="card">
-                        <div class="card-header"><span class="card-title">收益率曲线</span></div>
-                        <div class="card-body">
-                            <div id="returnChart" style="width:100%;height:360px;"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="tab-panel" id="panel-trades">
-                    <div class="card">
-                        <div class="card-header"><span class="card-title">交易记录</span></div>
-                        <div class="card-body-p0" id="tradeRecordsContainer"></div>
-                    </div>
-                </div>
-
-                <div class="tab-panel" id="panel-erp">
-                    <div class="card">
-                        <div class="card-header"><span class="card-title">ERP跟踪</span></div>
-                        <div class="card-body" id="erpContainer"></div>
-                    </div>
-                </div>
-
                 <div class="tab-panel" id="panel-logs">
                     <div class="card">
                         <div class="card-header"><span class="card-title">变更日志</span></div>
                         <div class="card-body" id="logsContainer"></div>
                     </div>
                 </div>
+
+                <div class="tab-panel" id="panel-trades">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">交易记录</span>
+                            <span style="font-size:var(--font-size-xs);color:var(--text-muted);margin-left:12px;">按创建时间倒序，展示该产品全部交易明细</span>
+                        </div>
+                        <div class="card-body-p0">
+                            <table class="data-table">
+                                <thead><tr><th>交易编号</th><th>交易类型</th><th>申报金额(元)</th><th>成交金额(元)</th><th>状态</th><th>合同状态</th><th>发起人</th><th>创建时间</th><th>成交日期</th><th>操作</th></tr></thead>
+                                <tbody id="tradesTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-panel" id="panel-dividends">
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">兑息兑付记录</span>
+                            <span style="font-size:var(--font-size-xs);color:var(--text-muted);margin-left:12px;">财务发起 → 交易员确认 → 财务最终确认 → 生成凭证 → 推送iBor</span>
+                        </div>
+                        <div class="card-body-p0">
+                            <table class="data-table">
+                                <thead><tr><th>流程编号</th><th>兑付日期</th><th>每百元应付利息(元)</th><th>每百元应付本金(元)</th><th>状态</th><th>发起人</th><th>创建时间</th><th>凭证编号</th><th>操作</th></tr></thead>
+                                <tbody id="dividendsTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <div id="sealModal" class="modal">
-        <div class="modal-content" style="width:560px;">
+    <div id="dividendDetailModal" class="modal" data-logic-id="modal_dividend_detail">
+        <div class="modal-content" style="width:720px;">
             <div class="modal-header">
-                <h3>上传用印版</h3>
-                <button class="btn btn-ghost btn-sm" onclick="closeSealModal()">✕</button>
+                <h3 id="divDetailTitle">兑息兑付详情</h3>
+                <button class="btn btn-ghost btn-sm" onclick="closeDividendDetailModal()">✕</button>
             </div>
-            <div class="modal-body">
-                <div class="detail-info-grid" id="sealContractInfo" style="margin-bottom:16px;"></div>
-                <div class="form-group" style="margin-bottom:10px;">
-                    <label>用印版文件 <span style="color:red;">*</span></label>
-                    <input type="file" id="sealFile" accept=".pdf,.doc,.docx">
-                </div>
-                <div class="grid-2" style="gap:10px;">
-                    <div class="form-group"><label>签署日期</label><input type="date" id="sealSignDate"></div>
-                    <div class="form-group"><label>到期日期</label><input type="date" id="sealExpireDate"></div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-ghost" onclick="closeSealModal()">取消</button>
-                <button class="btn btn-primary" onclick="confirmSealUpload()">确认上传</button>
-            </div>
+            <div class="modal-body" id="divDetailBody"></div>
+            <div class="modal-footer" id="divDetailFooter"></div>
         </div>
     </div>
 
@@ -173,9 +161,8 @@
         var tabs = [
             { key: 'basic', label: '基础信息' },
             { key: 'nav', label: '净值记录' },
-            { key: 'chart', label: '收益率曲线' },
             { key: 'trades', label: '交易记录' },
-            { key: 'erp', label: 'ERP跟踪' },
+            { key: 'dividends', label: '兑息兑付', onlyFor: ['信托', 'ABS(中保登)'] },
             { key: 'logs', label: '变更日志' }
         ];
 
@@ -235,6 +222,8 @@
         function renderTabNav() {
             var html = '';
             tabs.forEach(function(t) {
+                // 根据 onlyFor 过滤（如兑息兑付Tab仅信托/ABS显示）
+                if (t.onlyFor && currentProduct && t.onlyFor.indexOf(currentProduct.assetType) < 0) return;
                 html += '<button class="tab-btn' + (t.key === currentTab ? ' active' : '') + '" onclick="switchTab(\'' + t.key + '\')">' + t.label + '</button>';
             });
             document.getElementById('tabNav').innerHTML = html;
@@ -248,10 +237,9 @@
                     panel.classList.toggle('active', t.key === key);
                 }
             });
+            if (key === 'trades') renderTradesTable();
+            if (key === 'dividends') renderDividendsTable();
             renderTabNav();
-            if (key === 'chart') {
-                setTimeout(renderChart, 100);
-            }
         }
 
         function renderHeader() {
@@ -260,13 +248,8 @@
             document.getElementById('pageSubtitle').textContent = p.id + ' · ' + p.assetType + ' · ' + p.productType;
             document.getElementById('statusBadge').innerHTML = '<span class="status-badge ' + getStatusClass(p.status) + '">' + p.status + '</span>';
             var actions = '';
-            if (_canEditProduct && !_isReadOnly) {
-                actions += '<button class="btn btn-primary btn-sm" onclick="openEditModal()">编辑</button> ';
-                if (p.status === '禁用') {
-                    actions += '<button class="toggle-btn enable" onclick="toggleProductStatus(\'在投\')">启用</button>';
-                } else if (p.status === '在投' || p.status === '待投') {
-                    actions += '<button class="toggle-btn disable" onclick="toggleProductStatus(\'禁用\')">禁用</button>';
-                }
+            if (_canEditProduct && !_isReadOnly && p.status === '无计划') {
+                actions += '<button class="btn btn-primary btn-sm" onclick="openEditModal()">编辑</button>';
             }
             document.getElementById('detailActions').innerHTML = actions;
         }
@@ -332,143 +315,240 @@
             tbody.innerHTML = html;
         }
 
-        function renderChart() {
-            var chartDom = document.getElementById('returnChart');
-            if (!chartDom || typeof echarts === 'undefined') return;
-            var chart = echarts.init(chartDom);
-            var hist = generateNavHistory(currentProduct.id).slice().reverse();
-            if (hist.length === 0) {
-                chart.setOption({
-                    title: { text: '暂无数据', left: 'center', top: 'center', textStyle: { color: '#94A3B8', fontSize: 14 } }
+        // 渲染该产品的全部交易记录（按创建时间倒序）
+        function renderTradesTable() {
+            var trades = TRADES.filter(function(t) { return t.productId === currentProduct.id; });
+            // 按创建时间倒序
+            trades.sort(function(a, b) { return (b.createTime || '').localeCompare(a.createTime || ''); });
+            var tbody = document.getElementById('tradesTableBody');
+            if (trades.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text-muted);padding:20px;">该产品暂无交易记录</td></tr>';
+                return;
+            }
+            var html = '';
+            trades.forEach(function(t) {
+                // 合同状态
+                var contractStatus = '<span style="color:var(--text-muted);">无合同</span>';
+                var ct = CONTRACTS.find(function(c) { return c.tradeId === t.id; });
+                if (ct) {
+                    contractStatus = '<span class="status-badge ' + getStatusClass(ct.status) + '">' + ct.status + '</span>';
+                }
+                var dealAmount = t.actualDealAmount > 0 ? formatMoney(t.actualDealAmount) : (t.dealAmount > 0 ? formatMoney(t.dealAmount) : '-');
+                var dealDate = t.traderConfirmTime ? t.traderConfirmTime.slice(0, 10) : '-';
+                html += '<tr>' +
+                    '<td class="text-mono"><a href="trade.html?tradeId=' + t.id + '" style="color:var(--primary);">' + t.id + '</a></td>' +
+                    '<td>' + t.type + '</td>' +
+                    '<td class="text-mono">' + formatMoney(t.applyAmount) + '</td>' +
+                    '<td class="text-mono">' + dealAmount + '</td>' +
+                    '<td><span class="status-badge ' + getStatusClass(t.status) + '">' + t.status + '</span></td>' +
+                    '<td>' + contractStatus + '</td>' +
+                    '<td>' + (t.trader || '-') + '</td>' +
+                    '<td class="text-mono">' + (t.createTime || '-') + '</td>' +
+                    '<td class="text-mono">' + dealDate + '</td>' +
+                    '<td><a href="trade.html?tradeId=' + t.id + '" class="btn btn-info btn-sm">查看详情</a></td>' +
+                    '</tr>';
+            });
+            tbody.innerHTML = html;
+        }
+
+        // 渲染该产品的全部兑息兑付记录（按创建时间倒序）
+        function renderDividendsTable() {
+            var list = DIVIDENDS.filter(function(d) { return d.productId === currentProduct.id; });
+            list.sort(function(a, b) { return (b.createTime || '').localeCompare(a.createTime || ''); });
+            var tbody = document.getElementById('dividendsTableBody');
+            if (list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:20px;">该产品暂无兑息兑付记录</td></tr>';
+                return;
+            }
+            var html = '';
+            list.forEach(function(d) {
+                var voucherCell = d.voucherId ? '<a href="finance.html?voucherId=' + d.voucherId + '" style="color:var(--primary);">' + d.voucherId + '</a>' : '-';
+                html += '<tr>' +
+                    '<td class="text-mono"><a href="approval.html?dividendId=' + d.id + '" style="color:var(--primary);" onclick="event.preventDefault();openDividendDetail(\'' + d.id + '\')">' + d.id + '</a></td>' +
+                    '<td class="text-mono">' + d.divDate + '</td>' +
+                    '<td class="text-mono">' + d.interestPer100.toFixed(4) + '</td>' +
+                    '<td class="text-mono">' + d.principalPer100.toFixed(4) + '</td>' +
+                    '<td><span class="status-badge ' + getStatusClass(d.status) + '">' + d.status + '</span></td>' +
+                    '<td>' + (d.initiator || '-') + '</td>' +
+                    '<td class="text-mono">' + (d.createTime || '-') + '</td>' +
+                    '<td class="text-mono">' + voucherCell + '</td>' +
+                    '<td><button class="btn btn-info btn-sm" onclick="openDividendDetail(\'' + d.id + '\')">查看详情</button></td>' +
+                    '</tr>';
+            });
+            tbody.innerHTML = html;
+        }
+
+        function closeDividendDetailModal() {
+            document.getElementById('dividendDetailModal').style.display = 'none';
+        }
+
+        function openDividendDetail(dividendId) {
+            var d = DIVIDENDS.find(function(x) { return x.id === dividendId; });
+            if (!d) { alert('未找到兑息兑付记录：' + dividendId); return; }
+            document.getElementById('divDetailTitle').textContent = '兑息兑付详情 - ' + d.id;
+
+            var roleKey = getCurrentRoleKey();
+            var isTraderStep = (d.status === '待交易员确认' && (roleKey === 'trader' || roleKey === 'demo'));
+            var isFinanceStep = (d.status === '交易员已确认' && (roleKey === 'financial_staff' || roleKey === 'demo'));
+
+            var body = '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:14px;">';
+            body += '<div class="detail-info-item"><div class="info-label">流程编号</div><div class="info-value">' + d.id + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">当前状态</div><div class="info-value"><span class="status-badge ' + getStatusClass(d.status) + '">' + d.status + '</span></div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">产品名称</div><div class="info-value">' + d.productName + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">产品内部编码</div><div class="info-value">' + (d.innerCode || '-') + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">产品外部编码</div><div class="info-value">' + (d.externalCode || '-') + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">发起人</div><div class="info-value">' + (d.initiator || '-') + '</div></div>';
+            body += '<div class="detail-info-item"><div class="info-label">创建时间</div><div class="info-value">' + (d.createTime || '-') + '</div></div>';
+            body += '</div>';
+
+            body += '<div class="detail-section-title">兑息兑付信息（iBor兑息兑付字段）</div>';
+            if (isTraderStep) {
+                body += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;">';
+                body += '<div class="form-group"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">兑付日期</label><input type="date" id="pdDivEditDate" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);" value="' + d.divDate + '"></div>';
+                body += '<div class="form-group"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">每百元应付利息(元)</label><input type="number" step="0.0001" id="pdDivEditInterest" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);" value="' + d.interestPer100 + '"></div>';
+                body += '<div class="form-group"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">每百元应付本金(元)</label><input type="number" step="0.0001" id="pdDivEditPrincipal" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);" value="' + d.principalPer100 + '"></div>';
+                body += '<div class="form-group"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">备注</label><input type="text" id="pdDivEditRemark" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);" value="' + (d.remark || '') + '"></div>';
+                body += '<div class="form-group" style="grid-column:1/3;"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">确认备注 / 驳回原因</label><textarea id="pdDivTraderRemark" rows="2" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);resize:vertical;" placeholder="选填；确认时作为备注，驳回时作为驳回原因"></textarea></div>';
+                body += '</div>';
+                body += '<input type="hidden" id="pdDivRejectReason" value="">';
+            } else {
+                body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:6px;">';
+                body += '<div class="detail-info-item"><div class="info-label">兑付日期</div><div class="info-value">' + d.divDate + '</div></div>';
+                body += '<div class="detail-info-item"><div class="info-label">每百元应付利息</div><div class="info-value">' + d.interestPer100.toFixed(4) + ' 元</div></div>';
+                body += '<div class="detail-info-item"><div class="info-label">每百元应付本金</div><div class="info-value">' + d.principalPer100.toFixed(4) + ' 元</div></div>';
+                body += '<div class="detail-info-item" style="grid-column:1/3;"><div class="info-label">备注</div><div class="info-value">' + (d.remark || '-') + '</div></div>';
+                body += '</div>';
+                if (d.traderConfirmUser) {
+                    body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:6px;">';
+                    body += '<div class="detail-info-item"><div class="info-label">交易员确认</div><div class="info-value">' + d.traderConfirmUser + ' ' + d.traderConfirmTime + (d.traderModified ? '（已修改字段）' : '') + '</div></div>';
+                    body += '<div class="detail-info-item" style="grid-column:1/3;"><div class="info-label">交易员备注</div><div class="info-value">' + (d.traderRemark || '-') + '</div></div>';
+                    body += '</div>';
+                }
+                if (isFinanceStep) {
+                    body += '<div class="detail-section-title">驳回原因</div>';
+                    body += '<textarea id="pdDivRejectReason" rows="3" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);resize:vertical;" placeholder="如需驳回请填写原因..."></textarea>';
+                    body += '<input type="hidden" id="pdDivTraderRemark" value="">';
+                }
+            }
+
+            if (d.voucherId) {
+                body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-top:10px;">';
+                body += '<div class="detail-info-item"><div class="info-label">凭证编号</div><div class="info-value"><a href="finance.html?voucherId=' + d.voucherId + '" style="color:var(--primary);">' + d.voucherId + '</a></div></div>';
+                body += '<div class="detail-info-item"><div class="info-label">iBor推送</div><div class="info-value">' + (d.pushIborStatus || '未推送') + (d.pushIborTime ? ' (' + d.pushIborTime + ')' : '') + '</div></div>';
+                body += '</div>';
+            }
+
+            body += '<div class="detail-section-title">处理记录</div>';
+            body += '<div class="timeline">';
+            d.history.forEach(function(h) {
+                body += '<div class="timeline-item">';
+                body += '<div class="timeline-dot completed"></div>';
+                body += '<div class="timeline-title">' + h.action + '</div>';
+                if (h.user) body += '<div class="timeline-user">' + h.user + '</div>';
+                if (h.time) body += '<div class="timeline-time">' + h.time + '</div>';
+                if (h.remark) body += '<div class="timeline-time" style="color:var(--text-secondary);">' + h.remark + '</div>';
+                body += '</div>';
+            });
+            body += '</div>';
+
+            document.getElementById('divDetailBody').innerHTML = body;
+
+            var footer = '<button class="btn btn-ghost" onclick="closeDividendDetailModal()">关闭</button>';
+            if (isTraderStep) {
+                footer += '<button class="btn btn-danger" onclick="pdRejectDividend(\'' + d.id + '\')">驳回</button>';
+                footer += '<button class="btn btn-primary" onclick="pdConfirmDividend(\'' + d.id + '\', false)">确认</button>';
+            } else if (isFinanceStep) {
+                footer += '<button class="btn btn-danger" onclick="pdRejectDividend(\'' + d.id + '\')">驳回</button>';
+                footer += '<button class="btn btn-success" onclick="pdConfirmDividend(\'' + d.id + '\', true)">最终确认</button>';
+            }
+            document.getElementById('divDetailFooter').innerHTML = footer;
+            document.getElementById('dividendDetailModal').style.display = 'block';
+        }
+
+        function pdConfirmDividend(dividendId, isFinal) {
+            var d = DIVIDENDS.find(function(x) { return x.id === dividendId; });
+            if (!d) return;
+            var role = getCurrentRole();
+            var now = new Date();
+            var nowStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+
+            if (!isFinal) {
+                var modified = false;
+                var modifyRemark = [];
+                var newDate = document.getElementById('pdDivEditDate').value;
+                var newInterest = parseFloat(document.getElementById('pdDivEditInterest').value);
+                var newPrincipal = parseFloat(document.getElementById('pdDivEditPrincipal').value);
+                var newRemark = document.getElementById('pdDivEditRemark').value;
+                var traderRemark = document.getElementById('pdDivTraderRemark').value;
+
+                if (newDate !== d.divDate) { modifyRemark.push('兑付日期从' + d.divDate + '改为' + newDate); d.divDate = newDate; modified = true; }
+                if (newInterest !== d.interestPer100) { modifyRemark.push('每百元应付利息从' + d.interestPer100 + '调整为' + newInterest); d.interestPer100 = newInterest; modified = true; }
+                if (newPrincipal !== d.principalPer100) { modifyRemark.push('每百元应付本金从' + d.principalPer100 + '调整为' + newPrincipal); d.principalPer100 = newPrincipal; modified = true; }
+                if (newRemark !== d.remark) { d.remark = newRemark; modified = true; }
+
+                d.traderConfirmUser = role.label;
+                d.traderConfirmTime = nowStr;
+                d.traderModified = modified;
+                d.traderRemark = traderRemark || (modified ? modifyRemark.join('，') : '确认无误');
+                d.status = '交易员已确认';
+                d.history.push({ user: role.label, action: '交易员确认' + (modified ? '（已修改字段）' : ''), time: nowStr, remark: d.traderRemark });
+            } else {
+                d.financeConfirmUser = role.label;
+                d.financeConfirmTime = nowStr;
+                d.status = '已完成';
+                d.history.push({ user: role.label, action: '财务最终确认', time: nowStr, remark: '' });
+
+                var voucherSeq = 1;
+                VOUCHERS.forEach(function(v) { if (v.id && v.id.indexOf('VCH' + d.divDate.replace(/-/g,'')) === 0) voucherSeq++; });
+                var voucherId = 'VCH' + d.divDate.replace(/-/g,'') + String(voucherSeq).padStart(3,'0');
+                VOUCHERS.push({
+                    id: voucherId,
+                    summary: d.productName + '兑息兑付(利息' + d.interestPer100 + '/本金' + d.principalPer100 + '每百元)',
+                    debitAccount: '1122-应收利息',
+                    creditAccount: '6001-投资收益',
+                    amount: d.interestPer100 + d.principalPer100,
+                    maker: role.label,
+                    makeTime: nowStr
                 });
-                return;
+                d.voucherId = voucherId;
+                d.history.push({ user: '系统', action: '生成凭证' + voucherId, time: nowStr, remark: '' });
+
+                var frSeq = 1;
+                FINANCES.forEach(function(f) { if (f.id && f.id.indexOf('FR' + d.divDate.replace(/-/g,'')) === 0) frSeq++; });
+                FINANCES.push({
+                    id: 'FR' + d.divDate.replace(/-/g,'') + String(frSeq).padStart(3,'0'),
+                    productId: d.productId,
+                    productName: d.productName,
+                    changeType: '兑息兑付',
+                    changeDate: d.divDate,
+                    changeAmount: d.interestPer100 + d.principalPer100,
+                    voucherStatus: '待确认',
+                    createMethod: '系统自动生成',
+                    source: '兑息兑付流程',
+                    voucherId: voucherId
+                });
             }
-            var dates = hist.map(function(h) { return h.date; });
-            var navs = hist.map(function(h) { return h.nav; });
-            var returns = hist.map(function(h, i) { return i === 0 ? 0 : Math.round((h.dailyReturn) * 100) / 100; });
-            chart.setOption({
-                tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
-                legend: { data: ['单位净值', '日收益率(%)'], top: 5 },
-                grid: { left: 60, right: 60, bottom: 30, top: 40 },
-                xAxis: { type: 'category', data: dates, axisLabel: { fontSize: 11, color: '#64748B' }, axisLine: { lineStyle: { color: '#E2E8F0' } } },
-                yAxis: [
-                    { type: 'value', name: '净值', position: 'left', scale: true, axisLabel: { fontSize: 11, color: '#64748B' }, splitLine: { lineStyle: { color: '#F1F5F9' } } },
-                    { type: 'value', name: '收益率(%)', position: 'right', axisLabel: { fontSize: 11, color: '#64748B' }, splitLine: { show: false } }
-                ],
-                series: [
-                    {
-                        name: '单位净值', type: 'line', data: navs, smooth: true,
-                        lineStyle: { color: '#3B82F6', width: 2 },
-                        itemStyle: { color: '#3B82F6' },
-                        areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: 'rgba(59,130,246,0.15)' }, { offset: 1, color: 'rgba(59,130,246,0.01)' }] } }
-                    },
-                    {
-                        name: '日收益率(%)', type: 'bar', yAxisIndex: 1, data: returns,
-                        itemStyle: {
-                            color: function(params) { return params.value >= 0 ? '#10B981' : '#EF4444'; }
-                        }
-                    }
-                ]
-            });
-            window.addEventListener('resize', function() { chart.resize(); });
+            closeDividendDetailModal();
+            renderDividendsTable();
+            alert(isFinal ? '财务最终确认成功！已自动生成凭证' + d.voucherId + '。\n可在【财务核算】模块查看并推送到iBor。' : '交易员确认成功！已转交财务最终确认。');
         }
 
-        function renderTradeTable() {
-            var trades = TRADES.filter(function(t) { return t.productId === currentProduct.id; });
-            var container = document.getElementById('tradeRecordsContainer');
-            if (trades.length === 0) {
-                container.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px;">暂无交易记录</p>';
-                return;
-            }
-            var html = '';
-            trades.forEach(function(t) {
-                var typeClass = t.type === '买入' ? 'status-investing' : 'status-rejected';
-                var contracts = CONTRACTS.filter(function(c) { return c.tradeId === t.id; });
-                html += '<div class="trade-record-card">';
-                html += '<div class="trade-record-main">';
-                html += '<div class="trade-record-row">';
-                html += '<span class="text-mono font-bold">' + t.id + '</span>';
-                html += '<span class="status-badge ' + typeClass + '">' + t.type + '</span>';
-                html += '<span>' + t.productName + '</span>';
-                html += '<span class="text-mono">' + formatMoney(t.applyAmount) + '</span>';
-                html += '<span class="text-mono">' + (t.dealAmount > 0 ? formatMoney(t.dealAmount) : '-') + '</span>';
-                html += '<span class="status-badge ' + getStatusClass(t.status) + '">' + t.status + '</span>';
-                html += '<span>' + t.trader + '</span>';
-                html += '<span class="text-mono" style="font-size:var(--font-size-xs);">' + t.createTime + '</span>';
-                html += '</div>';
-                if (contracts.length > 0) {
-                    html += '<div class="trade-contracts-section">';
-                    html += '<div class="trade-contracts-label">关联合同（' + contracts.length + '）</div>';
-                    html += '<table class="data-table trade-contracts-table">';
-                    html += '<thead><tr><th>合同编号</th><th>合同类型</th><th>对手方</th><th>管理人</th><th>合同金额</th><th>版本</th><th>状态</th><th>操作</th></tr></thead>';
-                    html += '<tbody>';
-                    contracts.forEach(function(c) {
-                        var versionClass = getStatusClass(c.version);
-                        var statusClass = getStatusClass(c.status);
-                        var actionHtml = '';
-                        if (c.status === '待上传用印') {
-                            actionHtml = '<button class="btn btn-primary btn-xs" onclick="openSealModal(\'' + c.id + '\')">上传用印版</button>';
-                        } else if (c.status === '待推送') {
-                            actionHtml = '<button class="btn btn-primary btn-xs" onclick="pushContract(\'' + c.id + '\')">推送合同系统</button>';
-                        } else {
-                            actionHtml = '<span style="color:var(--text-muted);font-size:var(--font-size-xs);">-</span>';
-                        }
-                        html += '<tr>';
-                        html += '<td class="text-mono">' + c.id + '</td>';
-                        html += '<td>' + c.type + '</td>';
-                        html += '<td>' + c.counterpartyName + '</td>';
-                        html += '<td>' + (c.manager || '-') + '</td>';
-                        html += '<td class="text-mono">' + formatMoney(c.amount) + '</td>';
-                        html += '<td><span class="status-badge ' + versionClass + '">' + c.version + '</span></td>';
-                        html += '<td><span class="status-badge ' + statusClass + '">' + c.status + '</span></td>';
-                        html += '<td>' + actionHtml + '</td>';
-                        html += '</tr>';
-                    });
-                    html += '</tbody></table>';
-                    html += '</div>';
-                }
-                html += '</div></div>';
-            });
-            container.innerHTML = html;
-        }
-
-        function renderErpTracking() {
-            var trades = TRADES.filter(function(t) { return t.productId === currentProduct.id; });
-            var container = document.getElementById('erpContainer');
-            if (trades.length === 0) {
-                container.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:20px;">暂无ERP跟踪记录</p>';
-                return;
-            }
-            var html = '';
-            trades.forEach(function(t) {
-                var approval = APPROVALS.find(function(a) { return a.object === t.id; });
-                html += '<div style="margin-bottom:14px;padding:12px;background:var(--border-light);border-radius:var(--radius);border:1px solid var(--border-light);">';
-                html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">';
-                html += '<div><span class="font-bold">' + t.id + '</span> <span class="status-badge ' + getStatusClass(t.status) + '">' + t.status + '</span></div>';
-                html += '<div style="font-size:var(--font-size-xs);color:var(--text-muted);">' + t.createTime + '</div>';
-                html += '</div>';
-                html += '<div style="font-size:var(--font-size-sm);color:var(--text-secondary);margin-bottom:8px;">' + t.type + ' ' + t.productName + ' · 申请金额 ' + formatMoney(t.applyAmount) + (t.remark ? ' · ' + t.remark : '') + '</div>';
-                if (approval && approval.steps) {
-                    html += '<div class="erp-timeline">';
-                    approval.steps.forEach(function(step) {
-                        var cls = '';
-                        if (step.status === '已完成') cls = 'step-done';
-                        else if (step.status === '当前') cls = 'step-current';
-                        else if (step.status === '已驳回' || step.result === '驳回') cls = 'step-rejected';
-                        html += '<div class="erp-step ' + cls + '">';
-                        html += '<div class="step-title">' + step.title + '</div>';
-                        if (step.time) html += '<div class="step-time">' + step.time + '</div>';
-                        if (step.user) html += '<div class="step-user">' + step.user + '</div>';
-                        if (step.result === '驳回' && step.reason) html += '<div style="font-size:var(--font-size-xs);color:var(--danger);margin-top:2px;">驳回原因：' + step.reason + '</div>';
-                        html += '</div>';
-                    });
-                    html += '</div>';
-                } else {
-                    html += '<div style="font-size:var(--font-size-xs);color:var(--text-muted);">暂无审批流程信息</div>';
-                }
-                html += '</div>';
-            });
-            container.innerHTML = html;
+        function pdRejectDividend(dividendId) {
+            var reason = document.getElementById('pdDivRejectReason').value || document.getElementById('pdDivTraderRemark').value;
+            if (!reason) { alert('请填写驳回原因'); return; }
+            var d = DIVIDENDS.find(function(x) { return x.id === dividendId; });
+            if (!d) return;
+            var role = getCurrentRole();
+            var now = new Date();
+            var nowStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+            d.status = '已驳回';
+            d.traderConfirmUser = d.traderConfirmUser || role.label;
+            d.traderConfirmTime = d.traderConfirmTime || nowStr;
+            d.traderRemark = reason;
+            d.history.push({ user: role.label, action: '驳回', time: nowStr, remark: reason });
+            closeDividendDetailModal();
+            renderDividendsTable();
+            alert('已驳回该兑息兑付流程');
         }
 
         function renderChangeLogs() {
@@ -503,65 +583,6 @@
             });
             html += '</tbody></table>';
             container.innerHTML = html;
-        }
-
-        var _sealContractId = null;
-
-        function openSealModal(contractId) {
-            _sealContractId = contractId;
-            var c = CONTRACTS.find(function(x) { return x.id === contractId; });
-            if (!c) return;
-            var infoHtml = '';
-            var fields = [
-                { label: '合同编号', value: c.id },
-                { label: '合同类型', value: c.type },
-                { label: '对手方', value: c.counterpartyName },
-                { label: '合同金额', value: formatMoney(c.amount) },
-                { label: '初始版文件', value: c.initFile || '-' }
-            ];
-            fields.forEach(function(f) {
-                infoHtml += '<div class="detail-info-item"><div class="info-label">' + f.label + '</div><div class="info-value">' + f.value + '</div></div>';
-            });
-            document.getElementById('sealContractInfo').innerHTML = infoHtml;
-            document.getElementById('sealSignDate').value = '';
-            document.getElementById('sealExpireDate').value = '';
-            document.getElementById('sealFile').value = '';
-            document.getElementById('sealModal').style.display = 'block';
-        }
-
-        function closeSealModal() {
-            document.getElementById('sealModal').style.display = 'none';
-            _sealContractId = null;
-        }
-
-        function confirmSealUpload() {
-            if (!_sealContractId) return;
-            var fileInput = document.getElementById('sealFile');
-            if (!fileInput.files || fileInput.files.length === 0) {
-                alert('请选择用印版文件');
-                return;
-            }
-            var c = CONTRACTS.find(function(x) { return x.id === _sealContractId; });
-            if (!c) return;
-            c.sealFile = fileInput.files[0].name;
-            c.version = '用印版本';
-            c.status = '待推送';
-            var signDate = document.getElementById('sealSignDate').value;
-            var expireDate = document.getElementById('sealExpireDate').value;
-            if (signDate) c.signDate = signDate;
-            if (expireDate) c.expireDate = expireDate;
-            alert('用印版上传成功，合同状态已更新为「待推送」');
-            closeSealModal();
-            renderTradeTable();
-        }
-
-        function pushContract(contractId) {
-            if (!confirm('确定将此合同推送至合同系统？')) return;
-            var c = CONTRACTS.find(function(x) { return x.id === contractId; });
-            if (!c) return;
-            c.status = '已推送';
-            alert('合同已成功推送至合同系统');
-            renderTradeTable();
         }
 
         function openEditModal() {
@@ -616,19 +637,6 @@
             renderBasicInfo();
         }
 
-        function toggleProductStatus(newStatus) {
-            if (!confirm('确定将产品状态变更为「' + newStatus + '」？')) return;
-            currentProduct.status = newStatus;
-            var logs = generateChangeLogs(currentProduct.id);
-            logs.unshift({
-                time: new Date().toISOString().slice(0, 16).replace('T', ' '),
-                user: getCurrentRole().label,
-                content: '产品状态变更：→ ' + newStatus,
-                type: '信息变更'
-            });
-            renderHeader();
-        }
-
         (function init() {
             var pid = getQueryParam('id');
             if (!pid) { location.href = 'product.html'; return; }
@@ -638,14 +646,11 @@
             renderHeader();
             renderBasicInfo();
             renderNavTable();
-            renderTradeTable();
-            renderErpTracking();
             renderChangeLogs();
         })();
 
         window.addEventListener('click', function(event) {
             if (event.target === document.getElementById('editModal')) closeEditModal();
-            if (event.target === document.getElementById('sealModal')) closeSealModal();
         });
     </script>
 </body>

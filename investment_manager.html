@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>场外簿记OMS系统 - 监控看板</title>
+    <title>委外投资业务一体化订单管理平台 - 监控看板</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
@@ -296,7 +296,7 @@
         var _isCompanyLeader = _roleKey === 'company_leader';
         var _canViewAll = _dataScope === 'all';
         var _isInvestmentManager = _roleKey === 'investment_manager';
-        var _isTrader = _roleKey === 'trader';
+        var _isTrader = _roleKey === 'trader' || _roleKey === 'demo';
 
         var overviewData = [
             {
