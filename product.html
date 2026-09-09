@@ -34,6 +34,27 @@
         .btn-group { display: flex; gap: 8px; justify-content: flex-end; }
         .btn-group .btn { min-width: 90px; }
 
+        /* PRD 下拉组件：可搜索/可编辑下拉（信用评级、基础资产类型、区域市场） */
+        .combo-box { position: relative; }
+        .combo-box input { width: 100%; padding-right: 24px; }
+        .combo-caret { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); font-size: 10px; color: var(--text-muted); pointer-events: none; }
+        .combo-panel { display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 60; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); max-height: 240px; overflow-y: auto; }
+        .combo-panel.show { display: block; }
+        .combo-item { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 10px; font-size: var(--font-size-sm); cursor: pointer; color: var(--text-secondary); }
+        .combo-item:hover { background: var(--info-bg); color: var(--primary); }
+        .combo-item.active { background: var(--info-bg); color: var(--primary); font-weight: 600; }
+        .combo-item-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .combo-ops { display: none; gap: 4px; flex: none; }
+        .combo-item:hover .combo-ops { display: flex; }
+        .combo-op { font-size: 11px; padding: 1px 6px; border-radius: var(--radius-sm); cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary); }
+        .combo-op:hover { border-color: var(--primary); color: var(--primary); }
+        .combo-op.ok { color: var(--success); border-color: var(--success); }
+        .combo-inline-edit { display: flex; align-items: center; gap: 4px; padding: 6px 8px; border-bottom: 1px solid var(--border-light); }
+        .combo-inline-edit input { flex: 1; min-width: 0; padding: 3px 6px; font-size: var(--font-size-sm); border: 1px solid var(--primary); border-radius: var(--radius-sm); }
+        .combo-add-row { padding: 6px 10px; color: var(--primary); font-size: var(--font-size-sm); cursor: pointer; border-top: 1px solid var(--border-light); }
+        .combo-add-row:hover { background: var(--info-bg); }
+        .combo-empty { padding: 12px 10px; color: var(--text-muted); font-size: 12px; text-align: center; }
+
         .cascade-filter { position: relative; flex: none; width: 220px; }
         .cascade-trigger { display: flex; align-items: center; justify-content: space-between; width: 100%; cursor: pointer; text-align: left; background: var(--surface); }
         .cascade-trigger:disabled, .cascade-trigger.disabled { background: var(--border-light); cursor: not-allowed; color: var(--text-muted); }
@@ -690,6 +711,10 @@
             if (creditRatingEl) creditRatingEl.value = p.creditRating || '';
             var originatorEl = document.getElementById('fOriginator');
             if (originatorEl) originatorEl.value = p.originator || '';
+            var originatorCodeEl = document.getElementById('fOriginatorCode');
+            if (originatorCodeEl) originatorCodeEl.value = p.originatorCode || '';
+            var counterpartyCodeEl = document.getElementById('fCounterpartyCode');
+            if (counterpartyCodeEl) counterpartyCodeEl.value = p.counterpartyCode || '';
             var underlyingAssetTypeEl = document.getElementById('fUnderlyingAssetType');
             if (underlyingAssetTypeEl) underlyingAssetTypeEl.value = p.underlyingAssetType || '';
             var trancheLevelEl = document.getElementById('fTrancheLevel');
@@ -759,6 +784,8 @@
             var concentration = getElNum('fConcentration');
             var creditRating = getElVal('fCreditRating');
             var originator = getElVal('fOriginator');
+            var originatorCode = getElVal('fOriginatorCode');
+            var counterpartyCode = getElVal('fCounterpartyCode');
             var underlyingAssetType = getElVal('fUnderlyingAssetType');
             var trancheLevel = getElVal('fTrancheLevel');
             var annualYield = getElNum('fAnnualYield');
@@ -829,6 +856,8 @@
                     p.concentration = concentration;
                     p.creditRating = creditRating;
                     p.originator = originator;
+                    p.originatorCode = originatorCode;
+                    p.counterpartyCode = counterpartyCode;
                     p.underlyingAssetType = underlyingAssetType;
                     p.trancheLevel = trancheLevel;
                     p.annualYield = annualYield;
@@ -886,6 +915,8 @@
                     concentration: concentration,
                     creditRating: creditRating,
                     originator: originator,
+                    originatorCode: originatorCode,
+                    counterpartyCode: counterpartyCode,
                     underlyingAssetType: underlyingAssetType,
                     trancheLevel: trancheLevel,
                     annualYield: annualYield,
@@ -946,16 +977,233 @@
             return fixed;
         }
 
-        function buildCreditRatingDatalist() {
-            var opts = '';
-            CREDIT_RATINGS.forEach(function(r) { opts += '<option value="' + r + '">'; });
-            return '<datalist id="dlCreditRating">' + opts + '</datalist>';
+        // ============ PRD 下拉组件：可搜索/可编辑下拉（信用评级、基础资产类型、区域市场） ============
+        var _combos = {};
+
+        function escHtml(s) {
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         }
 
-        function buildUnderlyingAssetDatalist() {
-            var opts = '';
-            UNDERLYING_ASSET_TYPES.forEach(function(t) { opts += '<option value="' + t + '">'; });
-            return '<datalist id="dlUnderlyingAsset">' + opts + '</datalist>';
+        // 可维护选项（区域市场）持久化到 localStorage
+        function comboStored(key) {
+            try { return JSON.parse(localStorage.getItem(key)) || []; } catch (e) { return []; }
+        }
+        function comboPersist(key, arr) {
+            try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {}
+        }
+
+        // cfg: { id, label, required, hint, placeholder, items, allowCustom, manageable, storageKey }
+        function comboField(cfg) {
+            _combos[cfg.id] = cfg;
+            cfg.state = { adding: false, renamingIdx: -1 };
+            var star = cfg.required ? ' <span class="required-star">*</span>' : '';
+            return '<div class="form-group combo-field" id="combo-wrap-' + cfg.id + '">' +
+                '<label>' + cfg.label + star + '</label>' +
+                '<div class="combo-box">' +
+                '<input type="text" id="' + cfg.id + '" autocomplete="off" placeholder="' + (cfg.placeholder || '') + '"' + (cfg.required ? ' required' : '') +
+                ' onclick="comboOpen(\'' + cfg.id + '\')" onfocus="comboOpen(\'' + cfg.id + '\')" oninput="comboOpen(\'' + cfg.id + '\')" onkeydown="comboInputKey(event, \'' + cfg.id + '\')">' +
+                '<span class="combo-caret">▼</span>' +
+                '<div class="combo-panel" id="combo-panel-' + cfg.id + '"></div>' +
+                '</div>' +
+                (cfg.hint ? '<div class="form-hint">' + cfg.hint + '</div>' : '') +
+                '</div>';
+        }
+
+        function comboItems(id) {
+            var cfg = _combos[id];
+            if (cfg.storageKey) {
+                var stored = comboStored(cfg.storageKey);
+                // 首次使用：以预置枚举初始化（之后用户的新增/删除/重命名不再被还原）
+                if (stored.length === 0 && cfg.items && cfg.items.length) {
+                    stored = cfg.items.slice();
+                    comboPersist(cfg.storageKey, stored);
+                }
+                return stored;
+            }
+            return typeof cfg.items === 'function' ? cfg.items() : (cfg.items || []);
+        }
+
+        function comboRender(id) {
+            var cfg = _combos[id];
+            var panel = document.getElementById('combo-panel-' + id);
+            if (!panel || !cfg) return;
+            var input = document.getElementById(id);
+            var q = (input.value || '').trim();
+            var items = comboItems(id);
+            var exactMatch = items.indexOf(q) !== -1;
+            var html = '';
+            // 重命名编辑行
+            if (cfg.state.renamingIdx > -1 && items[cfg.state.renamingIdx] !== undefined) {
+                html += '<div class="combo-inline-edit"><input type="text" id="combo-rename-input" value="' + escHtml(items[cfg.state.renamingIdx]) + '"' +
+                    ' onkeydown="comboEditKey(event, \'' + id + '\', \'rename\')">' +
+                    '<span class="combo-op ok" title="保存" onclick="comboRenameCommit(\'' + id + '\')">✓</span>' +
+                    '<span class="combo-op" title="取消" onclick="comboRenameCancel(\'' + id + '\')">✕</span></div>';
+            }
+            // 新增编辑行
+            if (cfg.state.adding) {
+                html += '<div class="combo-inline-edit"><input type="text" id="combo-add-input" placeholder="输入新选项名称"' +
+                    ' onkeydown="comboEditKey(event, \'' + id + '\', \'add\')">' +
+                    '<span class="combo-op ok" title="保存" onclick="comboAddCommit(\'' + id + '\')">✓</span>' +
+                    '<span class="combo-op" title="取消" onclick="comboAddCancel(\'' + id + '\')">✕</span></div>';
+            }
+            var shown = 0;
+            items.forEach(function(item, idx) {
+                if (cfg.state.renamingIdx === idx) return;
+                if (q && item.indexOf(q) === -1) return;
+                shown++;
+                var ops = '';
+                if (cfg.manageable) {
+                    ops = '<span class="combo-ops">' +
+                        '<span class="combo-op" title="重命名" onclick="comboRenameStart(\'' + id + '\',' + idx + ',event)">✎</span>' +
+                        '<span class="combo-op" title="删除" onclick="comboRemove(\'' + id + '\',' + idx + ',event)">✕</span></span>';
+                }
+                var active = item === input.value ? ' active' : '';
+                html += '<div class="combo-item' + active + '" onclick="comboSelect(\'' + id + '\',' + idx + ')"><span class="combo-item-label">' + escHtml(item) + '</span>' + ops + '</div>';
+            });
+            // 自定义输入行（输入内容不在选项中时出现）
+            if (cfg.allowCustom && q && !exactMatch) {
+                html += '<div class="combo-add-row" onclick="comboUseCustom(\'' + id + '\')">＋ ' + (cfg.manageable ? '新增并使用「' : '使用「') + escHtml(q) + '」</div>';
+            }
+            // 管理行：新增选项
+            if (cfg.manageable && !cfg.state.adding) {
+                html += '<div class="combo-add-row" onclick="comboAddStart(\'' + id + '\')">＋ 新增选项</div>';
+            }
+            if (shown === 0 && !(cfg.allowCustom && q) && !cfg.state.adding) {
+                html += '<div class="combo-empty">' + (cfg.manageable ? '暂无选项，点击下方「新增选项」添加' : '无匹配选项') + '</div>';
+            }
+            panel.innerHTML = html;
+        }
+
+        function comboOpen(id) {
+            var cfg = _combos[id];
+            if (!cfg) return;
+            // 关闭其它下拉
+            Object.keys(_combos).forEach(function(k) {
+                if (k !== id) {
+                    var c = _combos[k];
+                    c.state.adding = false; c.state.renamingIdx = -1;
+                    var p = document.getElementById('combo-panel-' + k);
+                    if (p) p.classList.remove('show');
+                }
+            });
+            var panel = document.getElementById('combo-panel-' + id);
+            if (panel) panel.classList.add('show');
+            comboRender(id);
+        }
+
+        function comboClose(id) {
+            var cfg = _combos[id];
+            if (!cfg) return;
+            cfg.state.adding = false;
+            cfg.state.renamingIdx = -1;
+            var panel = document.getElementById('combo-panel-' + id);
+            if (panel) panel.classList.remove('show');
+        }
+
+        function comboSelect(id, idx) {
+            var items = comboItems(id);
+            var input = document.getElementById(id);
+            if (items[idx] !== undefined) input.value = items[idx];
+            comboClose(id);
+        }
+
+        // 使用自定义输入值；manageable 时同时加入选项库
+        function comboUseCustom(id) {
+            var cfg = _combos[id];
+            var input = document.getElementById(id);
+            var val = input.value.trim();
+            if (!val) return;
+            if (cfg.storageKey) {
+                var items = comboStored(cfg.storageKey);
+                if (items.indexOf(val) === -1) { items.push(val); comboPersist(cfg.storageKey, items); }
+            }
+            input.value = val;
+            comboClose(id);
+        }
+
+        function comboAddStart(id) {
+            var cfg = _combos[id];
+            cfg.state.adding = true; cfg.state.renamingIdx = -1;
+            comboRender(id);
+            var el = document.getElementById('combo-add-input');
+            if (el) el.focus();
+        }
+
+        function comboAddCancel(id) { _combos[id].state.adding = false; comboRender(id); }
+
+        function comboAddCommit(id) {
+            var cfg = _combos[id];
+            var el = document.getElementById('combo-add-input');
+            if (!el) return;
+            var val = el.value.trim();
+            if (!val) { alert('请输入选项名称'); return; }
+            var items = comboItems(id);
+            if (items.indexOf(val) !== -1) { alert('选项「' + val + '」已存在'); return; }
+            items.push(val);
+            if (cfg.storageKey) comboPersist(cfg.storageKey, items);
+            cfg.state.adding = false;
+            comboRender(id);
+        }
+
+        function comboRenameStart(id, idx, e) {
+            if (e) e.stopPropagation();
+            var cfg = _combos[id];
+            cfg.state.renamingIdx = idx; cfg.state.adding = false;
+            comboRender(id);
+            var el = document.getElementById('combo-rename-input');
+            if (el) { el.focus(); el.select(); }
+        }
+
+        function comboRenameCancel(id) { _combos[id].state.renamingIdx = -1; comboRender(id); }
+
+        function comboRenameCommit(id) {
+            var cfg = _combos[id];
+            var el = document.getElementById('combo-rename-input');
+            if (!el) return;
+            var val = el.value.trim();
+            var items = comboItems(id);
+            var idx = cfg.state.renamingIdx;
+            if (!val) { alert('选项名称不能为空'); return; }
+            if (items.indexOf(val) !== -1 && items[idx] !== val) { alert('选项「' + val + '」已存在'); return; }
+            var old = items[idx];
+            items[idx] = val;
+            if (cfg.storageKey) comboPersist(cfg.storageKey, items);
+            // 若当前选中值正是被改名项，同步输入框
+            var input = document.getElementById(id);
+            if (input && input.value === old) input.value = val;
+            cfg.state.renamingIdx = -1;
+            comboRender(id);
+        }
+
+        function comboRemove(id, idx, e) {
+            if (e) e.stopPropagation();
+            var cfg = _combos[id];
+            var items = comboItems(id);
+            var val = items[idx];
+            if (val === undefined) return;
+            if (!confirm('确定删除选项「' + val + '」？')) return;
+            items.splice(idx, 1);
+            if (cfg.storageKey) comboPersist(cfg.storageKey, items);
+            comboRender(id);
+        }
+
+        // 主输入框键盘：Enter 确认（已存在则关闭，可自定义则采用），Escape 关闭
+        function comboInputKey(e, id) {
+            if (e.key === 'Escape') { comboClose(id); return; }
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            var cfg = _combos[id];
+            var input = document.getElementById(id);
+            var val = input.value.trim();
+            if (!val) return;
+            if (comboItems(id).indexOf(val) !== -1) { comboClose(id); return; }
+            if (cfg.allowCustom) comboUseCustom(id);
+        }
+
+        // 编辑行键盘：Enter 保存，Escape 取消
+        function comboEditKey(e, id, action) {
+            if (e.key === 'Enter') { e.preventDefault(); if (action === 'add') comboAddCommit(id); else comboRenameCommit(id); }
+            if (e.key === 'Escape') { e.stopPropagation(); if (action === 'add') comboAddCancel(id); else comboRenameCancel(id); }
         }
 
         function buildAnnualYieldInput(required) {
@@ -989,6 +1237,7 @@
                     '<div class="form-group"><label>成立/发行日 <span class="required-star">*</span></label><input type="date" id="fEstablishDate" required></div>' +
                     '<div class="form-group"><label>预计到期日</label><input type="date" id="fExpireDate"></div>' +
                     '<div class="form-group"><label>管理人 <span class="required-star">*</span></label><input type="text" id="fManager" placeholder="管理机构标准名称" required></div>' +
+                    '<div class="form-group"><label>管理人代码</label><input type="text" id="fManagerCode" placeholder="选填"></div>' +
                     '</div></div>';
             } else if (accountType === '信托计划') {
                 html = '<div class="account-type-fields"><div class="account-type-fields-title">信托计划专属信息</div><div class="grid-3">' +
@@ -1013,16 +1262,18 @@
                     '<div class="form-group"><label>面值 <span class="required-star">*</span></label><input type="number" id="fFaceValue" step="0.01" required></div>' +
                     '<div class="form-group"><label>产品总规模 <span class="required-star">*</span></label><input type="number" id="fTotalScale" step="10000" required></div>' +
                     '<div class="form-group"><label>集中度 <span class="required-star">*</span></label><input type="number" id="fConcentration" step="0.01" required></div>' +
-                    '<div class="form-group"><label>信用评级 <span class="required-star">*</span></label><input type="text" id="fCreditRating" list="dlCreditRating" placeholder="下拉单选，支持搜索" required>' + buildCreditRatingDatalist() + '<div class="form-hint">枚举：AAA~B-及NR，共18项</div></div>' +
+                    comboField({ id: 'fCreditRating', label: '信用评级', required: true, placeholder: '下拉单选，支持搜索', items: CREDIT_RATINGS, allowCustom: false, hint: '枚举：AAA~B-及NR，共17项' }) +
                     '<div class="form-group"><label>原始权益人</label><input type="text" id="fOriginator"></div>' +
-                    '<div class="form-group"><label>基础资产类型</label><input type="text" id="fUnderlyingAssetType" list="dlUnderlyingAsset" placeholder="可编辑下拉，支持搜索">' + buildUnderlyingAssetDatalist() + '<div class="form-hint">支持选择或自定义输入</div></div>' +
+                    '<div class="form-group"><label>权益人代码</label><input type="text" id="fOriginatorCode"></div>' +
+                    comboField({ id: 'fUnderlyingAssetType', label: '基础资产类型', placeholder: '可编辑下拉，支持搜索', items: UNDERLYING_ASSET_TYPES, allowCustom: true, manageable: true, storageKey: 'oms_underlying_asset_types', hint: '预置21项枚举，支持新增/重命名/删除选项，选项保存在本机浏览器' }) +
                     '<div class="form-group"><label>产品层级 <span class="required-star">*</span></label><select id="fTrancheLevel" required><option value="">请选择</option><option value="优先">优先</option><option value="夹层">夹层</option><option value="次级">次级</option></select></div>' +
                     buildAnnualYieldInput(true) +
                     '</div></div>';
             } else if (accountType === '碳金融') {
                 html = '<div class="account-type-fields"><div class="account-type-fields-title">碳金融专属信息</div><div class="grid-3">' +
-                    '<div class="form-group"><label>区域市场 <span class="required-star">*</span></label><input type="text" id="fRegionalMarket" list="dlRegionalMarket" placeholder="可编辑下拉，初始为空" required><datalist id="dlRegionalMarket"></datalist><div class="form-hint">可编辑下拉组件，支持自定义输入</div></div>' +
+                    comboField({ id: 'fRegionalMarket', label: '区域市场', required: true, placeholder: '可编辑下拉，初始为空', allowCustom: true, manageable: true, storageKey: 'oms_regional_markets', hint: '支持新增/重命名/删除选项，选项保存在本机浏览器' }) +
                     '<div class="form-group"><label>交易对手方 <span class="required-star">*</span></label><input type="text" id="fCounterparty" placeholder="交易对手方" required></div>' +
+                    '<div class="form-group"><label>对手方代码</label><input type="text" id="fCounterpartyCode"></div>' +
                     buildAnnualYieldInput(true) +
                     '<div class="form-group"><label>预期到期日 <span class="required-star">*</span></label><input type="date" id="fExpireDate" required></div>' +
                     '</div></div>';
@@ -1139,6 +1390,11 @@
             if (statusCascade && !statusCascade.contains(e.target)) {
                 document.getElementById('statusPanel').classList.remove('show');
             }
+            // 点击下拉组件外部时关闭
+            Object.keys(_combos).forEach(function(k) {
+                var wrap = document.getElementById('combo-wrap-' + k);
+                if (wrap && !wrap.contains(e.target)) comboClose(k);
+            });
         });
 
         function openBatchImportModal() {
