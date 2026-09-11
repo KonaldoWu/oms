@@ -51,10 +51,56 @@
         .detail-section-title { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); margin: 16px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
         .detail-object-link { color: var(--primary); cursor: pointer; text-decoration: underline; }
         .detail-object-link:hover { color: var(--primary-dark, #2563eb); }
+        .plan-file-link { color: var(--primary); cursor: pointer; text-decoration: underline; }
+        .plan-file-link:hover { color: var(--primary-dark, #2563eb); }
         .opinion-input { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: var(--font-size-sm); resize: vertical; min-height: 60px; margin-top: 8px; }
         .opinion-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }
         .voucher-row { display: grid; grid-template-columns: 2fr 2fr 2fr 1.5fr; gap: 8px; margin-bottom: 6px; padding: 6px 0; border-bottom: 1px solid var(--border-light); }
         .voucher-row:last-child { border-bottom: none; }
+        /* ===== 账套类型树形选择器（账套大类 → E列账户名称） ===== */
+        .cascade-filter { position: relative; flex: none; }
+        .cascade-trigger { display: flex; align-items: center; justify-content: space-between; width: 100%; cursor: pointer; text-align: left; background: var(--surface); white-space: nowrap; overflow: hidden; }
+        .cascade-trigger .caret { font-size: 10px; color: var(--text-muted); margin-left: 6px; flex: none; }
+        .cascade-panel { display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 60; flex-direction: row; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); min-width: 340px; max-height: 280px; overflow: hidden; }
+        .cascade-panel.show { display: flex; }
+        .cascade-col { min-width: 110px; max-height: 280px; overflow-y: auto; border-right: 1px solid var(--border-light); }
+        .cascade-col:last-child { border-right: none; }
+        .cascade-col-header { padding: 6px 12px; font-size: var(--font-size-xs); color: var(--text-muted); background: var(--border-light); position: sticky; top: 0; }
+        .cascade-item { padding: 7px 12px; font-size: var(--font-size-sm); cursor: pointer; white-space: nowrap; color: var(--text-secondary); }
+        .cascade-item:hover { background: var(--info-bg); color: var(--primary); }
+        .cascade-item.active { background: var(--info-bg); color: var(--primary); font-weight: 600; }
+        .cascade-item.all { color: var(--text-muted); }
+        .cascade-check { display: flex; align-items: center; gap: 6px; }
+        .cascade-check input[type="checkbox"] { margin: 0; cursor: pointer; flex: none; }
+        /* ===== 审批详情抽屉（参考正式平台右侧抽屉式详情） ===== */
+        #detailModal .modal-content.drawer { position: fixed; top: 0; right: 0; bottom: 0; left: auto; width: 660px; max-width: 94vw; height: 100vh; max-height: none; margin: 0; border-radius: 0; display: flex; flex-direction: column; transform: none; animation: drawerIn 0.18s ease-out; }
+        @keyframes drawerIn { from { transform: translateX(60px); opacity: 0.5; } to { transform: none; opacity: 1; } }
+        #detailModal .modal-content.drawer .modal-header { flex: none; }
+        #detailModal .modal-content.drawer .modal-body { flex: 1; overflow-y: auto; }
+        #detailModal .modal-content.drawer .modal-footer { flex: none; }
+        .drawer-title-badge { margin-left: 8px; vertical-align: middle; }
+        /* ===== 审批流程：横向步骤条 ===== */
+        .step-bar { display: flex; align-items: flex-start; margin: 8px 0 14px; overflow-x: auto; padding-bottom: 2px; }
+        .step-node { display: flex; flex-direction: column; align-items: center; flex: 1; min-width: 64px; position: relative; }
+        .step-dot { width: 14px; height: 14px; border-radius: 50%; background: #cbd5e1; z-index: 1; flex: none; }
+        .step-dot.done { background: var(--success, #22c55e); }
+        .step-dot.current { background: var(--primary, #3b82f6); box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+        .step-dot.rejected { background: var(--danger, #ef4444); }
+        .step-line { position: absolute; top: 7px; left: calc(-50% + 7px); right: calc(50% + 7px); height: 2px; background: var(--border); }
+        .step-node:first-child .step-line { display: none; }
+        .step-line.done { background: var(--success, #22c55e); }
+        .step-name { margin-top: 5px; font-size: 11px; color: var(--text-secondary); text-align: center; line-height: 1.3; }
+        .step-name.current { color: var(--primary); font-weight: 600; }
+        .step-name.pending { color: var(--text-muted); }
+        /* ===== 审批流程：节点明细表格 ===== */
+        .step-table { width: 100%; border-collapse: collapse; font-size: var(--font-size-xs); margin-bottom: 6px; }
+        .step-table th, .step-table td { padding: 6px 10px; border-bottom: 1px solid var(--border-light); text-align: left; vertical-align: top; }
+        .step-table th { color: var(--text-muted); font-weight: 500; background: var(--border-light); white-space: nowrap; }
+        .step-table td .cell-remark { color: var(--text-secondary); }
+        /* 产品明细表格（计划书审批-申请信息） */
+        .apply-product-table { width: 100%; border-collapse: collapse; font-size: var(--font-size-xs); margin: 4px 0 10px; }
+        .apply-product-table th, .apply-product-table td { padding: 6px 8px; border: 1px solid var(--border-light); text-align: left; }
+        .apply-product-table th { background: var(--border-light); color: var(--text-muted); font-weight: 500; white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -80,15 +126,32 @@
                     <div class="card" style="margin-bottom:12px;">
                         <div class="card-body">
                             <div class="search-bar">
-                                <select class="search-input" id="typeFilter" style="flex:0 0 140px;">
+                                <select class="search-input" id="typeFilter" style="flex:0 0 130px;">
                                     <option value="">所有审批类型</option>
                                     <option value="产品入池审批">产品入池审批</option>
                                     <option value="投资计划书审批">投资计划书审批</option>
                                     <option value="交易审批">交易审批</option>
                                     <option value="兑息兑付确认">兑息兑付确认</option>
                                 </select>
-                                <input type="date" class="search-input" id="dateFrom" style="flex:0 0 150px;" placeholder="开始日期">
-                                <input type="date" class="search-input" id="dateTo" style="flex:0 0 150px;" placeholder="结束日期">
+                                <div class="cascade-filter" style="width:220px;">
+                                    <button type="button" class="search-input cascade-trigger" onclick="toggleAccountTree(event,'')">
+                                        <span id="accountTreeLabel">全部账套类型</span>
+                                        <span class="caret">▼</span>
+                                    </button>
+                                    <div class="cascade-panel" id="accountTreePanel">
+                                        <div class="cascade-col" style="width:110px;">
+                                            <div class="cascade-col-header">账套大类</div>
+                                            <div id="accountTreeCats"></div>
+                                        </div>
+                                        <div class="cascade-col" style="width:220px;">
+                                            <div class="cascade-col-header">E列账户名称</div>
+                                            <div id="accountTreeNames"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <select class="search-input" id="productTypeFilter" style="flex:0 0 105px;"></select>
+                                <input type="date" class="search-input" id="dateFrom" style="flex:0 0 140px;" placeholder="开始日期">
+                                <input type="date" class="search-input" id="dateTo" style="flex:0 0 140px;" placeholder="结束日期">
                                 <input type="text" placeholder="搜索编号、名称或发起人" class="search-input" id="searchInput">
                                 <button class="btn btn-primary btn-sm" onclick="renderApprovalList()">搜索</button>
                                 <button class="btn btn-ghost btn-sm" onclick="resetApprovalFilters()">重置</button>
@@ -101,13 +164,42 @@
                     <div class="card" style="margin-bottom:12px;">
                         <div class="card-body">
                             <div class="search-bar">
-                                <select class="search-input" id="typeFilterMine" style="flex:0 0 140px;">
+                                <select class="search-input" id="typeFilterMine" style="flex:0 0 130px;">
                                     <option value="">所有审批类型</option>
                                     <option value="产品入池审批">产品入池审批</option>
                                     <option value="投资计划书审批">投资计划书审批</option>
                                     <option value="交易审批">交易审批</option>
                                     <option value="兑息兑付确认">兑息兑付确认</option>
                                 </select>
+                                <select class="search-input" id="statusFilterMine" style="flex:0 0 100px;">
+                                    <option value="">所有状态</option>
+                                    <option value="草稿">草稿</option>
+                                    <option value="审批中">审批中</option>
+                                    <option value="执行中">执行中</option>
+                                    <option value="已通过">已通过</option>
+                                    <option value="已驳回">已驳回</option>
+                                    <option value="已撤回">已撤回</option>
+                                    <option value="已终止">已终止</option>
+                                </select>
+                                <div class="cascade-filter" style="width:220px;">
+                                    <button type="button" class="search-input cascade-trigger" onclick="toggleAccountTree(event,'Mine')">
+                                        <span id="accountTreeLabelMine">全部账套类型</span>
+                                        <span class="caret">▼</span>
+                                    </button>
+                                    <div class="cascade-panel" id="accountTreePanelMine">
+                                        <div class="cascade-col" style="width:110px;">
+                                            <div class="cascade-col-header">账套大类</div>
+                                            <div id="accountTreeCatsMine"></div>
+                                        </div>
+                                        <div class="cascade-col" style="width:220px;">
+                                            <div class="cascade-col-header">E列账户名称</div>
+                                            <div id="accountTreeNamesMine"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <select class="search-input" id="productTypeFilterMine" style="flex:0 0 105px;"></select>
+                                <input type="date" class="search-input" id="dateFromMine" style="flex:0 0 140px;" placeholder="开始日期">
+                                <input type="date" class="search-input" id="dateToMine" style="flex:0 0 140px;" placeholder="结束日期">
                                 <input type="text" placeholder="搜索编号、名称" class="search-input" id="searchInputMine">
                                 <button class="btn btn-primary btn-sm" onclick="renderApprovalList()">搜索</button>
                                 <button class="btn btn-ghost btn-sm" onclick="resetApprovalFilters()">重置</button>
@@ -120,13 +212,41 @@
                     <div class="card" style="margin-bottom:12px;">
                         <div class="card-body">
                             <div class="search-bar">
-                                <select class="search-input" id="typeFilterDone" style="flex:0 0 140px;">
+                                <select class="search-input" id="typeFilterDone" style="flex:0 0 130px;">
                                     <option value="">所有审批类型</option>
                                     <option value="产品入池审批">产品入池审批</option>
                                     <option value="投资计划书审批">投资计划书审批</option>
                                     <option value="交易审批">交易审批</option>
                                     <option value="兑息兑付确认">兑息兑付确认</option>
                                 </select>
+                                <select class="search-input" id="statusFilterDone" style="flex:0 0 100px;">
+                                    <option value="">所有状态</option>
+                                    <option value="审批中">审批中</option>
+                                    <option value="执行中">执行中</option>
+                                    <option value="已通过">已通过</option>
+                                    <option value="已驳回">已驳回</option>
+                                    <option value="已撤回">已撤回</option>
+                                    <option value="已终止">已终止</option>
+                                </select>
+                                <div class="cascade-filter" style="width:220px;">
+                                    <button type="button" class="search-input cascade-trigger" onclick="toggleAccountTree(event,'Done')">
+                                        <span id="accountTreeLabelDone">全部账套类型</span>
+                                        <span class="caret">▼</span>
+                                    </button>
+                                    <div class="cascade-panel" id="accountTreePanelDone">
+                                        <div class="cascade-col" style="width:110px;">
+                                            <div class="cascade-col-header">账套大类</div>
+                                            <div id="accountTreeCatsDone"></div>
+                                        </div>
+                                        <div class="cascade-col" style="width:220px;">
+                                            <div class="cascade-col-header">E列账户名称</div>
+                                            <div id="accountTreeNamesDone"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <select class="search-input" id="productTypeFilterDone" style="flex:0 0 105px;"></select>
+                                <input type="date" class="search-input" id="dateFromDone" style="flex:0 0 140px;" placeholder="开始日期">
+                                <input type="date" class="search-input" id="dateToDone" style="flex:0 0 140px;" placeholder="结束日期">
                                 <input type="text" placeholder="搜索编号、名称" class="search-input" id="searchInputDone">
                                 <button class="btn btn-primary btn-sm" onclick="renderApprovalList()">搜索</button>
                                 <button class="btn btn-ghost btn-sm" onclick="resetApprovalFilters()">重置</button>
@@ -140,13 +260,24 @@
     </div>
 
     <div id="detailModal" class="modal" data-logic-id="modal_approval_detail">
-        <div class="modal-content" style="width:700px;">
+        <div class="modal-content drawer">
             <div class="modal-header">
                 <h3 id="detailModalTitle">审批详情</h3>
                 <button class="btn btn-ghost btn-sm" onclick="closeDetailModal()">✕</button>
             </div>
             <div class="modal-body" id="detailModalBody"></div>
             <div class="modal-footer" id="detailModalFooter"></div>
+        </div>
+    </div>
+
+    <!-- 计划书附件预览弹窗 -->
+    <div id="planFileViewModal" class="modal" data-logic-id="modal_plan_file_view">
+        <div class="modal-content" style="width:560px;">
+            <div class="modal-header">
+                <h3>附件预览</h3>
+                <button class="btn btn-ghost btn-sm" onclick="document.getElementById('planFileViewModal').style.display='none'">✕</button>
+            </div>
+            <div class="modal-body" id="planFileViewBody"></div>
         </div>
     </div>
 
@@ -206,6 +337,33 @@
 
         var currentRejectId = null;
 
+        // 赎回新流程（7节点）交易审批：按当前节点匹配可操作角色；其余节点沿用原权限位
+        function getTradeStepRole(stepTitle) {
+            if (stepTitle.indexOf('交易员确认') === 0) return 'trader';
+            switch (stepTitle) {
+                case '投资经理审批': return 'investment_manager';
+                case '风控审批': return 'risk_control';
+                case '部门经理审批': return 'department_leader';
+                case '交易执行中-财务对账确认': return 'financial_staff';
+                case '交易员补充信息': return 'trader';
+                default: return null;
+            }
+        }
+        function canApproveApproval(a) {
+            if (a.type !== '交易审批') {
+                var k = APPROVAL_TYPE_PERM[a.type];
+                return k ? hasPermission(k) : false;
+            }
+            var step = a.steps.find(function(s) { return s.status === '当前'; });
+            if (!step) return false;
+            var stepRole = getTradeStepRole(step.title);
+            if (stepRole) {
+                var roleKey = getCurrentRoleKey();
+                return roleKey === stepRole || roleKey === 'demo';
+            }
+            return hasPermission('approvePlan');
+        }
+
         var TYPE_CONFIG = {
             '投资计划书审批': { key: 'plan', icon: '📋', iconClass: 'icon-plan', label: '计划书审批' },
             '产品入池审批': { key: 'product', icon: '📦', iconClass: 'icon-product', label: '产品入池' },
@@ -236,20 +394,114 @@
             return step ? step.title : (a.status === '已通过' ? '已完成' : a.status === '已驳回' ? '已驳回' : '-');
         }
 
-        function getFilteredApprovals(tab) {
-            var typeFilter, searchInput, dateFrom, dateTo;
-            if (tab === 'todo') {
-                typeFilter = document.getElementById('typeFilter').value;
-                searchInput = document.getElementById('searchInput').value.toLowerCase();
-                dateFrom = document.getElementById('dateFrom').value;
-                dateTo = document.getElementById('dateTo').value;
-            } else if (tab === 'mine') {
-                typeFilter = document.getElementById('typeFilterMine').value;
-                searchInput = document.getElementById('searchInputMine').value.toLowerCase();
-            } else {
-                typeFilter = document.getElementById('typeFilterDone').value;
-                searchInput = document.getElementById('searchInputDone').value.toLowerCase();
+        // ===== 账套类型树形选择器（账套大类 → E列账户名称，参考产品管理两级级联） =====
+        var _acctTreeState = { '': { cat: '', names: [] }, 'Mine': { cat: '', names: [] }, 'Done': { cat: '', names: [] } };
+
+        function renderAccountTree(sfx) {
+            var st = _acctTreeState[sfx];
+            var catHtml = '<div class="cascade-item all' + (!st.cat ? ' active' : '') + '" onclick="selectAcctCat(\'' + sfx + '\',\'\')">全部大类</div>';
+            Object.keys(ACCOUNT_TREE).forEach(function(c) {
+                catHtml += '<div class="cascade-item' + (st.cat === c ? ' active' : '') + '" onclick="selectAcctCat(\'' + sfx + '\',\'' + c + '\')">' + c + '</div>';
+            });
+            document.getElementById('accountTreeCats' + sfx).innerHTML = catHtml;
+
+            var names = st.cat ? (ACCOUNT_TREE[st.cat] || []) : [].concat.apply([], Object.keys(ACCOUNT_TREE).map(function(k) { return ACCOUNT_TREE[k]; }));
+            var nameHtml = '<div class="cascade-item all' + (st.names.length === 0 ? ' active' : '') + '" onclick="clearAcctNames(\'' + sfx + '\')">全部账户</div>';
+            names.forEach(function(n) {
+                var checked = st.names.indexOf(n) !== -1 ? ' checked' : '';
+                nameHtml += '<label class="cascade-item cascade-check"><input type="checkbox" value="' + n + '"' + checked + ' onchange="toggleAcctName(\'' + sfx + '\',\'' + n + '\')">' + n + '</label>';
+            });
+            document.getElementById('accountTreeNames' + sfx).innerHTML = nameHtml;
+            updateAcctTreeLabel(sfx);
+        }
+        function selectAcctCat(sfx, cat) {
+            _acctTreeState[sfx].cat = cat;
+            _acctTreeState[sfx].names = [];
+            renderAccountTree(sfx);
+        }
+        function toggleAcctName(sfx, n) {
+            var arr = _acctTreeState[sfx].names;
+            var idx = arr.indexOf(n);
+            if (idx === -1) arr.push(n); else arr.splice(idx, 1);
+            renderAccountTree(sfx);
+        }
+        function clearAcctNames(sfx) {
+            _acctTreeState[sfx].names = [];
+            renderAccountTree(sfx);
+        }
+        function updateAcctTreeLabel(sfx) {
+            var st = _acctTreeState[sfx];
+            var label = '全部账套类型';
+            if (st.cat && st.names.length > 0) label = st.cat + ' / ' + st.names.join('、');
+            else if (st.cat) label = st.cat + '（全部账户）';
+            else if (st.names.length > 0) label = st.names.join('、');
+            document.getElementById('accountTreeLabel' + sfx).textContent = label;
+        }
+        function toggleAccountTree(e, sfx) {
+            if (e) e.stopPropagation();
+            var panel = document.getElementById('accountTreePanel' + sfx);
+            var willShow = !panel.classList.contains('show');
+            document.querySelectorAll('.cascade-panel').forEach(function(p) { p.classList.remove('show'); });
+            if (willShow) panel.classList.add('show');
+        }
+        // 账套匹配：选定账户精确匹配；仅选大类按大类前缀匹配
+        function matchAcctTree(p, st) {
+            if (st.names.length > 0) return st.names.indexOf(p.accountType) !== -1;
+            if (st.cat) {
+                var full = getAccountCategory(p.accountType) || '';
+                return full === st.cat || full.indexOf(st.cat) === 0;
             }
+            return true;
+        }
+
+        // 初始化三个Tab的筛选项（账套类型树形选择器 + 产品类型选项动态生成）
+        function initApprovalFilters() {
+            ['', 'Mine', 'Done'].forEach(function(sfx) {
+                renderAccountTree(sfx);
+                var ptSel = document.getElementById('productTypeFilter' + sfx);
+                if (ptSel) {
+                    var types = [];
+                    PRODUCTS.forEach(function(p) { if (p.productType && types.indexOf(p.productType) < 0) types.push(p.productType); });
+                    var h2 = '<option value="">产品类型</option>';
+                    types.forEach(function(t) { h2 += '<option value="' + t + '">' + t + '</option>'; });
+                    ptSel.innerHTML = h2;
+                }
+            });
+        }
+
+        // 按审批类型解析关联产品（用于账套类型/产品类型筛选）
+        function getApprovalProduct(a) {
+            if (a.type === '产品入池审批') {
+                return PRODUCTS.find(function(p) { return p.id === a.object; }) || null;
+            }
+            if (a.type === '投资计划书审批') {
+                var plan = PLANS.find(function(pl) { return pl.id === a.object; });
+                if (plan && plan.products && plan.products.length) {
+                    return PRODUCTS.find(function(p) { return p.id === plan.products[0]; }) || null;
+                }
+                return null;
+            }
+            if (a.type === '交易审批') {
+                var t = TRADES.find(function(tr) { return tr.id === a.object; });
+                return t ? (PRODUCTS.find(function(p) { return p.id === t.productId; }) || null) : null;
+            }
+            if (a.type === '兑息兑付确认') {
+                var d = DIVIDENDS.find(function(dv) { return dv.id === a.id; });
+                return d ? (PRODUCTS.find(function(p) { return p.id === d.productId; }) || null) : null;
+            }
+            return null;
+        }
+
+        function getFilteredApprovals(tab) {
+            var sfx = tab === 'todo' ? '' : tab === 'mine' ? 'Mine' : 'Done';
+            var typeFilter = document.getElementById('typeFilter' + sfx).value;
+            var searchInput = document.getElementById('searchInput' + sfx).value.toLowerCase();
+            var dateFrom = document.getElementById('dateFrom' + sfx).value;
+            var dateTo = document.getElementById('dateTo' + sfx).value;
+            // 待我审批Tab均为审批中数据，不提供状态筛选
+            var statusFilter = tab === 'todo' ? '' : document.getElementById('statusFilter' + sfx).value;
+            var acctSt = _acctTreeState[sfx];
+            var productType = document.getElementById('productTypeFilter' + sfx).value;
             var dividendApprovals = DIVIDENDS.filter(function(d) {
                 return d.status === '待交易员确认' || d.status === '交易员已确认';
             }).map(function(d) {
@@ -260,12 +512,19 @@
             return allApprovals.filter(function(a) {
                 if (!TYPE_CONFIG[a.type]) return false;
                 if (typeFilter && a.type !== typeFilter) return false;
+                if (statusFilter && a.status !== statusFilter) return false;
                 if (searchInput) {
                     var hay = (a.id + a.objectName + a.object + a.applicant).toLowerCase();
                     if (hay.indexOf(searchInput) < 0) return false;
                 }
                 if (dateFrom && a.applyTime < dateFrom) return false;
                 if (dateTo && a.applyTime > dateTo + ' 23:59') return false;
+                if (acctSt.cat || acctSt.names.length > 0 || productType) {
+                    var p = getApprovalProduct(a);
+                    if (!p) return false;
+                    if (!matchAcctTree(p, acctSt)) return false;
+                    if (productType && p.productType !== productType) return false;
+                }
                 if (tab === 'todo') {
                     if (a.status !== '审批中') return false;
                     var currentStep = a.steps.find(function(s) { return s.status === '当前'; });
@@ -279,8 +538,7 @@
                             return false;
                         }
                     } else {
-                        var permKey = APPROVAL_TYPE_PERM[a.type];
-                        if (!permKey || !hasPermission(permKey)) return false;
+                        if (!canApproveApproval(a)) return false;
                     }
                 } else if (tab === 'mine') {
                     if (a.applicant !== _currentRoleLabel) return false;
@@ -313,14 +571,25 @@
                 var currentStep = getCurrentStep(a);
                 var btns = '<button class="btn btn-info btn-sm" data-logic-id="modal_approval_detail" onclick="viewDetail(\'' + a.id + '\')">查看详情</button>';
                 var isPending = a.status === '审批中';
-                var permKey = APPROVAL_TYPE_PERM[a.type];
-                var canApproveThisType = permKey ? hasPermission(permKey) : false;
+                var canApproveThisType = canApproveApproval(a);
                 var isInitiator = a.applicant === _currentRoleLabel;
                 if (isPending && !_isReadOnly) {
                     if (canApproveThisType) {
-                        var approveBtnText = currentStep.indexOf('ERP流程') >= 0 ? '模拟完成' : '通过';
-                        btns += ' <button class="btn btn-success btn-sm" data-logic-id="page_approval_list" onclick="approveItem(\'' + a.id + '\')">' + approveBtnText + '</button>';
-                        btns += ' <button class="btn btn-danger btn-sm" onclick="openRejectModal(\'' + a.id + '\')">驳回</button>';
+                        var approveBtnText = '通过';
+                        var approveBtnCls = 'btn-success';
+                        if (currentStep.indexOf('ERP流程') >= 0) {
+                            approveBtnText = '模拟完成';
+                        } else if (currentStep === '交易执行中-财务对账确认') {
+                            approveBtnText = '填写对账单';
+                            approveBtnCls = 'btn-primary';
+                        } else if (currentStep === '交易员补充信息') {
+                            approveBtnText = '前往补充信息';
+                            approveBtnCls = 'btn-primary';
+                        }
+                        btns += ' <button class="btn ' + approveBtnCls + ' btn-sm" data-logic-id="page_approval_list" onclick="viewDetail(\'' + a.id + '\')">' + approveBtnText + '</button>';
+                        if (currentStep !== '交易执行中-财务对账确认' && currentStep !== '交易员补充信息') {
+                            btns += ' <button class="btn btn-danger btn-sm" onclick="openRejectModal(\'' + a.id + '\')">驳回</button>';
+                        }
                     }
                     if (isInitiator) {
                         btns += ' <button class="btn btn-withdraw btn-sm" onclick="withdrawApproval(\'' + a.id + '\')">撤回</button>';
@@ -348,15 +617,194 @@
         }
 
         function resetApprovalFilters() {
-            if (document.getElementById('searchInput')) document.getElementById('searchInput').value = '';
-            if (document.getElementById('typeFilter')) document.getElementById('typeFilter').value = '';
-            if (document.getElementById('dateFrom')) document.getElementById('dateFrom').value = '';
-            if (document.getElementById('dateTo')) document.getElementById('dateTo').value = '';
-            if (document.getElementById('searchInputMine')) document.getElementById('searchInputMine').value = '';
-            if (document.getElementById('typeFilterMine')) document.getElementById('typeFilterMine').value = '';
-            if (document.getElementById('searchInputDone')) document.getElementById('searchInputDone').value = '';
-            if (document.getElementById('typeFilterDone')) document.getElementById('typeFilterDone').value = '';
+            ['', 'Mine', 'Done'].forEach(function(sfx) {
+                var ids = ['searchInput', 'typeFilter', 'statusFilter', 'productTypeFilter', 'dateFrom', 'dateTo'];
+                ids.forEach(function(id) {
+                    var el = document.getElementById(id + sfx);
+                    if (el) el.value = '';
+                });
+                _acctTreeState[sfx].cat = '';
+                _acctTreeState[sfx].names = [];
+                renderAccountTree(sfx);
+            });
             renderApprovalList();
+        }
+
+        // ===== 详情通用渲染：信息项 =====
+        function _infoItem(label, value, span2) {
+            var v = (value === undefined || value === null || value === '') ? '-' : value;
+            return '<div class="detail-info-item"' + (span2 ? ' style="grid-column:1/3;"' : '') + '><div class="info-label">' + label + '</div><div class="info-value">' + v + '</div></div>';
+        }
+
+        // 附件查看：演示环境展示文件信息预览（正式环境为在线预览/下载）
+        function viewPlanFile(fileName) {
+            var ext = (String(fileName).split('.').pop() || '').toLowerCase();
+            var icon = ext === 'pdf' ? '📕' : (ext === 'doc' || ext === 'docx') ? '📘' : (ext === 'xls' || ext === 'xlsx') ? '📗' : '📄';
+            var html = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">';
+            html += '<span style="font-size:28px;">' + icon + '</span>';
+            html += '<div><div style="font-size:14px;font-weight:600;word-break:break-all;">' + fileName + '</div>';
+            html += '<div style="font-size:12px;color:var(--text-muted);">格式：' + (ext ? ext.toUpperCase() : '未知') + '</div></div></div>';
+            html += '<div style="border:1px dashed var(--border);border-radius:8px;padding:40px 16px;text-align:center;color:var(--text-muted);font-size:12px;background:var(--border-light);">演示环境：附件已随表单提交，正式环境此处展示在线预览内容，并支持下载。</div>';
+            document.getElementById('planFileViewBody').innerHTML = html;
+            document.getElementById('planFileViewModal').style.display = 'block';
+        }
+
+        // ===== 审批流程：横向步骤条 =====
+        function renderStepBar(steps) {
+            var html = '<div class="step-bar">';
+            steps.forEach(function(s) {
+                var dot = 'step-dot', line = 'step-line', name = 'step-name';
+                if (s.status === '已完成') { dot += s.result === '驳回' ? ' rejected' : ' done'; line += ' done'; }
+                else if (s.status === '当前') { dot += ' current'; name += ' current'; }
+                else { name += ' pending'; }
+                html += '<div class="step-node"><div class="' + line + '"></div><div class="' + dot + '"></div><div class="' + name + '">' + s.title + '</div></div>';
+            });
+            return html + '</div>';
+        }
+
+        // ===== 审批流程：节点明细表格 =====
+        function renderStepTable(steps) {
+            var html = '<table class="step-table"><thead><tr><th>节点</th><th>处理人</th><th>节点状态</th><th>审批结果</th><th>时间</th><th>备注</th></tr></thead><tbody>';
+            steps.forEach(function(s) {
+                var result = '-';
+                if (s.status === '已完成') result = s.result === '驳回' ? '<span style="color:var(--danger);">驳回</span>' : (s.result || '通过');
+                else if (s.status === '当前') result = '<span style="color:var(--primary);">处理中</span>';
+                var remark = s.reason || s.opinion || '-';
+                html += '<tr><td style="white-space:nowrap;">' + s.title + '</td><td>' + (s.user || '-') + '</td><td>' + s.status + '</td><td>' + result + '</td><td style="white-space:nowrap;">' + (s.time || '-') + '</td><td class="cell-remark">' + remark + '</td></tr>';
+            });
+            return html + '</tbody></table>';
+        }
+
+        // ===== 申请信息：投资计划书审批（计划书表单全部提交字段） =====
+        function renderPlanApplyInfo(a) {
+            var plan = PLANS.find(function(p) { return p.id === a.object; });
+            if (!plan) return '';
+            var html = '<div class="detail-section-title">计划书信息（表单提交字段）</div>';
+            html += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px;">';
+            html += _infoItem('计划书名称', plan.name);
+            html += _infoItem('业务部门', plan.dept);
+            html += _infoItem('投资组', plan.group);
+            html += _infoItem('投资经理', plan.creator);
+            html += _infoItem('交易员', plan.trader);
+            var planFileVal = plan.file
+                ? '<span class="plan-file-link" onclick="viewPlanFile(\'' + String(plan.file).replace(/'/g, "\\'") + '\')">📄 ' + plan.file + '</span><span style="font-size:11px;color:var(--text-muted);margin-left:4px;">点击查看</span>'
+                : '-';
+            html += '<div class="detail-info-item"><div class="info-label">计划书文件</div><div class="info-value">' + planFileVal + '</div></div>';
+            html += _infoItem('总额度（自动汇总）', formatMoney(plan.totalAmount) + ' 元');
+            html += _infoItem('提交时间', plan.submitTime || plan.createTime);
+            html += _infoItem('备注', plan.remark, true);
+            html += '</div>';
+            html += '<table class="apply-product-table"><thead><tr><th>关联产品</th><th>产品类型</th><th>账套类型</th><th>投资方向</th><th>运作模式</th><th>投资方式</th><th>持有期限</th><th>计划额度(元)</th></tr></thead><tbody>';
+            var details = plan.productDetails || (plan.products || []).map(function(pid) { return { id: pid }; });
+            details.forEach(function(d) {
+                var p = PRODUCTS.find(function(x) { return x.id === d.id; });
+                var amt = (d.amount != null) ? formatMoneyFull(d.amount) : (details.length === 1 ? formatMoneyFull(plan.totalAmount) : '-');
+                html += '<tr><td>' + (p ? p.shortName : d.id) + '</td><td>' + (p ? (p.productType || '-') : '-') + '</td><td>' + (p ? (p.accountType || '-') : '-') + '</td><td>' + (d.direction || '-') + '</td><td>' + (d.operationMode || '-') + '</td><td>' + (d.investMode || '-') + '</td><td>' + (d.holdPeriod || '-') + '</td><td style="text-align:right;">' + amt + '</td></tr>';
+            });
+            return html + '</tbody></table>';
+        }
+
+        // ===== 申请信息：产品入池审批（入池表单全部提交字段） =====
+        function renderProductApplyInfo(a) {
+            var p = PRODUCTS.find(function(x) { return x.id === a.object; });
+            if (!p) return '';
+            var html = '<div class="detail-section-title">产品入池信息（表单提交字段）</div>';
+            html += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px;">';
+            // 基础信息（所有账套类型通用）
+            html += _infoItem('产品名称', p.name);
+            html += _infoItem('产品简称', p.shortName);
+            html += _infoItem('产品内部编码', p.hengtaiCode);
+            html += _infoItem('外部编码', p.externalCode);
+            html += _infoItem('账套类型', p.accountType);
+            html += _infoItem('资产类型', p.assetType);
+            html += _infoItem('产品类型', p.productType);
+            html += _infoItem('投资组合ID', getPortfolioId(p.accountType));
+            html += _infoItem('币种', p.currency);
+            html += _infoItem('交易市场', p.tradeMarket || p.regionalMarket);
+            html += _infoItem('成立日期', p.establishDate);
+            html += _infoItem('起始日期', p.startDate);
+            html += _infoItem('预计到期日', p.expireDate);
+            html += _infoItem('所属部门', p.dept);
+            html += _infoItem('投资组', p.group);
+            html += '</div>';
+            // 账套类型专属字段（按入池表单展示，存在才显示）
+            var specific = [];
+            if (p.manager) specific.push(['管理人', p.manager]);
+            if (p.faceValue) specific.push(['面值', p.faceValue]);
+            if (p.totalScale) specific.push(['总规模(元)', formatMoneyFull(p.totalScale)]);
+            if (p.actualMaturityDate) specific.push(['实际到期日', p.actualMaturityDate]);
+            if (p.financier) specific.push(['融资人', p.financier]);
+            if (p.guarantor) specific.push(['担保人', p.guarantor]);
+            if (p.concentration) specific.push(['集中度', p.concentration]);
+            if (p.creditRating) specific.push(['信用评级', p.creditRating]);
+            if (p.originator) specific.push(['原始权益人', p.originator]);
+            if (p.underlyingAssetType) specific.push(['基础资产类型', p.underlyingAssetType]);
+            if (p.trancheLevel) specific.push(['份额级别', p.trancheLevel]);
+            if (p.annualYield) specific.push(['年化收益率', p.annualYield + '%']);
+            if (p.regionalMarket) specific.push(['区域市场', p.regionalMarket]);
+            if (p.counterpartyIbor) specific.push(['对手方(iBor)', p.counterpartyIbor]);
+            if (specific.length) {
+                html += '<div class="detail-section-title">账套类型专属字段</div>';
+                html += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px;">';
+                specific.forEach(function(it) { html += _infoItem(it[0], it[1]); });
+                html += '</div>';
+            }
+            // 入池信息
+            html += '<div class="detail-section-title">入池信息</div>';
+            html += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px;">';
+            html += _infoItem('入池人', p.poolUser);
+            html += _infoItem('入池时间', p.poolTime);
+            html += _infoItem('对手方', p.counterparty);
+            html += _infoItem('交易限额(元)', p.tradeLimit ? formatMoneyFull(p.tradeLimit) : '-');
+            html += _infoItem('是否可赎回', p.redeemable === true ? '是' : (p.redeemable === false ? '否' : '-'));
+            html += _infoItem('备注说明', p.description || p.remark, true);
+            html += '</div>';
+            return html;
+        }
+
+        // ===== 申请信息：交易审批（交易表单全部提交字段） =====
+        function renderTradeApplyInfo(a) {
+            var t = TRADES.find(function(x) { return x.id === a.object; });
+            if (!t) return '';
+            var p = PRODUCTS.find(function(x) { return x.id === t.productId; });
+            var html = '<div class="detail-section-title">交易信息（表单提交字段）</div>';
+            html += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px;">';
+            html += _infoItem('交易编号', t.id);
+            html += _infoItem('关联计划书', t.planId);
+            html += _infoItem('产品名称', t.productName);
+            html += _infoItem('产品内部编码', p ? p.hengtaiCode : '-');
+            html += _infoItem('资产类型', t.assetType || (p ? p.assetType : '-'));
+            html += _infoItem('账套类型', p ? p.accountType : '-');
+            html += _infoItem('投资组合ID', p ? getPortfolioId(p.accountType) : '-');
+            html += _infoItem('交易类型', t.type);
+            html += _infoItem('申报金额(元)', formatMoneyFull(t.applyAmount));
+            html += _infoItem('交易份额', t.shares);
+            html += _infoItem('优先级', t.priority);
+            html += _infoItem('期望成交日期', t.expectedDate);
+            html += _infoItem('对手方', t.counterpartyName);
+            html += _infoItem('交易员', t.trader);
+            html += _infoItem('发起时间', t.createTime);
+            html += _infoItem('备注', t.remark, true);
+            html += '</div>';
+            if (t.actualDealAmount || t.actualArrivalAmount || t.financeConfirmStatus === '已确认') {
+                html += '<div class="detail-section-title">成交确认信息（财务对账 + 交易员补充）</div>';
+                html += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px;">';
+                if (t.actualDealAmount) html += _infoItem('实际成交金额(元)', formatMoneyFull(t.actualDealAmount));
+                if (t.actualArrivalAmount) html += _infoItem('实际到账金额(元)', formatMoneyFull(t.actualArrivalAmount));
+                if (t.actualArrivalShares) html += _infoItem('实际到账份额', t.actualArrivalShares.toLocaleString());
+                if (t.actualArrivalDate) html += _infoItem('到账日期', t.actualArrivalDate);
+                if (t.statementFile) html += _infoItem('对账单附件', '📄 ' + t.statementFile);
+                if (t.redeemFee) html += _infoItem('赎回费用(元)', formatMoneyFull(t.redeemFee));
+                if (t.diffRemark) html += _infoItem('差异说明', t.diffRemark, true);
+                if (t.financeConfirmUser) html += _infoItem('财务对账确认', t.financeConfirmUser + ' ' + (t.financeConfirmTime || ''));
+                if (t.actualNav) html += _infoItem('赎回净值', t.actualNav);
+                if (t.supplementFile) html += _infoItem('补充附件', '📄 ' + t.supplementFile);
+                if (t.supplementRemark) html += _infoItem('补充备注', t.supplementRemark, true);
+                if (t.traderConfirmTime) html += _infoItem('交易员确认时间', t.traderConfirmTime);
+                html += _infoItem('凭证状态', t.voucherStatus);
+                html += '</div>';
+            }
+            return html;
         }
 
         function viewDetail(id) {
@@ -370,62 +818,82 @@
                 renderDividendDetail(a);
                 return;
             }
-            var cfg = TYPE_CONFIG[a.type] || {};
-            document.getElementById('detailModalTitle').textContent = cfg.icon + ' ' + (cfg.label || a.type) + ' - ' + a.id;
+            document.getElementById('detailModalTitle').innerHTML = '审批详情 ' + a.id + ' <span class="status-badge drawer-title-badge ' + getStatusClass(a.status) + '">' + a.status + '</span>';
 
+            var curStep = a.steps.find(function(s) { return s.status === '当前'; });
+            var canApproveThisType = canApproveApproval(a);
+            var relTrade = a.type === '交易审批' ? TRADES.find(function(t) { return t.id === a.object; }) : null;
+
+            // ===== 申请信息 =====
+            var body = '<div class="detail-section-title">申请信息</div>';
             var linkPage = OBJECT_LINK_MAP[a.type] || '#';
             var objectLink = '<span class="detail-object-link" onclick="window.open(\'' + linkPage + '\', \'_blank\')">' + a.object + ' ' + a.objectName + ' ↗</span>';
-
-            var body = '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:14px;">';
-            body += '<div class="detail-info-item"><div class="info-label">审批编号</div><div class="info-value">' + a.id + '</div></div>';
-            body += '<div class="detail-info-item"><div class="info-label">审批类型</div><div class="info-value">' + a.type + '</div></div>';
-            body += '<div class="detail-info-item"><div class="info-label">关联对象</div><div class="info-value">' + objectLink + '</div></div>';
-            body += '<div class="detail-info-item"><div class="info-label">发起人</div><div class="info-value">' + a.applicant + '</div></div>';
-            body += '<div class="detail-info-item"><div class="info-label">发起时间</div><div class="info-value">' + a.applyTime + '</div></div>';
-            body += '<div class="detail-info-item"><div class="info-label">当前状态</div><div class="info-value"><span class="status-badge ' + getStatusClass(a.status) + '">' + a.status + '</span></div></div>';
+            body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px;">';
+            body += _infoItem('审批编号', a.id);
+            body += _infoItem('审批类型', a.type);
+            body += _infoItem('关联对象', objectLink);
+            body += _infoItem('发起人', a.applicant);
+            body += _infoItem('发起时间', a.applyTime || '-');
+            body += _infoItem('当前状态', '<span class="status-badge ' + getStatusClass(a.status) + '">' + a.status + '</span>');
             body += '</div>';
+            // 按审批类型补充业务表单全部提交字段
+            if (a.type === '投资计划书审批') body += renderPlanApplyInfo(a);
+            else if (a.type === '产品入池审批') body += renderProductApplyInfo(a);
+            else if (a.type === '交易审批') body += renderTradeApplyInfo(a);
 
+            // ===== 审批流程（步骤条 + 节点明细表格） =====
             body += '<div class="detail-section-title">审批流程</div>';
-            body += '<div class="timeline">';
-            a.steps.forEach(function(step) {
-                var dotClass = 'pending';
-                var titleClass = '';
-                if (step.status === '已完成') {
-                    dotClass = step.result === '驳回' ? 'rejected' : 'completed';
-                } else if (step.status === '当前') {
-                    dotClass = 'current';
-                } else {
-                    titleClass = ' pending-title';
-                }
-                body += '<div class="timeline-item">';
-                body += '<div class="timeline-dot ' + dotClass + '"></div>';
-                body += '<div class="timeline-title' + titleClass + '">' + step.title + '</div>';
-                if (step.user) body += '<div class="timeline-user">' + step.user + '</div>';
-                if (step.time) body += '<div class="timeline-time">' + step.time + '</div>';
-                if (step.status === '当前' && !step.time) body += '<div class="timeline-time" style="color:var(--primary);">待处理</div>';
-                if (step.status === '待处理') body += '<div class="timeline-time">待处理</div>';
-                if (step.result === '驳回' && step.reason) body += '<div class="timeline-reason">驳回原因: ' + step.reason + '</div>';
-                body += '</div>';
-            });
-            body += '</div>';
+            body += renderStepBar(a.steps);
+            body += renderStepTable(a.steps);
 
-            var typePermKey = APPROVAL_TYPE_PERM[a.type];
-            var canApproveThisType = typePermKey ? hasPermission(typePermKey) : false;
+            // ===== 审批意见 / 节点操作表单 =====
             if (a.status === '审批中' && canApproveThisType && !_isReadOnly) {
-                body += '<div class="detail-section-title">审批意见</div>';
-                body += '<textarea id="approvalOpinion" class="opinion-input" rows="3" placeholder="请输入审批意见（选填）..."></textarea>';
+                if (curStep && curStep.title === '交易执行中-财务对账确认' && relTrade) {
+                    // ============ 财务对账确认表单（赎回新流程：提交即代表交易执行成功） ============
+                    body += '<div class="detail-section-title">财务对账确认表单 <span style="font-weight:400;font-size:12px;color:var(--danger);">（提交即代表交易执行成功）</span></div>';
+                    body += '<div style="padding:8px 12px;background:#FFF7ED;border:1px solid #FDBA74;border-radius:6px;font-size:12px;color:#92400E;margin-bottom:10px;">请根据银行到账回单核对实际到账金额/份额并填写本表单；提交后交易状态变更为"待交易员补充信息"，由交易员补充最终信息</div>';
+                    body += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;">';
+                    body += '<div class="form-group"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">实际到账金额（元）*</label><input type="number" step="0.01" id="finRecAmount" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);" value="' + relTrade.applyAmount + '"></div>';
+                    body += '<div class="form-group"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">实际到账份额</label><input type="number" step="0.01" id="finRecShares" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);" value="' + (relTrade.shares || '') + '" placeholder="选填"></div>';
+                    body += '<div class="form-group"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">到账日期 *</label><input type="date" id="finRecDate" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);"></div>';
+                    body += '<div class="form-group"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">赎回费用（元）</label><input type="number" step="0.01" id="finRecFee" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);" value="0"></div>';
+                    body += '</div>';
+                    body += '<div class="form-group"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">对账单附件（银行回单）*</label><input type="file" id="finRecFile" accept=".pdf,.jpg,.png,.xls,.xlsx" style="width:100%;font-size:var(--font-size-xs);"></div>';
+                    body += '<div class="form-group"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">差异说明</label><textarea id="finRecDiff" rows="2" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);resize:vertical;" placeholder="实际到账与申报金额存在差异时必填"></textarea></div>';
+                } else if (curStep && curStep.title === '交易员补充信息') {
+                    // ============ 交易员补充信息节点：展示财务对账结果 + 跳转交易管理填写 ============
+                    body += '<div class="detail-section-title">财务对账确认结果</div>';
+                    if (relTrade.financeConfirmStatus === '已确认') {
+                        body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:6px;">';
+                        body += '<div class="detail-info-item"><div class="info-label">实际到账金额</div><div class="info-value text-mono">' + formatMoneyFull(relTrade.actualArrivalAmount) + '</div></div>';
+                        body += '<div class="detail-info-item"><div class="info-label">实际到账份额</div><div class="info-value text-mono">' + (relTrade.actualArrivalShares > 0 ? relTrade.actualArrivalShares.toLocaleString() : '-') + '</div></div>';
+                        body += '<div class="detail-info-item"><div class="info-label">到账日期</div><div class="info-value">' + (relTrade.actualArrivalDate || '-') + '</div></div>';
+                        body += '<div class="detail-info-item"><div class="info-label">对账单文件</div><div class="info-value">' + (relTrade.statementFile || '-') + '</div></div>';
+                        body += '</div>';
+                    }
+                    body += '<div style="padding:8px 12px;background:var(--info-bg);border:1px dashed var(--info);border-radius:6px;font-size:12px;color:var(--text-secondary);">请前往【交易管理 → 交易详情 → 交易员补充信息】填写最终实际到账金额/份额（默认带入财务确认值，允许修改）并确认结束流程</div>';
+                } else {
+                    body += '<div class="detail-section-title">审批意见</div>';
+                    body += '<textarea id="approvalOpinion" class="opinion-input" rows="3" placeholder="请输入审批意见（选填）..."></textarea>';
+                }
             }
 
             document.getElementById('detailModalBody').innerHTML = body;
             var footer = document.getElementById('detailModalFooter');
             var isInitiator = a.applicant === _currentRoleLabel;
             if (a.status === '审批中' && !_isReadOnly) {
-                var curStep = a.steps.find(function(s) { return s.status === '当前'; });
                 var approveBtnText = (curStep && curStep.title.indexOf('ERP流程') >= 0) ? '模拟完成' : '通过';
                 var footerHtml = '<button class="btn btn-ghost" onclick="closeDetailModal()">关闭</button>';
                 if (canApproveThisType) {
-                    footerHtml += '<button class="btn btn-danger" onclick="closeDetailModal();openRejectModal(\'' + a.id + '\')">驳回</button>';
-                    footerHtml += '<button class="btn btn-primary" onclick="approveItem(\'' + a.id + '\')">' + approveBtnText + '</button>';
+                    if (curStep && curStep.title === '交易执行中-财务对账确认') {
+                        // 财务对账确认节点：提交对账表单即代表交易执行成功
+                        footerHtml += '<button class="btn btn-primary" onclick="confirmFinanceReconcile(\'' + a.id + '\')">确认对账（交易执行成功）</button>';
+                    } else if (curStep && curStep.title === '交易员补充信息') {
+                        footerHtml += '<button class="btn btn-primary" onclick="window.open(\'trade.html?openTrade=' + a.object + '\', \'_blank\')">前往交易管理填写补充信息</button>';
+                    } else {
+                        footerHtml += '<button class="btn btn-danger" onclick="closeDetailModal();openRejectModal(\'' + a.id + '\')">驳回</button>';
+                        footerHtml += '<button class="btn btn-primary" onclick="approveItem(\'' + a.id + '\')">' + approveBtnText + '</button>';
+                    }
                 }
                 if (isInitiator) {
                     footerHtml += '<button class="btn btn-withdraw" onclick="withdrawApproval(\'' + a.id + '\')">撤回</button>';
@@ -467,24 +935,26 @@
 
         function renderDividendDetail(a) {
             var d = a._dividendData;
-            var cfg = TYPE_CONFIG[a.type] || {};
-            document.getElementById('detailModalTitle').textContent = cfg.icon + ' ' + (cfg.label || a.type) + ' - ' + a.id;
+            document.getElementById('detailModalTitle').innerHTML = '审批详情 ' + a.id + ' <span class="status-badge drawer-title-badge ' + getStatusClass(d.status) + '">' + d.status + '</span>';
             var roleKey = getCurrentRoleKey();
             var canEdit = !_isReadOnly;
             var isTraderStep = (d.status === '待交易员确认' && (roleKey === 'trader' || roleKey === 'demo'));
             var isFinanceStep = (d.status === '交易员已确认' && (roleKey === 'financial_staff' || roleKey === 'demo'));
 
-            var body = '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:14px;">';
-            body += '<div class="detail-info-item"><div class="info-label">审批编号</div><div class="info-value">' + a.id + '</div></div>';
-            body += '<div class="detail-info-item"><div class="info-label">审批类型</div><div class="info-value">' + a.type + '</div></div>';
-            body += '<div class="detail-info-item"><div class="info-label">发起人</div><div class="info-value">' + d.initiator + '</div></div>';
-            body += '<div class="detail-info-item"><div class="info-label">发起时间</div><div class="info-value">' + d.createTime + '</div></div>';
-            body += '<div class="detail-info-item"><div class="info-label">当前状态</div><div class="info-value"><span class="status-badge ' + getStatusClass(d.status) + '">' + d.status + '</span></div></div>';
-            body += '<div class="detail-info-item"><div class="info-label">关联产品</div><div class="info-value">' + d.productName + ' (' + d.productId + ')</div></div>';
-            body += '<div class="detail-info-item"><div class="info-label">产品内部编码</div><div class="info-value">' + (d.innerCode || '-') + '</div></div>';
-            body += '<div class="detail-info-item"><div class="info-label">产品外部编码</div><div class="info-value">' + (d.externalCode || '-') + '</div></div>';
+            // ===== 申请信息 =====
+            var body = '<div class="detail-section-title">申请信息</div>';
+            body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px;">';
+            body += _infoItem('审批编号', a.id);
+            body += _infoItem('审批类型', a.type);
+            body += _infoItem('发起人', d.initiator);
+            body += _infoItem('发起时间', d.createTime);
+            body += _infoItem('关联产品', d.productName + ' (' + d.productId + ')');
+            body += _infoItem('当前状态', '<span class="status-badge ' + getStatusClass(d.status) + '">' + d.status + '</span>');
+            body += _infoItem('产品内部编码', d.innerCode);
+            body += _infoItem('产品外部编码', d.externalCode);
             body += '</div>';
 
+            // ===== 兑息兑付信息（iBor兑息兑付字段） =====
             body += '<div class="detail-section-title">兑息兑付信息（iBor兑息兑付字段）</div>';
             if (isTraderStep && canEdit) {
                 body += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;">';
@@ -496,16 +966,16 @@
                 body += '</div>';
                 body += '<input type="hidden" id="divRejectReason" value="">';
             } else {
-                body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:6px;">';
-                body += '<div class="detail-info-item"><div class="info-label">兑付日期</div><div class="info-value">' + d.divDate + '</div></div>';
-                body += '<div class="detail-info-item"><div class="info-label">每百元应付利息</div><div class="info-value">' + d.interestPer100.toFixed(4) + ' 元</div></div>';
-                body += '<div class="detail-info-item"><div class="info-label">每百元应付本金</div><div class="info-value">' + d.principalPer100.toFixed(4) + ' 元</div></div>';
-                body += '<div class="detail-info-item" style="grid-column:1/3;"><div class="info-label">备注</div><div class="info-value">' + (d.remark || '-') + '</div></div>';
+                body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px;">';
+                body += _infoItem('兑付日期', d.divDate);
+                body += _infoItem('每百元应付利息', d.interestPer100.toFixed(4) + ' 元');
+                body += _infoItem('每百元应付本金', d.principalPer100.toFixed(4) + ' 元');
+                body += _infoItem('备注', d.remark, true);
                 body += '</div>';
                 if (d.traderConfirmUser) {
-                    body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:6px;">';
-                    body += '<div class="detail-info-item"><div class="info-label">交易员确认</div><div class="info-value">' + d.traderConfirmUser + ' ' + d.traderConfirmTime + (d.traderModified ? '（已修改字段）' : '') + '</div></div>';
-                    body += '<div class="detail-info-item" style="grid-column:1/3;"><div class="info-label">交易员备注</div><div class="info-value">' + (d.traderRemark || '-') + '</div></div>';
+                    body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px;">';
+                    body += _infoItem('交易员确认', d.traderConfirmUser + ' ' + d.traderConfirmTime + (d.traderModified ? '（已修改字段）' : ''));
+                    body += _infoItem('交易员备注', d.traderRemark, true);
                     body += '</div>';
                 }
                 if (isFinanceStep && canEdit) {
@@ -515,18 +985,10 @@
                 }
             }
 
-            body += '<div class="detail-section-title">处理记录</div>';
-            body += '<div class="timeline">';
-            d.history.forEach(function(h) {
-                body += '<div class="timeline-item">';
-                body += '<div class="timeline-dot completed"></div>';
-                body += '<div class="timeline-title">' + h.action + '</div>';
-                if (h.user) body += '<div class="timeline-user">' + h.user + '</div>';
-                if (h.time) body += '<div class="timeline-time">' + h.time + '</div>';
-                if (h.remark) body += '<div class="timeline-time" style="color:var(--text-secondary);">' + h.remark + '</div>';
-                body += '</div>';
-            });
-            body += '</div>';
+            // ===== 审批流程（步骤条 + 节点明细表格） =====
+            body += '<div class="detail-section-title">审批流程</div>';
+            body += renderStepBar(a.steps);
+            body += renderStepTable(a.steps);
 
             document.getElementById('detailModalBody').innerHTML = body;
             var footer = document.getElementById('detailModalFooter');
@@ -658,6 +1120,11 @@
                 }
             }
             if (a.steps.every(function(s) { return s.status === '已完成'; })) a.status = '已通过';
+            // 投资计划书审批全部通过：回写计划书状态为"已通过"（产品方可发起交易）
+            if (a.status === '已通过' && a.type === '投资计划书审批') {
+                var passPlan = PLANS.find(function(pl) { return pl.id === a.object; });
+                if (passPlan) passPlan.status = '已通过';
+            }
             alert('审批已通过');
             closeDetailModal();
             renderApprovalList();
@@ -668,8 +1135,23 @@
             if (!trade) return;
             var title = completedStep.title;
             var now = completedStep.time;
-            // 交易员发起后直接进入ERP流程，无OMS内3级审批
-            if (title.indexOf('ERP流程-资金划拨') === 0) {
+            // 申购/赎回均前置三级审批（PRD（二）（三））
+            if (title === '投资经理审批' || title === '风控审批') {
+                // 三级审批中间节点：交易保持"交易审批中"
+            } else if (title === '部门经理审批') {
+                if (trade.erpStep1Status === '不适用') {
+                    // 赎回：三级审批全部通过 → 交易执行中（等待财务在审批中心对账确认）
+                    trade.status = '交易执行中';
+                    trade.remark = '三级审批已通过，待财务对账确认（交易执行中）';
+                } else {
+                    // 申购：三级审批全部通过 → 自动触发ERP用款流程（步骤1发起）
+                    trade.status = '交易执行中';
+                    trade.erpStep1Status = '执行中';
+                    trade.remark = '三级审批已通过，已自动发起ERP用款流程（资金划拨）';
+                }
+            } else if (title === '交易员补充信息') {
+                // 由交易管理-交易员补充信息表单处理
+            } else if (title.indexOf('ERP流程-资金划拨') === 0) {
                 // ERP步骤1完成 → 交易执行中（申购）或 还款审批中（赎回）
                 trade.erpStep1Status = '已完成';
                 trade.erpStep1Time = now;
@@ -685,15 +1167,60 @@
                 if (trade.type === '赎回') {
                     trade.status = '还款审批中';
                 }
-            } else if (title.indexOf('交易员线') === 0) {
-                // traderConfirmStatus 保持"待确认"，不修改
-            } else if (title === '交易员确认结束') {
+            } else if (title.indexOf('交易员确认') === 0) {
+                // 申购终态节点：交易员确认（金额修正+合同上传）通过即流程结束
                 trade.traderConfirmStatus = '已确认';
                 trade.status = '已结束';
                 trade.actualDealAmount = trade.applyAmount;
                 trade.traderConfirmTime = now;
                 trade.voucherStatus = '待生成';
             }
+        }
+
+        // 赎回新流程：财务对账确认（审批中心填写对账表单，提交即代表交易执行成功）
+        function confirmFinanceReconcile(approvalId) {
+            var a = APPROVALS.find(function(x) { return x.id === approvalId; });
+            if (!a) return;
+            var trade = TRADES.find(function(t) { return t.id === a.object; });
+            if (!trade) { alert('关联交易不存在'); return; }
+            var amount = parseFloat(document.getElementById('finRecAmount').value);
+            if (isNaN(amount) || amount <= 0) { alert('请输入有效的实际到账金额'); return; }
+            var date = document.getElementById('finRecDate').value;
+            if (!date) { alert('请选择到账日期'); return; }
+            var shares = parseFloat(document.getElementById('finRecShares').value);
+            var fee = parseFloat(document.getElementById('finRecFee').value);
+            var diff = (document.getElementById('finRecDiff').value || '').trim();
+            var fileInput = document.getElementById('finRecFile');
+            var fileName = (fileInput && fileInput.files && fileInput.files[0]) ? fileInput.files[0].name : '';
+            if (!fileName) { alert('请上传对账单附件（银行回单）'); return; }
+            if (Math.abs(amount - trade.applyAmount) > 0.01 && !diff) { alert('实际到账金额与申报金额存在差异，请填写差异说明'); return; }
+            if (!confirm('确认提交对账信息？\n\n实际到账金额：' + formatMoney(amount) + '\n到账日期：' + date + '\n\n提交后交易即视为执行成功，流转至交易员补充信息节点。')) return;
+
+            var role = getCurrentRole();
+            var now = new Date();
+            var nowStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+
+            trade.financeConfirmStatus = '已确认';
+            trade.financeConfirmUser = role.label;
+            trade.financeConfirmTime = nowStr;
+            trade.actualArrivalAmount = amount;
+            trade.actualArrivalDate = date;
+            trade.statementFile = fileName;
+            trade.redeemFee = isNaN(fee) ? 0 : fee;
+            trade.diffRemark = diff || '';
+            if (!isNaN(shares) && shares > 0) trade.actualArrivalShares = shares;
+            trade.status = '待交易员补充信息';
+            trade.remark = '财务已确认对账（实际到账' + formatMoney(amount) + '），待交易员补充信息';
+
+            // 推进审批节点：财务对账确认完成 → 交易员补充信息（当前）
+            var step = a.steps.find(function(s) { return s.status === '当前'; });
+            if (step) { step.status = '已完成'; step.time = nowStr; step.user = role.label; }
+            var next = a.steps.find(function(s) { return s.status === '待处理'; });
+            if (next) next.status = '当前';
+
+            alert('对账确认成功，交易已执行！\n\n交易状态变更为"待交易员补充信息"，已通知交易员在【交易管理】补充最终信息。');
+            closeDetailModal();
+            renderApprovalList();
         }
 
         function openRejectModal(id) {
@@ -720,6 +1247,11 @@
             if (a.type === '交易审批') {
                 var trade = TRADES.find(function(t) { return t.id === a.object; });
                 if (trade) trade.status = '已驳回';
+            }
+            // 投资计划书审批驳回：回写计划书状态为"已驳回"
+            if (a.type === '投资计划书审批') {
+                var rejPlan = PLANS.find(function(pl) { return pl.id === a.object; });
+                if (rejPlan) rejPlan.status = '已驳回';
             }
             alert('已驳回');
             closeRejectModal();
@@ -778,9 +1310,18 @@
             if (event.target === document.getElementById('detailModal')) closeDetailModal();
             if (event.target === document.getElementById('rejectModal')) closeRejectModal();
             if (event.target === document.getElementById('terminateModal')) closeTerminateModal();
+            if (event.target === document.getElementById('planFileViewModal')) document.getElementById('planFileViewModal').style.display = 'none';
+        });
+
+        // 点击账套树形面板外部时收起
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.cascade-filter')) {
+                document.querySelectorAll('.cascade-panel').forEach(function(p) { p.classList.remove('show'); });
+            }
         });
 
         document.addEventListener('DOMContentLoaded', function() {
+            initApprovalFilters();
             renderApprovalList();
             // 支持从通知中心跳转过来自动打开审批详情弹窗
             // openApproval 参数值为业务对象ID（TP/TRX/DV开头）

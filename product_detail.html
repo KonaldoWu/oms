@@ -46,12 +46,28 @@
 
                 <div class="tab-panel active" id="panel-basic" data-logic-id="page_product_detail">
                     <div class="detail-section">
-                        <div class="detail-section-title">核心信息</div>
-                        <div class="detail-info-grid" id="coreInfoGrid"></div>
+                        <div class="detail-section-title">基本档案</div>
+                        <div class="detail-info-grid" id="archiveGrid"></div>
                     </div>
                     <div class="detail-section">
-                        <div class="detail-section-title">扩展信息</div>
-                        <div class="detail-info-grid" id="extInfoGrid"></div>
+                        <div class="detail-section-title">日期与期限</div>
+                        <div class="detail-info-grid" id="dateGrid"></div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">规模与份额</div>
+                        <div class="detail-info-grid" id="scaleGrid"></div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">参与主体</div>
+                        <div class="detail-info-grid" id="partyGrid"></div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">业务属性</div>
+                        <div class="detail-info-grid" id="attrGrid"></div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">系统信息</div>
+                        <div class="detail-info-grid" id="sysGrid"></div>
                     </div>
                 </div>
 
@@ -259,45 +275,89 @@
             var cpName = '-';
             if (p.counterparty) {
                 var cp = COUNTERPARTIES.find(function(x) { return x.id === p.counterparty; });
-                cpName = cp ? '<a class="product-name-link" href="counterparty_detail.html?id=' + cp.id + '">' + cp.name + '</a>' : p.counterparty;
+                cpName = cp ? cp.name : p.counterparty;
             }
-            var coreFields = [
-                { label: '产品ID', value: p.id },
-                { label: '产品名称', value: p.name },
-                { label: '产品简称', value: p.shortName },
-                { label: '资产类型', value: p.assetType },
-                { label: '产品类型', value: p.productType },
-                { label: '衡泰代码', value: p.hengtaiCode || '-' },
-                { label: '外部代码', value: p.externalCode || '-' },
-                { label: '所属部门', value: p.dept },
-                { label: '投资组', value: p.group || '-' },
-                { label: '状态', value: '<span class="status-badge ' + getStatusClass(p.status) + '">' + p.status + '</span>' },
-                { label: '关联对手方', value: cpName }
-            ];
-            var extFields = [
-                { label: '到期日期', value: p.expireDate || '无固定期限' },
+            function val(v) { return (v === undefined || v === null || v === '') ? '-' : v; }
+            function buildHtml(fields) {
+                var html = '';
+                fields.forEach(function(f) {
+                    html += '<div class="detail-info-item"><div class="info-label">' + f.label + '</div><div class="info-value">' + f.value + '</div></div>';
+                });
+                return html;
+            }
+            // 基本档案
+            var archiveFields = [
+                { label: '内部编码', value: val(p.hengtaiCode) },
+                { label: '产品名称', value: val(p.name) },
+                { label: '产品简称', value: val(p.shortName) },
+                { label: '外部编码', value: val(p.externalCode) },
+                { label: '产品类型', value: val(p.productType) },
+                { label: '账套类型', value: val(p.accountType) },
+                { label: '资产类型', value: val(p.assetType) },
+                { label: '投资组', value: val(p.group) },
+                { label: '投资状态', value: '<span class="status-badge ' + getStatusClass(p.status) + '">' + val(p.status) + '</span>' },
+                { label: '所属部门', value: val(p.dept) },
                 { label: '可赎回', value: p.redeemable ? '是' : '否' },
-                { label: '当前净值', value: p.nav ? p.nav.toFixed(4) : '-' },
-                { label: '净值日期', value: p.navDate || '-' },
+                { label: '备注', value: val(p.remark) }
+            ];
+            document.getElementById('archiveGrid').innerHTML = buildHtml(archiveFields);
+            // 日期与期限
+            var dateFields = [
+                { label: '成立/发行日', value: val(p.establishDate) },
+                { label: '开始日期', value: val(p.startDate) },
+                { label: '预计到期日', value: val(p.expireDate) },
+                { label: '实际到期日', value: val(p.actualMaturityDate) },
+                { label: '最新净值日期', value: val(p.navDate) }
+            ];
+            document.getElementById('dateGrid').innerHTML = buildHtml(dateFields);
+            // 规模与份额
+            var scaleFields = [
+                { label: '面值', value: p.faceValue ? Number(p.faceValue).toFixed(2) : '-' },
+                { label: '产品总规模', value: p.totalScale ? formatMoney(p.totalScale) : '-' },
+                { label: '单位净值', value: p.nav ? p.nav.toFixed(4) : '-' },
                 { label: '持仓金额', value: p.holdAmount ? formatMoney(p.holdAmount) : '-' },
                 { label: '持仓份额', value: p.holdShares ? p.holdShares.toLocaleString() : '-' },
                 { label: '计划额度', value: p.planAmount ? formatMoney(p.planAmount) : '-' },
                 { label: '已用额度', value: p.usedAmount ? formatMoney(p.usedAmount) : '-' },
-                { label: '交易限额', value: p.tradeLimit ? formatMoney(p.tradeLimit) : '不限' },
-                { label: '科目映射', value: p.accountMapping || '-' },
-                { label: '入池操作人', value: p.poolUser || '-' },
-                { label: '入池时间', value: p.poolTime || '-' }
+                { label: '交易限额', value: p.tradeLimit ? formatMoney(p.tradeLimit) : '不限' }
             ];
-            var coreHtml = '';
-            coreFields.forEach(function(f) {
-                coreHtml += '<div class="detail-info-item"><div class="info-label">' + f.label + '</div><div class="info-value">' + f.value + '</div></div>';
-            });
-            document.getElementById('coreInfoGrid').innerHTML = coreHtml;
-            var extHtml = '';
-            extFields.forEach(function(f) {
-                extHtml += '<div class="detail-info-item"><div class="info-label">' + f.label + '</div><div class="info-value">' + f.value + '</div></div>';
-            });
-            document.getElementById('extInfoGrid').innerHTML = extHtml;
+            document.getElementById('scaleGrid').innerHTML = buildHtml(scaleFields);
+            // 参与主体
+            var partyFields = [
+                { label: '管理人', value: val(p.manager) },
+                { label: '管理人代码', value: val(p.managerCode) },
+                { label: '融资人', value: val(p.financier) },
+                { label: '融资人代码', value: val(p.financierCode) },
+                { label: '担保人', value: val(p.guarantor) },
+                { label: '担保人代码', value: val(p.guarantorCode) },
+                { label: '原始权益人', value: val(p.originator) },
+                { label: '权益人代码', value: val(p.originatorCode) },
+                { label: '交易对手方', value: val(p.counterpartyIbor) || cpName },
+                { label: '对手方代码', value: val(p.counterpartyCode) }
+            ];
+            document.getElementById('partyGrid').innerHTML = buildHtml(partyFields);
+            // 业务属性
+            var attrFields = [
+                { label: '交易市场', value: val(p.tradeMarket) },
+                { label: '币种', value: p.currency === 'CNY' ? '人民币' : val(p.currency) },
+                { label: '信用评级', value: val(p.creditRating) },
+                { label: '基础资产类型', value: val(p.underlyingAssetType) },
+                { label: '产品层级', value: val(p.trancheLevel) },
+                { label: '集中度', value: p.concentration ? p.concentration + '%' : '-' },
+                { label: '年化收益率', value: p.annualYield ? p.annualYield + '%' : '-' },
+                { label: '区域市场', value: val(p.regionalMarket) },
+                { label: '科目映射', value: val(p.accountMapping) }
+            ];
+            document.getElementById('attrGrid').innerHTML = buildHtml(attrFields);
+            // 系统信息
+            var sysFields = [
+                { label: '产品ID', value: val(p.id) },
+                { label: '创建人', value: val(p.poolUser) },
+                { label: '创建时间', value: val(p.poolTime) },
+                { label: '更新人', value: val(p.updateUser) || '-' },
+                { label: '更新时间', value: val(p.updateTime) || '-' }
+            ];
+            document.getElementById('sysGrid').innerHTML = buildHtml(sysFields);
         }
 
         function renderNavTable() {

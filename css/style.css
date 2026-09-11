@@ -264,6 +264,24 @@ body {
     text-overflow: ellipsis;
 }
 
+/* 二级菜单（投资管理 → 计划书管理/交易管理） */
+.nav-group-title.group-active {
+    color: var(--dark-text);
+    background: var(--dark-hover);
+}
+
+.nav-submenu {
+    display: flex;
+    flex-direction: column;
+    padding: 0 0 2px;
+}
+
+.nav-sub-item {
+    padding: 5px 12px 5px 42px;
+    font-size: var(--font-size-xs);
+    margin: 0 6px;
+}
+
 .sidebar-footer {
     padding: 8px 6px;
     border-top: 1px solid var(--dark-border);

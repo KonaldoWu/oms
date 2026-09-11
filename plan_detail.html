@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>委外投资业务一体化订单管理平台 - 计划书详情</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* 审批概要行 */
+        .approval-meta { display: flex; align-items: center; gap: 40px; font-size: var(--font-size-sm); color: var(--text-secondary); flex-wrap: wrap; }
+        .approval-meta b { color: var(--text-primary); font-weight: 600; }
+        .approval-meta .meta-label { color: var(--text-muted); margin-right: 6px; }
+
+        /* 横向审批步骤条 */
+        .step-bar { display: flex; align-items: flex-start; margin-top: 34px; padding: 0 40px; }
+        .step-node { display: flex; flex-direction: column; align-items: center; flex: none; width: 90px; position: relative; }
+        .step-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); background: var(--surface); z-index: 1; }
+        .step-node.done .step-dot { border-color: var(--success); background: var(--success); }
+        .step-node.current .step-dot { border-color: #F59E0B; background: #F59E0B; box-shadow: 0 0 0 4px rgba(245,158,11,0.18); }
+        .step-node.rejected .step-dot { border-color: var(--danger); background: var(--danger); }
+        .step-label { margin-top: 8px; font-size: var(--font-size-sm); color: var(--text-muted); white-space: nowrap; }
+        .step-node.done .step-label { color: var(--success); font-weight: 600; }
+        .step-node.current .step-label { color: #F59E0B; font-weight: 600; }
+        .step-node.rejected .step-label { color: var(--danger); font-weight: 600; }
+        .step-connector { flex: 1; height: 2px; background: var(--border); margin-top: 9px; min-width: 40px; }
+        .step-connector.done { background: var(--success); }
+
+        /* 基础信息表格（3组标签/值 每行） */
+        .info-table { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm); }
+        .info-table td { border: 1px solid var(--border-light); padding: 10px 14px; }
+        .info-table td.info-label { background: #F8FAFC; color: var(--text-muted); width: 110px; white-space: nowrap; }
+        .info-table td.info-value { color: var(--text-primary); min-width: 160px; }
+
+        /* 附件行 */
+        .attach-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; font-size: var(--font-size-sm); }
+        .attach-icon { color: var(--primary); font-size: 16px; }
+        .attach-name { color: var(--text-primary); }
+        .attach-download { color: var(--primary); cursor: pointer; margin-left: 12px; }
+        .attach-download:hover { text-decoration: underline; }
+        .attach-empty { color: var(--text-muted); font-size: var(--font-size-sm); padding: 10px 0; }
+
+        /* 审批记录竖向时间线（与审批中心一致） */
+        .timeline { position: relative; padding-left: 24px; }
+        .timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+        .timeline-item { position: relative; padding-bottom: 20px; }
+        .timeline-item:last-child { padding-bottom: 0; }
+        .timeline-dot { position: absolute; left: -20px; top: 2px; width: 12px; height: 12px; border-radius: 50%; z-index: 1; }
+        .timeline-dot.completed { background: var(--success, #22c55e); }
+        .timeline-dot.current { background: var(--primary, #3b82f6); box-shadow: 0 0 0 4px rgba(59,130,246,0.2); }
+        .timeline-dot.pending { background: var(--border, #e5e7eb); }
+        .timeline-dot.rejected { background: var(--danger, #ef4444); }
+        .timeline-title { font-size: var(--font-size-sm); font-weight: 600; color: var(--text-primary); }
+        .timeline-title.pending-title { color: var(--text-muted); }
+        .timeline-user { font-size: var(--font-size-xs); color: var(--text-secondary); margin-top: 2px; }
+        .timeline-time { font-size: var(--font-size-xs); color: var(--text-muted); margin-top: 1px; }
+        .timeline-reason { font-size: var(--font-size-xs); color: var(--danger); margin-top: 2px; padding: 4px 8px; background: #FEF2F2; border-radius: 3px; }
+        .timeline-status-badge { margin-left: 6px; }
+        .product-name-link { font-weight: 500; color: var(--primary); cursor: pointer; text-decoration: none; }
+        .product-name-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <nav class="sidebar"></nav>
+        <div class="main-area">
+            <div class="topbar"></div>
+            <div class="content">
+                <div class="detail-page-header">
+                    <div class="header-left">
+                        <button class="back-btn" onclick="location.href='trade.html'" data-logic-id="page_plan_detail">← 返回列表</button>
+                        <div>
+                            <h2 id="pageTitle">计划书详情</h2>
+                            <div class="header-subtitle" id="pageSubtitle"></div>
+                        </div>
+                        <span id="statusBadge"></span>
+                    </div>
+                </div>
+
+                <div class="card" data-logic-id="page_plan_detail">
+                    <div class="card-body">
+                        <div class="approval-meta">
+                            <span><span class="meta-label">审批编号：</span><b id="metaAprId">-</b></span>
+                            <span><span class="meta-label">当前状态：</span><span id="metaStatus"></span></span>
+                            <span><span class="meta-label">提交时间：</span><span id="metaSubmitTime">-</span></span>
+                        </div>
+                        <div class="step-bar" id="stepBar"></div>
+                    </div>
+                </div>
+
+                <div class="detail-section" data-logic-id="page_plan_detail">
+                    <div class="detail-section-title">基础信息</div>
+                    <table class="info-table" id="infoTable"></table>
+                </div>
+
+                <div class="detail-section" data-logic-id="page_plan_detail">
+                    <div class="detail-section-title">关联产品</div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>产品内部编号</th>
+                                    <th>产品名称</th>
+                                    <th>外部编码</th>
+                                    <th>产品类型</th>
+                                    <th>账套类型</th>
+                                    <th>计划额度(元)</th>
+                                    <th>已用额度(元)</th>
+                                    <th>投资方向</th>
+                                    <th>运作方式</th>
+                                    <th>投资方式</th>
+                                    <th>持有期限</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="detail-section" data-logic-id="page_plan_detail">
+                    <div class="detail-section-title">附件</div>
+                    <div id="attachArea"></div>
+                </div>
+
+                <div class="detail-section" data-logic-id="page_plan_detail">
+                    <div class="detail-section-title">审批记录</div>
+                    <div id="approvalTimeline"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script>
+        initLayout('trade.html', '计划书详情');
+        initNotification();
+
+        var planId = new URLSearchParams(location.search).get('id');
+        var plan = PLANS.find(function(p) { return p.id === planId; });
+        if (!plan) {
+            document.querySelector('.content').innerHTML = '<div class="card"><div class="card-body" style="text-align:center;color:var(--text-muted);padding:60px 0;">未找到对应计划书，<a href="trade.html" style="color:var(--primary);">返回列表</a></div></div>';
+        } else {
+            renderPage();
+        }
+
+        function renderPage() {
+            // 页头
+            document.getElementById('pageTitle').textContent = '计划书详情';
+            document.getElementById('pageSubtitle').textContent = plan.name + '（' + plan.id + '）';
+            document.getElementById('statusBadge').innerHTML = '<span class="status-badge ' + getStatusClass(plan.status) + '" style="margin-left:12px;">' + plan.status + '</span>';
+
+            // 审批概要（草稿无审批流程）
+            var apr = APPROVALS.find(function(a) { return a.type === '投资计划书审批' && a.object === plan.id; });
+            var isDraft = plan.status === '草稿' || !apr || apr.status === '草稿';
+            document.getElementById('metaAprId').textContent = apr ? apr.id : '-';
+            document.getElementById('metaStatus').innerHTML = '<span class="status-badge ' + getStatusClass(plan.status) + '">' + plan.status + '</span>';
+            document.getElementById('metaSubmitTime').textContent = plan.submitTime || '-';
+
+            renderStepBar(apr, isDraft);
+            renderInfoTable();
+            renderProducts();
+            renderAttach();
+            renderTimeline(apr, isDraft);
+        }
+
+        // 横向步骤条：提交 → 风控审批 → 部门负责人审批
+        function renderStepBar(apr, isDraft) {
+            var labels = ['提交', '风控审批', '部门负责人审批'];
+            var states;
+            if (isDraft) {
+                states = ['current', 'pending', 'pending'];
+            } else {
+                states = apr.steps.map(function(s) {
+                    if (s.result === '驳回') return 'rejected';
+                    if (s.status === '已完成') return 'done';
+                    if (s.status === '当前') return 'current';
+                    return 'pending';
+                });
+                // 已终止：全部置灰，提交节点完成
+                if (plan.status === '已终止') states = ['done', 'pending', 'pending'];
+            }
+            var html = '';
+            labels.forEach(function(label, i) {
+                html += '<div class="step-node ' + states[i] + '"><div class="step-dot"></div><div class="step-label">' + label + '</div></div>';
+                if (i < labels.length - 1) {
+                    html += '<div class="step-connector' + (states[i] === 'done' ? ' done' : '') + '"></div>';
+                }
+            });
+            document.getElementById('stepBar').innerHTML = html;
+        }
+
+        // 基础信息：每行3组 标签/值
+        function renderInfoTable() {
+            var rows = [
+                [{ l: '编号', v: plan.id }, { l: '名称', v: plan.name }, { l: '业务部门', v: plan.dept || '-' }],
+                [{ l: '总额度(元)', v: formatNum(plan.totalAmount) }, { l: '已用额度(元)', v: formatNum(plan.usedAmount) }, { l: '状态', v: '<span class="status-badge ' + getStatusClass(plan.status) + '">' + plan.status + '</span>', html: true }],
+                [{ l: '交易员', v: plan.trader || '-' }, { l: '投资经理', v: plan.creator || '-' }, { l: '创建人', v: plan.creator || '-' }],
+                [{ l: '创建时间', v: plan.createTime || '-' }, { l: '提交时间', v: plan.submitTime || '-' }, { l: '备注', v: plan.remark || '-' }]
+            ];
+            var html = '';
+            rows.forEach(function(row) {
+                html += '<tr>';
+                row.forEach(function(cell) {
+                    html += '<td class="info-label">' + cell.l + '</td><td class="info-value">' + (cell.html ? cell.v : escapeText(cell.v)) + '</td>';
+                });
+                html += '</tr>';
+            });
+            document.getElementById('infoTable').innerHTML = html;
+        }
+
+        // 关联产品
+        function renderProducts() {
+            var tbody = document.getElementById('productTableBody');
+            var details = plan.productDetails || plan.products.map(function(pid) { return { id: pid }; });
+            if (!details.length) {
+                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--text-muted);padding:20px;">暂无关联产品</td></tr>';
+                return;
+            }
+            var html = '';
+            details.forEach(function(d) {
+                var p = getProductById(d.id);
+                if (!p) return;
+                html += '<tr>';
+                html += '<td class="text-mono">' + (p.hengtaiCode || '-') + '</td>';
+                html += '<td><a class="product-name-link" href="product_detail.html?id=' + p.id + '">' + p.name + '</a></td>';
+                html += '<td>' + (p.externalCode || '-') + '</td>';
+                html += '<td>' + (p.productType || '-') + '</td>';
+                html += '<td>' + (p.accountType || '-') + '</td>';
+                html += '<td class="text-mono">' + (d.amount != null ? formatNum(d.amount) : formatNum(p.planAmount)) + '</td>';
+                html += '<td class="text-mono">' + formatNum(p.usedAmount) + '</td>';
+                html += '<td>' + (d.direction || '-') + '</td>';
+                html += '<td>' + (d.operationMode || '-') + '</td>';
+                html += '<td>' + (d.investMode || '-') + '</td>';
+                html += '<td>' + (d.holdPeriod || '-') + '</td>';
+                html += '</tr>';
+            });
+            tbody.innerHTML = html;
+        }
+
+        // 附件
+        function renderAttach() {
+            var area = document.getElementById('attachArea');
+            if (!plan.file) {
+                area.innerHTML = '<div class="attach-empty">暂无附件</div>';
+                return;
+            }
+            area.innerHTML = '<div class="attach-row">' +
+                '<span class="attach-icon">📄</span>' +
+                '<span class="attach-name">' + escapeText(plan.file) + '</span>' +
+                '<a class="attach-download" onclick="alert(\'演示环境，文件下载略\')">下载</a>' +
+                '</div>';
+        }
+
+        // 审批记录竖向时间线
+        function renderTimeline(apr, isDraft) {
+            var box = document.getElementById('approvalTimeline');
+            if (isDraft) {
+                box.innerHTML = '<div style="color:var(--text-muted);font-size:var(--font-size-sm);padding:10px 0;">计划书草稿，尚未提交审批</div>';
+                return;
+            }
+            var html = '<div class="timeline">';
+            apr.steps.forEach(function(step) {
+                var dotClass = 'pending';
+                if (step.result === '驳回') dotClass = 'rejected';
+                else if (step.status === '已完成') dotClass = 'completed';
+                else if (step.status === '当前') dotClass = 'current';
+                var titleClass = (dotClass === 'pending') ? ' pending-title' : '';
+                html += '<div class="timeline-item">';
+                html += '<div class="timeline-dot ' + dotClass + '"></div>';
+                html += '<div class="timeline-title' + titleClass + '">' + step.title;
+                if (step.status === '当前') html += '<span class="status-badge status-processing timeline-status-badge">' + plan.status + '</span>';
+                html += '</div>';
+                if (step.user) html += '<div class="timeline-user">' + step.user + '</div>';
+                if (step.time) html += '<div class="timeline-time">' + step.time + '</div>';
+                if (step.status === '当前' && !step.time) html += '<div class="timeline-time" style="color:var(--primary);">待处理</div>';
+                if (step.status === '待处理') html += '<div class="timeline-time">待处理</div>';
+                if (step.result === '驳回' && step.reason) html += '<div class="timeline-reason">驳回原因: ' + step.reason + '</div>';
+                html += '</div>';
+            });
+            html += '</div>';
+            box.innerHTML = html;
+        }
+
+        function getProductById(pid) {
+            return PRODUCTS.find(function(p) { return p.id === pid; });
+        }
+        function formatNum(n) {
+            if (n == null || n === '') return '-';
+            return Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+        function escapeText(s) {
+            return String(s == null ? '-' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+    </script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>交易管理 - 投资计划书</title>
+    <title>投资管理 - 计划书管理</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
         .filter-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; text-align: center; cursor: pointer; transition: all 0.15s; }
@@ -25,12 +25,6 @@
         .file-upload .file-name.show { display: block; }
         .file-upload .file-name .clear-file { color: var(--danger); cursor: pointer; margin-left: 8px; font-weight: 600; }
         .file-upload.has-file p { display: none; }
-        .tab-bar { display: flex; gap: 0; margin-bottom: 14px; border-bottom: 2px solid var(--border); }
-        .tab-item { padding: 8px 20px; font-size: var(--font-size-sm); font-weight: 500; color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
-        .tab-item:hover { color: var(--primary); }
-        .tab-item.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
         .product-checkbox-list { max-height: 200px; overflow-y: auto; border: 1px solid var(--border); border-radius: var(--radius); padding: 8px; }
         .product-checkbox-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: var(--font-size-sm); }
         .product-checkbox-item input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
@@ -44,6 +38,25 @@
         .product-row select { flex: 1; }
         .product-row input { flex: 0 0 150px; }
         .product-amount-total { text-align: right; font-weight: 600; margin-top: 8px; padding: 6px 0; border-top: 1px solid var(--border); }
+        /* ===== 新建计划书-文件标签与产品子表（对齐正式平台） ===== */
+        .plan-file-row { display: flex; align-items: center; gap: 12px; }
+        .plan-file-tip { font-size: var(--font-size-xs); color: var(--text-muted); line-height: 1.5; }
+        .plan-file-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 360px; padding: 7px 12px; background: #e8f7f0; border: 1px solid #b7e4cd; border-radius: var(--radius-sm); font-size: var(--font-size-sm); color: var(--text-primary); }
+        .plan-file-chip .chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .plan-file-chip .chip-clear { color: var(--text-muted); cursor: pointer; font-weight: 600; flex: 0 0 auto; }
+        .plan-file-chip .chip-clear:hover { color: var(--danger); }
+        .plan-file-placeholder { border: 1px dashed var(--border); border-radius: var(--radius-sm); padding: 10px 14px; cursor: pointer; color: var(--text-muted); font-size: var(--font-size-sm); display: inline-flex; align-items: center; gap: 6px; }
+        .plan-file-placeholder:hover { border-color: var(--primary); color: var(--primary); }
+        .plan-product-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-top: 8px; }
+        .plan-product-table { width: 100%; min-width: 900px; border-collapse: collapse; font-size: var(--font-size-sm); }
+        .plan-product-table th { background: #f0f5ff; color: var(--text-secondary); font-weight: 500; padding: 8px 10px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--border); }
+        .plan-product-table td { padding: 6px 8px; border-bottom: 1px solid var(--border-light); vertical-align: middle; }
+        .plan-product-table tr:last-child td { border-bottom: none; }
+        .plan-product-table select, .plan-product-table input { width: 100%; min-width: 90px; }
+        .plan-product-table .cell-text { color: var(--text-primary); white-space: nowrap; }
+        .plan-product-table .row-del { color: var(--danger); cursor: pointer; white-space: nowrap; background: none; border: none; font-size: var(--font-size-sm); padding: 0 4px; }
+        .plan-product-table .row-del:hover { text-decoration: underline; }
+        .plan-form-static { font-size: 13px; color: var(--text-secondary); padding: 6px 0; }
         .validation-tip { background: #fffbeb; border: 1px solid #f59e0b; border-radius: var(--radius); padding: 10px 12px; margin-bottom: 12px; font-size: var(--font-size-sm); }
         .validation-tip .tip-item { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
         .validation-tip .tip-icon { color: #f59e0b; font-weight: 600; }
@@ -88,6 +101,12 @@
         .erp-sub-section-body { padding: 12px; }
         .erp-flow-arrow { text-align: center; margin: 4px 0 2px; color: var(--primary); font-size: 20px; }
         .erp-flow-arrow-text { text-align: center; margin: 0 0 12px; font-size: 11px; color: var(--text-muted); }
+        /* 计划书审批视图：申请信息产品明细表 + 附件查看链接 */
+        .apply-product-table { width: 100%; border-collapse: collapse; font-size: var(--font-size-xs); margin: 4px 0 12px; }
+        .apply-product-table th, .apply-product-table td { padding: 6px 8px; border: 1px solid var(--border-light); text-align: left; }
+        .apply-product-table th { background: var(--border-light); color: var(--text-muted); font-weight: 500; white-space: nowrap; }
+        .plan-file-link { color: var(--primary); cursor: pointer; text-decoration: underline; }
+        .plan-file-link:hover { color: var(--primary-dark, #2563eb); }
         [data-logic-id]:not(.modal) { position: relative; transition: outline 0.15s; }
         [data-logic-id]:not(.modal):hover { outline: 2px dashed rgba(59,130,246,0.35); outline-offset: 2px; border-radius: 4px; cursor: context-menu; }
         #logic-context-menu { position: fixed; z-index: 10000; background: #fff; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); padding: 6px 0; min-width: 160px; display: none; }
@@ -128,7 +147,7 @@
             <div class="content">
                 <div class="page-header">
                     <div class="page-header-left">
-                        <span class="page-title">交易管理</span>
+                        <span class="page-title">计划书管理</span>
                         <span class="page-subtitle">投资计划书</span>
                     </div>
                     <div class="page-actions">
@@ -207,65 +226,58 @@
     </div>
 
     <div id="planFormModal" class="modal" data-logic-id="plan_form">
-        <div class="modal-content" style="width: 700px;">
+        <div class="modal-content" style="width: 1020px;">
             <div class="modal-header">
                 <h3>新建计划书</h3>
                 <button class="btn btn-ghost btn-sm" onclick="closePlanForm()">✕</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
+                    <label>计划书文件</label>
+                    <div class="plan-file-row">
+                        <input type="file" id="planFileInput" accept=".pdf,.doc,.docx" style="display:none;" onchange="onPlanFileSelected(this)">
+                        <span id="planFileChipWrap">
+                            <label for="planFileInput" class="plan-file-placeholder" id="planFilePlaceholder">📎 选择文件</label>
+                        </span>
+                        <span class="plan-file-tip">仅支持上传一份计划书文件，上传后自动解析填入字段</span>
+                    </div>
+                </div>
+                <div class="form-group">
                     <label>计划书名称 *</label>
                     <input type="text" id="planName" placeholder="请输入计划书名称">
                 </div>
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label>业务部门 *</label>
-                        <select id="planDept" onchange="onDeptChange()">
-                            <option value="">请选择部门</option>
-                            <option value="创新金融业务总部">创新金融业务总部</option>
-                            <option value="FICC固定收益业务总部">FICC固定收益业务总部</option>
-                            <option value="证券投资部">证券投资部</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>投资组 *</label>
-                        <select id="planGroup">
-                            <option value="">请先选择部门</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label>交易员 *</label>
-                        <select id="planTrader">
-                            <option value="">请选择交易员</option>
-                            <option value="李华">李华</option>
-                            <option value="赵丽">赵丽</option>
-                            <option value="陈芳">陈芳</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>总额度(元) *</label>
-                        <input type="number" id="planTotalAmount" placeholder="请输入总额度">
-                    </div>
-                </div>
                 <div class="form-group">
-                    <label>上传计划书文件</label>
-                    <div class="file-upload" id="planFileUpload">
-                        <input type="file" id="planFileInput" accept=".pdf,.doc,.docx" onchange="onFileSelected(this,'planFileUpload')">
-                        <label for="planFileInput">选择文件</label>
-                        <p>支持 PDF、Word 格式</p>
-                        <div class="file-name" id="planFileName"></div>
-                    </div>
+                    <label>总额度 *</label>
+                    <div class="plan-form-static">根据关联产品额度自动汇总</div>
                 </div>
                 <div class="form-group">
                     <label>关联产品</label>
-                    <div id="productRowsContainer"></div>
-                    <div class="product-amount-total" id="productAmountTotal">产品额度合计：¥0.00</div>
+                    <div>
+                        <button class="btn btn-primary btn-sm" onclick="addProductRow()">＋ 添加产品</button>
+                    </div>
+                    <div class="plan-product-table-wrap">
+                        <table class="plan-product-table" id="planProductTable">
+                            <thead>
+                                <tr>
+                                    <th style="min-width:200px;">产品名称</th>
+                                    <th>产品类型</th>
+                                    <th>账套类型</th>
+                                    <th style="min-width:130px;">额度</th>
+                                    <th>投资方向</th>
+                                    <th>运作方式</th>
+                                    <th style="min-width:110px;">投资方式</th>
+                                    <th style="min-width:130px;">持有期限</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="productRowsContainer"></tbody>
+                        </table>
+                    </div>
+                    <div class="product-amount-total" id="productAmountTotal">总额度（自动汇总）：0.00</div>
                 </div>
                 <div class="form-group">
                     <label>备注</label>
-                    <textarea id="planRemark" rows="2" placeholder="请输入备注信息"></textarea>
+                    <textarea id="planRemark" rows="2" placeholder="请输入备注"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
@@ -273,6 +285,28 @@
                 <button class="btn btn-ghost" onclick="savePlanDraft()">保存草稿</button>
                 <button class="btn btn-primary" onclick="submitPlanApproval()">提交审批</button>
             </div>
+        </div>
+    </div>
+
+    <!-- ============ 计划书审批状态弹窗（提交后在此弹窗内逐级审批演示） ============ -->
+    <div id="planApprovalViewModal" class="modal" data-logic-id="plan_approval_view">
+        <div class="modal-content" style="width: 720px;">
+            <div class="modal-header">
+                <h3 id="planApprovalViewTitle">计划书审批进度</h3>
+                <button class="btn btn-ghost btn-sm" onclick="closePlanApprovalView()">✕</button>
+            </div>
+            <div class="modal-body" id="planApprovalViewBody"></div>
+        </div>
+    </div>
+
+    <!-- ============ 计划书附件预览弹窗 ============ -->
+    <div id="planFileViewModal" class="modal" data-logic-id="plan_file_view">
+        <div class="modal-content" style="width: 560px;">
+            <div class="modal-header">
+                <h3>附件预览</h3>
+                <button class="btn btn-ghost btn-sm" onclick="document.getElementById('planFileViewModal').style.display='none'">✕</button>
+            </div>
+            <div class="modal-body" id="planFileViewBody"></div>
         </div>
     </div>
 
@@ -300,20 +334,6 @@
                 <!-- ============ 交易核心信息 ============ -->
                 <div class="trade-section">
                     <div class="trade-section-title">📋 交易核心信息 <span class="trade-section-sub">交易必填核心字段</span></div>
-                    <div class="form-group">
-                        <label>产品名称</label>
-                        <input type="text" id="tradeProductName" readonly style="background:var(--border-light);">
-                    </div>
-                    <div class="grid-2">
-                        <div class="form-group">
-                            <label>产品内部编码</label>
-                            <input type="text" id="tradeProductInnerCode" readonly style="background:var(--border-light);">
-                        </div>
-                        <div class="form-group">
-                            <label>产品外部编码</label>
-                            <input type="text" id="tradeProductExternalCode" readonly style="background:var(--border-light);">
-                        </div>
-                    </div>
                     <div class="grid-2">
                         <div class="form-group">
                             <label>交易类型 *</label>
@@ -322,38 +342,38 @@
                                 <option value="赎回">赎回</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <label>管理人</label>
-                            <select id="tradeCounterparty">
-                                <option value="">请选择管理人（选填）</option>
-                            </select>
-                        </div>
                     </div>
                 </div>
 
-                <!-- ============ 板块1：ERP流程字段（优先展示） ============ -->
+                <!-- ============ 产品入池信息（只读展示，不支持修改） ============ -->
                 <div class="trade-section">
-                    <div class="trade-section-title trade-collapsible" onclick="var d=document.getElementById('erpFieldsSection');d.style.display=d.style.display==='none'?'block':'none';">
-                        🔄 ERP流程字段 <span class="trade-section-sub">根据申购/赎回切换，串行执行（点击展开/收起）</span>
+                    <div class="trade-section-title">📄 产品入池信息 <span class="trade-section-sub">自动带出当前产品入池档案，只读不可修改</span></div>
+                    <div id="tradeProductPoolInfo"></div>
+                </div>
+
+                <!-- ============ 板块1：赎回流程说明（仅赎回展示，申购不展示流程说明） ============ -->
+                <div class="trade-section" id="flowNoteBlock" style="display:none;">
+                    <div class="trade-section-title trade-collapsible" onclick="var d=document.getElementById('flowNoteSection');d.style.display=d.style.display==='none'?'block':'none';">
+                        <span id="flowNoteTitleText">🔁 赎回流程说明</span> <span class="trade-section-sub" id="flowNoteSubText">三级审批 → 交易执行中（财务对账确认）→ 交易员补充信息（点击展开/收起）</span>
                     </div>
-                    <div id="erpFieldsSection" style="display:none;padding-top:10px;">
-                        <div id="erpFieldsContent"></div>
+                    <div id="flowNoteSection" style="display:none;padding-top:10px;">
+                        <div id="flowNoteContent"></div>
                     </div>
                 </div>
 
                 <!-- ============ 板块2：iBor字段 ============ -->
                 <div class="trade-section">
                     <div class="trade-section-title trade-collapsible" onclick="var d=document.getElementById('iborFieldsSection');d.style.display=d.style.display==='none'?'block':'none';">
-                        📊 iBor字段<span id="iborAssetTypeLabel"></span> <span class="trade-section-sub">根据资产类型展示交易类+价格类字段（点击展开/收起）</span>
+                        📊 iBor字段<span id="iborAssetTypeLabel"></span> <span class="trade-section-sub">根据资产类型展示交易类字段（点击展开/收起）</span>
                     </div>
                     <div id="iborFieldsSection" style="display:none;padding-top:10px;">
                         <div id="iborFieldsContent"></div>
                     </div>
                 </div>
 
-                <!-- ============ 板块3：补充字段（ERP和iBor都未覆盖的OMS字段） ============ -->
+                <!-- ============ 板块3：补充字段（iBor交易字段之外的OMS补充信息） ============ -->
                 <div class="trade-section">
-                    <div class="trade-section-title">📝 补充字段 <span class="trade-section-sub">ERP和iBor都未展示的OMS交易补充信息</span></div>
+                    <div class="trade-section-title">📝 补充字段 <span class="trade-section-sub">是否清盘（赎回可选）/ 产品优先级（买入选填，可多选）/ 对手方银行大额支付号</span></div>
                     <div class="form-group">
                         <label>到期时间</label>
                         <input type="date" id="tradeExpectedDate">
@@ -369,16 +389,16 @@
                                 <option value="否">否</option>
                                 <option value="是">是</option>
                             </select>
+                            <div class="form-hint">卖出赎回的可选，给到iBor做标识</div>
                         </div>
                     </div>
                     <div class="grid-2">
-                        <div class="form-group">
-                            <label>产品优先级</label>
-                            <select id="tradePriority">
-                                <option value="">请选择（选填）</option>
-                                <option value="优先级">优先级</option>
-                                <option value="次级">次级</option>
-                            </select>
+                        <div class="form-group" id="priorityField">
+                            <label>产品优先级 <span style="font-weight:400;font-size:11px;color:var(--text-muted);">（选填，可多选）</span></label>
+                            <div style="display:flex;gap:18px;align-items:center;height:38px;">
+                                <label style="display:flex;align-items:center;gap:5px;font-weight:400;cursor:pointer;margin-bottom:0;"><input type="checkbox" name="tradePriority" value="优先级"> 优先级</label>
+                                <label style="display:flex;align-items:center;gap:5px;font-weight:400;cursor:pointer;margin-bottom:0;"><input type="checkbox" name="tradePriority" value="次优先级"> 次优先级</label>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>相关交易</label>
@@ -434,30 +454,6 @@
         </div>
     </div>
 
-    <div id="planDetailModal" class="modal" data-logic-id="plan_detail">
-        <div class="modal-content" style="width: 750px;">
-            <div class="modal-header">
-                <h3 id="planDetailTitle">计划书详情</h3>
-                <button class="btn btn-ghost btn-sm" onclick="closePlanDetailModal()">✕</button>
-            </div>
-            <div class="modal-body">
-                <div class="tab-bar" id="detailTabBar">
-                    <div class="tab-item active" onclick="switchDetailTab('basic')">基础信息</div>
-                    <div class="tab-item" onclick="switchDetailTab('products')">关联产品</div>
-                    <div class="tab-item" onclick="switchDetailTab('trades')">交易记录</div>
-                    <div class="tab-item" onclick="switchDetailTab('approval')">审批流程</div>
-                </div>
-                <div id="detailTabBasic" class="tab-content active"></div>
-                <div id="detailTabProducts" class="tab-content"></div>
-                <div id="detailTabTrades" class="tab-content"></div>
-                <div id="detailTabApproval" class="tab-content"></div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-ghost" onclick="closePlanDetailModal()">关闭</button>
-            </div>
-        </div>
-    </div>
-
     <div id="uploadSealModal" class="modal" data-logic-id="upload_seal">
         <div class="modal-content" style="width: 500px;">
             <div class="modal-header">
@@ -493,75 +489,6 @@
         </div>
     </div>
 
-    <div id="contractEntryModal" class="modal" data-logic-id="contract_entry">
-        <div class="modal-content" style="width: 600px;">
-            <div class="modal-header">
-                <h3>合同录入</h3>
-                <button class="btn btn-ghost btn-sm" onclick="closeContractEntryModal()">✕</button>
-            </div>
-            <div class="modal-body">
-                <div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:14px;" id="contractEntryInfo"></div>
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label>合同类型 *</label>
-                        <select id="contractEntryType">
-                            <option value="专户资管合同">专户资管合同</option>
-                            <option value="FOF投资合同">FOF投资合同</option>
-                            <option value="权益投资合同">权益投资合同</option>
-                            <option value="信托投资合同">信托投资合同</option>
-                            <option value="托管合同">托管合同</option>
-                            <option value="补充协议">补充协议</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>合同版本 *</label>
-                        <select id="contractEntryVersion">
-                            <option value="初始版本">初始版本（非用印版）</option>
-                            <option value="用印版本">用印版本</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label>对手方</label>
-                        <select id="contractEntryCounterparty"></select>
-                    </div>
-                    <div class="form-group">
-                        <label>合同金额(元)</label>
-                        <input type="number" id="contractEntryAmount" placeholder="合同金额（选填）">
-                    </div>
-                </div>
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label>签署日期 *</label>
-                        <input type="date" id="contractEntrySignDate">
-                    </div>
-                    <div class="form-group">
-                        <label>到期日期</label>
-                        <input type="date" id="contractEntryExpireDate">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>合同文件 *</label>
-                    <div class="file-upload" id="contractEntryUpload">
-                        <input type="file" id="contractEntryFile" accept=".pdf,.doc,.docx" onchange="onFileSelected(this,'contractEntryUpload')">
-                        <label for="contractEntryFile">选择文件</label>
-                        <p>点击按钮打开系统资源管理器，支持 PDF、Word 格式</p>
-                        <div class="file-name" id="contractEntryFileName"></div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>备注</label>
-                    <textarea id="contractEntryRemark" rows="2" placeholder="备注信息（选填）"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-ghost" onclick="closeContractEntryModal()">取消</button>
-                <button class="btn btn-primary" onclick="submitContractEntry()">确认录入</button>
-            </div>
-        </div>
-    </div>
-
     <script src="js/script.js"></script>
 <div id="logic-context-menu">
   <div class="menu-item" id="menu-view-logic">
@@ -584,7 +511,7 @@
   <span class="key">右键</span>点击功能元素查看PRD逻辑
 </div>
     <script>
-        initLayout('trade.html', '交易管理');
+        initLayout('trade.html', '投资管理 / 计划书管理');
 
         var _isReadOnly = isReadOnly();
         var _canUploadPlan = hasPermission('uploadPlan');
@@ -595,7 +522,15 @@
         }
 
         var currentStatusFilter = '';
-        var currentDetailPlanId = '';
+
+        // 支持从审批中心跳转过来自动打开交易详情弹窗（?openTrade=TRX...）
+        (function() {
+            var match = location.search.match(/[?&]openTrade=([^&]+)/);
+            if (match) {
+                var tradeId = decodeURIComponent(match[1]);
+                setTimeout(function() { openTradeDetail(tradeId); }, 200);
+            }
+        })();
 
         function updateStats() {
             document.getElementById('statAll').textContent = PLANS.length;
@@ -663,7 +598,7 @@
                 html += '<tr class="plan-row" data-plan-id="' + plan.id + '">';
                 html += '<td><span class="expand-icon" id="icon-' + plan.id + '">▶</span></td>';
                 html += '<td class="text-mono" style="font-size:var(--font-size-xs);">' + plan.id + '</td>';
-                html += '<td style="font-weight:500;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + plan.name + '">' + plan.name + '</td>';
+                html += '<td style="font-weight:500;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + plan.name + '"><a href="plan_detail.html?id=' + plan.id + '" onclick="event.stopPropagation();" style="color:var(--primary);text-decoration:none;">' + plan.name + '</a></td>';
                 html += '<td style="font-size:var(--font-size-sm);">' + (plan.dept || '-') + '</td>';
                 html += '<td style="font-size:var(--font-size-sm);">' + (plan.group || '-') + '</td>';
                 html += '<td class="text-mono">' + formatMoney(plan.totalAmount) + '</td>';
@@ -684,7 +619,7 @@
 
         function renderActions(plan) {
             var html = '';
-            html += '<button class="btn btn-info btn-sm" data-logic-id="btn_plan_detail" onclick="event.stopPropagation();openPlanDetail(\'' + plan.id + '\')">详情</button> ';
+            html += '<button class="btn btn-info btn-sm" data-logic-id="btn_plan_detail" onclick="event.stopPropagation();location.href=\'plan_detail.html?id=' + plan.id + '\'">详情</button> ';
             if (_isReadOnly) return html;
             if (_canUploadPlan) {
                 if (plan.status === '草稿') {
@@ -721,9 +656,6 @@
                     if (plan.status === '已通过' && _canCreateTrade) {
                         html += '<button class="btn btn-primary btn-sm" data-logic-id="btn_initiate_trade" onclick="openTradeForm(\'' + plan.id + '\',\'' + p.id + '\')">发起交易</button> ';
                     }
-                    if (_canUploadPlan) {
-                        html += '<button class="btn btn-info btn-sm" data-logic-id="btn_contract_entry" onclick="contractEntry(\'' + plan.id + '\',\'' + p.id + '\')">合同录入</button> ';
-                    }
                 }
                 html += '<button class="btn btn-info btn-sm" data-logic-id="btn_trade_record" onclick="openTradeRecordModal(\'' + plan.id + '\',\'' + p.shortName + '\')">交易记录</button>';
                 html += '</td></tr>';
@@ -748,41 +680,57 @@
             });
         }
 
-        var DEPT_GROUP_MAP = {
-            '创新金融业务总部': ['专户投资组', 'xn账户', 'fb账户'],
-            'FICC固定收益业务总部': ['理财投资组'],
-            '证券投资部': ['权益投资组']
-        };
-
         var productRowCount = 0;
 
-        function onDeptChange() {
-            var dept = document.getElementById('planDept').value;
-            var groupSelect = document.getElementById('planGroup');
-            groupSelect.innerHTML = '<option value="">请选择投资组</option>';
-            if (dept && DEPT_GROUP_MAP[dept]) {
-                DEPT_GROUP_MAP[dept].forEach(function(g) {
-                    groupSelect.innerHTML += '<option value="' + g + '">' + g + '</option>';
-                });
+        // 计划书文件：上传后显示绿色文件标签，并默认带入文件名作为计划书名称
+        function onPlanFileSelected(input) {
+            var wrap = document.getElementById('planFileChipWrap');
+            if (input.files && input.files[0]) {
+                var fileName = input.files[0].name;
+                wrap.innerHTML = '<span class="plan-file-chip"><span>📄</span><span class="chip-name" title="' + fileName + '">' + fileName + '</span><span class="chip-clear" onclick="removePlanFile()">✕</span></span>';
+                // 自动解析填入字段：默认带入文件名（去扩展名），可修改
+                var baseName = fileName.replace(/\.[^.]+$/, '');
+                document.getElementById('planName').value = baseName;
             }
+        }
+
+        function removePlanFile() {
+            document.getElementById('planFileInput').value = '';
+            document.getElementById('planFileChipWrap').innerHTML = '<label for="planFileInput" class="plan-file-placeholder" id="planFilePlaceholder">📎 选择文件</label>';
         }
 
         function addProductRow() {
             productRowCount++;
             var container = document.getElementById('productRowsContainer');
-            var row = document.createElement('div');
-            row.className = 'product-row';
-            row.id = 'productRow-' + productRowCount;
-            var selectHtml = '<select class="product-select" onchange="calcProductAmountTotal()" style="flex:1;">';
+            var tr = document.createElement('tr');
+            tr.id = 'productRow-' + productRowCount;
+            var selectHtml = '<select class="product-select" onchange="onPlanProductSelect(' + productRowCount + ')">';
             selectHtml += '<option value="">请选择产品</option>';
             PRODUCTS.filter(function(p) { return p.status === '在投' || p.status === '无计划'; }).forEach(function(p) {
                 selectHtml += '<option value="' + p.id + '">' + p.shortName + ' (' + p.hengtaiCode + ')</option>';
             });
             selectHtml += '</select>';
-            row.innerHTML = selectHtml +
-                '<input type="number" class="product-amount-input" placeholder="计划额度" oninput="calcProductAmountTotal()" style="flex:0 0 150px;">' +
-                '<button class="btn btn-ghost btn-sm" onclick="removeProductRow(' + productRowCount + ')" style="flex:0 0 auto;">✕</button>';
-            container.appendChild(row);
+            tr.innerHTML =
+                '<td>' + selectHtml + '</td>' +
+                '<td class="cell-product-type cell-text">-</td>' +
+                '<td class="cell-account-type cell-text">-</td>' +
+                '<td><input type="number" class="product-amount-input" placeholder="¥ 请输入额度" oninput="calcProductAmountTotal()"></td>' +
+                '<td><select class="product-direction"><option value="">请选择</option><option value="申购">申购</option><option value="赎回">赎回</option></select></td>' +
+                '<td><select class="product-operation"><option value="开放式">开放式</option><option value="封闭式">封闭式</option></select></td>' +
+                '<td><input type="text" class="product-invest-mode" placeholder="请输入"></td>' +
+                '<td><input type="text" class="product-hold-period" placeholder="如：3个月、1年"></td>' +
+                '<td><button class="row-del" onclick="removeProductRow(' + productRowCount + ')">删除</button></td>';
+            container.appendChild(tr);
+        }
+
+        // 选定产品后自动带出产品类型、账套类型（只读）
+        function onPlanProductSelect(rowId) {
+            var tr = document.getElementById('productRow-' + rowId);
+            if (!tr) return;
+            var pid = tr.querySelector('.product-select').value;
+            var p = pid ? getProductById(pid) : null;
+            tr.querySelector('.cell-product-type').textContent = p ? (p.productType || '-') : '-';
+            tr.querySelector('.cell-account-type').textContent = p ? (p.accountType || '-') : '-';
         }
 
         function removeProductRow(id) {
@@ -797,15 +745,23 @@
                 var val = parseFloat(input.value);
                 if (!isNaN(val)) total += val;
             });
-            document.getElementById('productAmountTotal').textContent = '产品额度合计：¥' + total.toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('productAmountTotal').textContent = '总额度（自动汇总）：' + total.toLocaleString('zh-CN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         }
 
         function getFormProducts() {
             var result = [];
-            document.querySelectorAll('#productRowsContainer .product-row').forEach(function(row) {
-                var pid = row.querySelector('.product-select').value;
-                var amt = parseFloat(row.querySelector('.product-amount-input').value);
-                if (pid) result.push({id: pid, amount: amt || 0});
+            document.querySelectorAll('#productRowsContainer tr').forEach(function(tr) {
+                var pid = tr.querySelector('.product-select').value;
+                if (!pid) return;
+                var amt = parseFloat(tr.querySelector('.product-amount-input').value);
+                result.push({
+                    id: pid,
+                    amount: isNaN(amt) ? 0 : amt,
+                    direction: tr.querySelector('.product-direction').value,
+                    operationMode: tr.querySelector('.product-operation').value,
+                    investMode: tr.querySelector('.product-invest-mode').value,
+                    holdPeriod: tr.querySelector('.product-hold-period').value
+                });
             });
             return result;
         }
@@ -813,13 +769,23 @@
         function openPlanForm() {
             productRowCount = 0;
             document.getElementById('productRowsContainer').innerHTML = '';
-            document.getElementById('productAmountTotal').textContent = '产品额度合计：¥0.00';
-            document.getElementById('planName').value = '';
-            document.getElementById('planDept').value = '';
-            document.getElementById('planGroup').innerHTML = '<option value="">请先选择部门</option>';
-            document.getElementById('planTrader').value = '';
-            document.getElementById('planTotalAmount').value = '';
-            document.getElementById('planRemark').value = '';
+            document.getElementById('productAmountTotal').textContent = '总额度（自动汇总）：0.00';
+            removePlanFile();
+            // ===== 演示预填：全部字段自动填好，打开弹窗后可直接点"提交审批" =====
+            document.getElementById('planName').value = '2026年演示-碳金融投资计划';
+            document.getElementById('planRemark').value = '演示用：全部字段已预填，直接点提交审批';
+            addProductRow();
+            var tr = document.getElementById('productRow-1');
+            if (tr) {
+                tr.querySelector('.product-select').value = 'P004';
+                onPlanProductSelect(1);
+                tr.querySelector('.product-amount-input').value = '3000000';
+                tr.querySelector('.product-direction').value = '申购';
+                tr.querySelector('.product-operation').value = '开放式';
+                tr.querySelector('.product-invest-mode').value = '直销';
+                tr.querySelector('.product-hold-period').value = '6个月';
+                calcProductAmountTotal();
+            }
             document.getElementById('planFormModal').style.display = 'block';
         }
 
@@ -834,21 +800,202 @@
 
         function submitPlanApproval() {
             var name = document.getElementById('planName').value;
-            var dept = document.getElementById('planDept').value;
-            var group = document.getElementById('planGroup').value;
-            var trader = document.getElementById('planTrader').value;
-            var amount = document.getElementById('planTotalAmount').value;
             if (!name) { alert('请填写计划书名称'); return; }
-            if (!dept) { alert('请选择业务部门'); return; }
-            if (!group) { alert('请选择投资组'); return; }
-            if (!trader) { alert('请选择交易员'); return; }
-            if (!amount || parseFloat(amount) <= 0) { alert('请填写有效的总额度'); return; }
             var formProducts = getFormProducts();
             if (formProducts.length === 0) { alert('请至少添加一个关联产品'); return; }
             var hasEmptyAmount = formProducts.some(function(fp) { return !fp.amount || fp.amount <= 0; });
-            if (hasEmptyAmount) { alert('请为每个关联产品填写计划额度'); return; }
-            alert('计划书已提交审批');
+            if (hasEmptyAmount) { alert('请为每个关联产品填写额度'); return; }
+            var hasEmptyDirection = formProducts.some(function(fp) { return !fp.direction; });
+            if (hasEmptyDirection) { alert('请为每个关联产品选择投资方向'); return; }
+            // 真实创建计划书记录（待审批）+ 审批中心记录（审批中，当前节点=风控审批）
+            var now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+            var totalAmount = formProducts.reduce(function(sum, fp) { return sum + fp.amount; }, 0);
+            var firstProduct = getProductById(formProducts[0].id);
+            var fileChip = document.querySelector('#planFileChipWrap .chip-name');
+            var newPlan = {
+                id: 'TP' + new Date().toISOString().slice(0,10).replace(/-/g,'') + String(Math.floor(Math.random() * 900) + 100),
+                name: name,
+                dept: getCurrentRole().dept,
+                group: firstProduct ? (firstProduct.group || '') : '',
+                trader: '李华',
+                totalAmount: totalAmount,
+                usedAmount: 0,
+                status: '待审批',
+                creator: '张明',
+                createTime: now,
+                submitTime: now,
+                file: fileChip ? fileChip.textContent : '',
+                products: formProducts.map(function(fp) { return fp.id; }),
+                productDetails: formProducts,
+                remark: document.getElementById('planRemark').value
+            };
+            PLANS.push(newPlan);
+            APPROVALS.push({
+                id: 'APR' + newPlan.id.slice(2), type: '投资计划书审批', object: newPlan.id, objectName: newPlan.name,
+                applicant: newPlan.creator, applyTime: now, status: '审批中',
+                steps: [
+                    { title: '投资经理提交', user: newPlan.creator, time: now, status: '已完成' },
+                    { title: '风控审批', user: '刘伟', time: '', status: '当前' },
+                    { title: '部门负责人审批', user: '孙磊', time: '', status: '待处理' }
+                ]
+            });
             closePlanForm();
+            updateStats();
+            renderTable();
+            // 弹窗直接切换为审批状态视图：可在此弹窗内逐级点"通过"走完审批流程
+            openPlanApprovalView(newPlan.id);
+        }
+
+        // ===== 计划书审批状态视图（弹窗内逐级审批演示，demo账号全权限直接操作） =====
+        var _planApprovalViewId = null;
+
+        // 申请信息字段项
+        function _pvInfo(label, value) {
+            return '<div class="detail-info-item"><div class="info-label">' + label + '</div><div class="info-value">' + (value || '-') + '</div></div>';
+        }
+
+        // 附件查看：演示环境展示文件信息预览（正式环境为在线预览/下载）
+        function viewPlanFile(fileName) {
+            var ext = (String(fileName).split('.').pop() || '').toLowerCase();
+            var icon = ext === 'pdf' ? '📕' : (ext === 'doc' || ext === 'docx') ? '📘' : (ext === 'xls' || ext === 'xlsx') ? '📗' : '📄';
+            var html = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">';
+            html += '<span style="font-size:28px;">' + icon + '</span>';
+            html += '<div><div style="font-size:14px;font-weight:600;word-break:break-all;">' + fileName + '</div>';
+            html += '<div style="font-size:12px;color:var(--text-muted);">格式：' + (ext ? ext.toUpperCase() : '未知') + '</div></div></div>';
+            html += '<div style="border:1px dashed var(--border);border-radius:8px;padding:40px 16px;text-align:center;color:var(--text-muted);font-size:12px;background:var(--border-light);">演示环境：附件已随表单提交，正式环境此处展示在线预览内容，并支持下载。</div>';
+            document.getElementById('planFileViewBody').innerHTML = html;
+            document.getElementById('planFileViewModal').style.display = 'block';
+        }
+
+        function openPlanApprovalView(planId) {
+            _planApprovalViewId = planId;
+            renderPlanApprovalView();
+            document.getElementById('planApprovalViewModal').style.display = 'block';
+        }
+
+        function closePlanApprovalView() {
+            document.getElementById('planApprovalViewModal').style.display = 'none';
+            _planApprovalViewId = null;
+        }
+
+        function renderPlanApprovalView() {
+            var plan = PLANS.find(function(p) { return p.id === _planApprovalViewId; });
+            var ap = APPROVALS.find(function(a) { return a.type === '投资计划书审批' && a.object === _planApprovalViewId; });
+            if (!plan || !ap) { closePlanApprovalView(); return; }
+            var statusCls = ap.status === '已通过' ? 'background:#F0FDF4;color:#15803D;border:1px solid #86EFAC;'
+                : ap.status === '已驳回' ? 'background:#FEF2F2;color:#B91C1C;border:1px solid #FECACA;'
+                : 'background:var(--info-bg);color:var(--primary);border:1px solid rgba(59,130,246,0.3);';
+            var html = '';
+            // 标题行：计划书名称 + 审批状态徽章
+            html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">';
+            html += '<span style="font-size:15px;font-weight:600;">' + plan.name + '</span>';
+            html += '<span style="padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600;' + statusCls + '">' + ap.status + '</span>';
+            html += '</div>';
+            // ===== 申请信息：计划书表单提交的全部字段（与审批中心口径一致） =====
+            html += '<div style="font-weight:600;font-size:14px;margin-bottom:10px;">申请信息（表单提交字段）</div>';
+            html += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px;">';
+            html += _pvInfo('计划书名称', plan.name);
+            html += _pvInfo('计划书编号', plan.id);
+            html += _pvInfo('业务部门', plan.dept);
+            html += _pvInfo('投资组', plan.group);
+            html += _pvInfo('投资经理', plan.creator);
+            html += _pvInfo('交易员', plan.trader);
+            html += _pvInfo('总额度（自动汇总）', formatMoneyFull(plan.totalAmount) + ' 元');
+            html += _pvInfo('提交时间', plan.submitTime || plan.createTime);
+            var fileVal = plan.file
+                ? '<span class="plan-file-link" onclick="viewPlanFile(\'' + String(plan.file).replace(/'/g, "\\'") + '\')">📄 ' + plan.file + '</span><span style="font-size:11px;color:var(--text-muted);margin-left:4px;">点击查看</span>'
+                : '-';
+            html += '<div class="detail-info-item"><div class="info-label">计划书文件</div><div class="info-value">' + fileVal + '</div></div>';
+            html += '<div class="detail-info-item" style="grid-column:1/-1;"><div class="info-label">备注</div><div class="info-value">' + (plan.remark || '-') + '</div></div>';
+            html += '</div>';
+            // 关联产品明细表（提交时的产品行全部字段）
+            var details = plan.productDetails || (plan.products || []).map(function(pid) { return { id: pid }; });
+            html += '<table class="apply-product-table"><thead><tr><th>关联产品</th><th>产品类型</th><th>账套类型</th><th>投资方向</th><th>运作模式</th><th>投资方式</th><th>持有期限</th><th>计划额度(元)</th></tr></thead><tbody>';
+            details.forEach(function(d) {
+                var p = getProductById(d.id);
+                var amt = (d.amount != null) ? formatMoneyFull(d.amount) : (details.length === 1 ? formatMoneyFull(plan.totalAmount) : '-');
+                html += '<tr><td>' + (p ? p.shortName : d.id) + '</td><td>' + (p && p.productType ? p.productType : '-') + '</td><td>' + (p && p.accountType ? p.accountType : '-') + '</td><td>' + (d.direction || '-') + '</td><td>' + (d.operationMode || '-') + '</td><td>' + (d.investMode || '-') + '</td><td>' + (d.holdPeriod || '-') + '</td><td style="text-align:right;">' + amt + '</td></tr>';
+            });
+            html += '</tbody></table>';
+            // 流程步骤时间线
+            html += '<div style="font-weight:600;font-size:14px;margin-bottom:10px;">审批流程</div>';
+            ap.steps.forEach(function(s, i) {
+                var dotColor = s.status === '已完成' ? (s.result === '驳回' ? '#EF4444' : '#22C55E') : s.status === '当前' ? '#3B82F6' : '#E5E7EB';
+                var titleColor = s.status === '待处理' ? 'var(--text-muted)' : 'var(--text-primary)';
+                html += '<div style="display:flex;gap:12px;position:relative;padding-bottom:' + (i < ap.steps.length - 1 ? '18px' : '0') + ';">';
+                if (i < ap.steps.length - 1) html += '<div style="position:absolute;left:7px;top:18px;bottom:0;width:2px;background:var(--border);"></div>';
+                html += '<div style="width:16px;height:16px;border-radius:50%;background:' + dotColor + ';flex:none;margin-top:2px;z-index:1;' + (s.status === '当前' ? 'box-shadow:0 0 0 4px rgba(59,130,246,0.2);' : '') + '"></div>';
+                html += '<div style="flex:1;">';
+                html += '<div style="font-size:13px;font-weight:600;color:' + titleColor + ';">' + s.title + (s.status === '当前' ? ' <span style="font-size:11px;color:var(--primary);">（当前节点）</span>' : '') + '</div>';
+                html += '<div style="font-size:12px;color:var(--text-secondary);">处理人：' + s.user + (s.time ? '　' + s.time : '') + '</div>';
+                if (s.result === '驳回' && s.reason) html += '<div style="font-size:12px;color:var(--danger);background:#FEF2F2;padding:4px 8px;border-radius:4px;margin-top:4px;">驳回原因：' + s.reason + '</div>';
+                if (s.opinion) html += '<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">审批意见：' + s.opinion + '</div>';
+                html += '</div></div>';
+            });
+            // 当前节点操作区（demo全权限，直接操作）
+            var currentStep = ap.steps.find(function(s) { return s.status === '当前'; });
+            if (ap.status === '审批中' && currentStep) {
+                html += '<div style="background:var(--info-bg);border:1px solid rgba(59,130,246,0.3);border-radius:8px;padding:12px;margin-top:16px;">';
+                html += '<div style="font-size:13px;font-weight:600;color:var(--primary);margin-bottom:8px;">流程处理 - 当前节点：' + currentStep.title + '（' + currentStep.user + '）</div>';
+                html += '<div class="form-group"><label>审批意见</label><textarea id="planViewOpinion" rows="2" style="width:100%;" placeholder="选填"></textarea></div>';
+                html += '<div style="display:flex;gap:8px;justify-content:flex-end;"><button class="btn btn-danger" onclick="planViewReject()">驳回</button><button class="btn btn-primary" onclick="planViewPass()">通过</button></div>';
+                html += '</div>';
+            } else if (ap.status === '已通过') {
+                html += '<div style="background:#F0FDF4;border:1px solid #86EFAC;border-radius:8px;padding:12px;margin-top:16px;font-size:13px;color:#15803D;">✓ 审批已通过，关联产品可依据本计划书发起交易。</div>';
+            } else if (ap.status === '已驳回') {
+                html += '<div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:12px;margin-top:16px;font-size:13px;color:#B91C1C;">✕ 审批已驳回，计划书流程终止。</div>';
+            }
+            document.getElementById('planApprovalViewBody').innerHTML = html;
+            document.getElementById('planApprovalViewTitle').textContent = '计划书审批进度 - ' + plan.name;
+        }
+
+        // 当前节点通过 → 推进到下一节点；全部完成 → 已通过并回写计划书状态
+        function planViewPass() {
+            var ap = APPROVALS.find(function(a) { return a.type === '投资计划书审批' && a.object === _planApprovalViewId; });
+            var plan = PLANS.find(function(p) { return p.id === _planApprovalViewId; });
+            if (!ap || !plan) return;
+            var currentStep = ap.steps.find(function(s) { return s.status === '当前'; });
+            if (!currentStep) return;
+            currentStep.status = '已完成';
+            currentStep.time = new Date().toISOString().slice(0, 16).replace('T', ' ');
+            var opinionEl = document.getElementById('planViewOpinion');
+            if (opinionEl && opinionEl.value.trim()) currentStep.opinion = opinionEl.value.trim();
+            var idx = ap.steps.indexOf(currentStep);
+            var nextStep = null;
+            for (var i = idx + 1; i < ap.steps.length; i++) {
+                if (ap.steps[i].status === '待处理') { nextStep = ap.steps[i]; break; }
+            }
+            if (nextStep) {
+                nextStep.status = '当前';
+            } else {
+                ap.status = '已通过';
+                plan.status = '已通过';
+            }
+            updateStats();
+            renderTable();
+            renderPlanApprovalView();
+        }
+
+        // 当前节点驳回 → 审批与计划书状态均变为已驳回
+        function planViewReject() {
+            var reason = prompt('请输入驳回原因：');
+            if (reason === null) return;
+            if (!reason.trim()) { alert('请输入驳回原因'); return; }
+            var ap = APPROVALS.find(function(a) { return a.type === '投资计划书审批' && a.object === _planApprovalViewId; });
+            var plan = PLANS.find(function(p) { return p.id === _planApprovalViewId; });
+            if (!ap || !plan) return;
+            var currentStep = ap.steps.find(function(s) { return s.status === '当前'; });
+            if (currentStep) {
+                currentStep.status = '已完成';
+                currentStep.result = '驳回';
+                currentStep.reason = reason.trim();
+                currentStep.time = new Date().toISOString().slice(0, 16).replace('T', ' ');
+            }
+            ap.status = '已驳回';
+            plan.status = '已驳回';
+            updateStats();
+            renderTable();
+            renderPlanApprovalView();
         }
 
         function editPlan(planId) {
@@ -867,7 +1014,29 @@
             var plan = PLANS.find(function(p) { return p.id === planId; });
             if (plan) {
                 plan.status = '待审批';
-                plan.submitTime = new Date().toISOString().slice(0, 16).replace('T', ' ');
+                var now = new Date().toISOString().slice(0, 16).replace('T', ' ');
+                plan.submitTime = now;
+                // 同步审批中心记录：进入"审批中"，当前节点=风控审批
+                var approval = APPROVALS.find(function(a) { return a.type === '投资计划书审批' && a.object === plan.id; });
+                if (!approval) {
+                    APPROVALS.push({
+                        id: 'APR' + plan.id.slice(2), type: '投资计划书审批', object: plan.id, objectName: plan.name,
+                        applicant: plan.creator, applyTime: now, status: '审批中',
+                        steps: [
+                            { title: '投资经理提交', user: plan.creator, time: now, status: '已完成' },
+                            { title: '风控审批', user: '刘伟', time: '', status: '当前' },
+                            { title: '部门负责人审批', user: '孙磊', time: '', status: '待处理' }
+                        ]
+                    });
+                } else {
+                    approval.status = '审批中';
+                    approval.applyTime = now;
+                    approval.steps.forEach(function(s, i) {
+                        if (i === 0) { s.status = '已完成'; s.time = now; }
+                        else if (i === 1) { s.status = '当前'; s.time = ''; }
+                        else { s.status = '待处理'; s.time = ''; }
+                    });
+                }
             }
             updateStats();
             renderTable();
@@ -894,7 +1063,6 @@
 
         var contractRowCount = 0;
         var currentSealContractId = '';
-        var currentContractEntry = null;
 
         function addContractRow() {
             contractRowCount++;
@@ -925,33 +1093,26 @@
             var product = getProductById(productId);
             if (!plan || !product) return;
             document.getElementById('tradePlanName').value = plan.name;
-            document.getElementById('tradeProductName').value = product.shortName + ' (' + product.hengtaiCode + ')';
-            // 产品档案自动带入的只读字段
-            document.getElementById('tradeProductInnerCode').value = product.hengtaiCode || '';
-            document.getElementById('tradeProductExternalCode').value = product.externalCode || '';
             document.getElementById('tradeAssetType').value = product.assetType || '-';
-            // 填充管理人下拉列表（仅显示已入池的管理人）
-            var cpSelect = document.getElementById('tradeCounterparty');
-            cpSelect.innerHTML = '<option value="">请选择管理人（选填）</option>';
-            COUNTERPARTIES.filter(function(cp) { return cp.status === '在池'; }).forEach(function(cp) {
-                cpSelect.innerHTML += '<option value="' + cp.id + '">' + cp.shortName + '</option>';
-            });
+            // 产品入池信息只读展示（不支持修改）
+            renderProductPoolInfo(product);
             // 相关交易：默认带入投资计划书名称，只读
             var relInput = document.getElementById('tradeRelatedTrade');
             relInput.value = plan.name;
             document.getElementById('tradeType').value = '买入(开仓)';
-            document.getElementById('tradePriority').value = '';
+            _setTradePriorityValues([]);
             document.getElementById('tradeExpectedDate').value = '';
             document.getElementById('tradeCpCnaps').value = '';
             document.getElementById('tradeIsClearing').value = '否';
             document.getElementById('clearingField').style.display = 'none';
+            document.getElementById('priorityField').style.display = 'block';
             document.getElementById('tradeRemark').value = '';
             document.getElementById('tradeValidationTip').style.display = 'none';
-            document.getElementById('erpFieldsSection').style.display = 'none';
+            document.getElementById('flowNoteSection').style.display = 'none';
             document.getElementById('iborFieldsSection').style.display = 'none';
             // 重置iBor板块的交易金额/价格/数量（renderIBorFields会重新渲染，不需要手动清，但确保联动函数可用）
-            renderERPFields('买入(开仓)');
-            renderIBorFields(product.assetType);
+            renderFlowNote('买入(开仓)');
+            renderIBorFields(product.assetType, product);
             contractRowCount = 0;
             document.getElementById('contractRowsContainer').innerHTML = '';
             document.getElementById('tradeFormModal').setAttribute('data-plan-id', planId);
@@ -964,105 +1125,114 @@
         function onTradeTypeChange() {
             validateTradeForm();
             var type = document.getElementById('tradeType').value;
-            var clearingField = document.getElementById('clearingField');
-            clearingField.style.display = (type === '赎回') ? 'block' : 'none';
-            renderERPFields(type);
+            var isRedeem = type === '赎回';
+            // 是否清盘：卖出赎回的可选；产品优先级：买入选填
+            document.getElementById('clearingField').style.display = isRedeem ? 'block' : 'none';
+            document.getElementById('priorityField').style.display = isRedeem ? 'none' : 'block';
+            renderFlowNote(type);
         }
 
-        function renderERPFields(type) {
-            var el = document.getElementById('erpFieldsContent');
-            var html = '';
-            var isRedeem = type === '赎回';
-            var step1Title = isRedeem ? '资金划拨（还款）' : '资金划拨（用款）';
-            var step2Title = '创新金融-资金划拨申请';
-
-            // 自动串行提示
-            html += '<div class="erp-flow-tip">';
-            html += '<b>自动串行：</b>交易员发起后系统自动发起步骤1，步骤1完成后自动触发步骤2，无需人工干预。';
-            html += '</div>';
-
-            // 步骤1字段区
-            html += '<div class="erp-step-card">';
-            html += '<div class="erp-step-header">步骤1：' + step1Title + '<span class="erp-step-tag">发起交易后自动发起</span></div>';
-            html += '<div class="erp-step-body">';
-            if (isRedeem) {
-                // 还款子流程（赎回路径步骤1）
-                html += '<div class="grid-2"><div class="form-group"><label>是否场外还款 *</label><select><option value="否">否</option><option value="是">是</option></select></div>';
-                html += '<div class="form-group"><label>是否纸签 *</label><select><option value="否">否</option><option value="是">是</option></select></div></div>';
-                html += '<div class="grid-2"><div class="form-group"><label>是否历史数据补录（暂）*</label><select><option value="否">否</option><option value="是">是</option></select></div>';
-                html += '<div class="form-group"><label>业务类型 *</label><select id="erpStep1BizType"><option value="">请选择</option><option value="正常还款">正常还款</option><option value="提前还款">提前还款</option><option value="到期还款">到期还款</option><option value="赎回">赎回</option><option value="到期赎回">到期赎回</option></select></div></div>';
-                html += '<div class="grid-2"><div class="form-group"><label>产品类型</label><select id="erpStep1ProdType"><option value="">请选择（选填）</option><option value="专户资管">专户资管</option><option value="信托计划">信托计划</option><option value="保交所ABS">保交所ABS</option><option value="票据">票据</option><option value="碳金融">碳金融</option></select></div>';
-                html += '<div class="form-group"><label>项目</label><select id="erpStep1Project"><option value="">请选择（选填）</option><option value="创新金融业务总部-自营">创新金融业务总部-自营</option><option value="FICC固定收益业务总部-自营">FICC固定收益业务总部-自营</option><option value="证券投资部-自营">证券投资部-自营</option><option value="理财资金">理财资金</option></select></div></div>';
-                html += '<div class="grid-2"><div class="form-group"><label>资金用途 *</label><input type="text" placeholder="资金用途"></div>';
-                html += '<div class="form-group"><label>还款信息-用款单号 *</label><select id="erpStep1OrderNo"><option value="">请选择</option><option value="YK20260310001">YK20260310001</option><option value="YK20260508002">YK20260508002</option><option value="YK20260615003">YK20260615003</option></select></div></div>';
-                html += '<div class="grid-2"><div class="form-group"><label>还款资金是否来源于上存提取资金 *</label><select><option value="否">否</option><option value="是">是</option></select></div>';
-                html += '<div class="form-group"><label>还款日期 *</label><input type="date"></div></div>';
-                html += '<div class="grid-2"><div class="form-group"><label>还款时间 *</label><input type="time"></div>';
-                html += '<div class="form-group"><label>还款金额（本金）*</label><input type="number" placeholder="还款本金"></div></div>';
-                html += '<div class="grid-2"><div class="form-group"><label>还款金额（利息）*</label><input type="number" placeholder="还款利息"></div>';
-                html += '<div class="form-group"><label>付款账号 *</label><input type="text" placeholder="付款账号（ERP独立）"></div></div>';
-                html += '<div class="form-group"><label>收款账号 *</label><input type="text" placeholder="收款账号（ERP独立）"></div>';
+        // 产品入池信息只读展示：按账套类型渲染《OMS平台字段》产品入池字段sheet定义的字段，不支持修改
+        function renderProductPoolInfo(product) {
+            var el = document.getElementById('tradeProductPoolInfo');
+            if (!product) { el.innerHTML = ''; return; }
+            var at = product.assetType || '';
+            // 字段清单：[标签, 值]（空值展示为'-'）
+            var fields = [
+                ['产品名称', product.name],
+                ['产品简称', product.shortName],
+                ['内部编码', product.hengtaiCode],
+                ['外部编码', product.externalCode],
+                ['账套类型', product.accountType],
+                ['产品类型', product.productType]
+            ];
+            if (at === '信托' || at === '信托产品') {
+                fields = fields.concat([
+                    ['交易市场', product.tradeMarket],
+                    ['开始日期', product.startDate || product.establishDate],
+                    ['到期日', product.expireDate],
+                    ['面值', product.faceValue],
+                    ['产品总规模', product.totalScale ? formatMoney(product.totalScale) : ''],
+                    ['融资人', product.financier],
+                    ['管理人', product.manager],
+                    ['担保人', product.guarantor]
+                ]);
+            } else if (at === 'ABS(中保登)' || at === '结构化产品') {
+                fields = fields.concat([
+                    ['交易市场', product.tradeMarket],
+                    ['开始日期', product.startDate || product.establishDate],
+                    ['预计到期日', product.expireDate],
+                    ['实际到期日', product.actualMaturityDate],
+                    ['面值', product.faceValue],
+                    ['产品总规模', product.totalScale ? formatMoney(product.totalScale) : ''],
+                    ['集中度', product.concentration],
+                    ['信用评级', product.creditRating],
+                    ['原始权益人', product.originator],
+                    ['基础资产类型', product.underlyingAssetType],
+                    ['产品层级', product.trancheLevel],
+                    ['年化收益率(%)', product.annualYield]
+                ]);
+            } else if (at === '碳金融' || at === '碳金融业务') {
+                fields = fields.concat([
+                    ['区域市场', product.regionalMarket],
+                    ['交易对手方', product.counterpartyIbor],
+                    ['年化收益率(%)', product.annualYield],
+                    ['预期到期日', product.expireDate]
+                ]);
             } else {
-                // 用款子流程（申购路径步骤1）
-                html += '<div class="grid-2"><div class="form-group"><label>是否适用FTP计价 *</label><select><option value="否">否</option><option value="是">是</option></select></div>';
-                html += '<div class="form-group"><label>FTP计价类型 *</label><select id="erpStep1FtpType"><option value="">请选择</option><option value="内部转移定价">内部转移定价</option></select></div></div>';
-                html += '<div class="grid-2"><div class="form-group"><label>业务类型 *</label><select id="erpStep1BizType"><option value="">请选择</option><option value="申购">申购</option><option value="追加申购">追加申购</option><option value="正常投资">正常投资</option><option value="新增投资">新增投资</option><option value="存款">存款</option><option value="上存">上存</option></select></div>';
-                html += '<div class="form-group"><label>是否纸签 *</label><select><option value="否">否</option><option value="是">是</option></select></div></div>';
-                html += '<div class="grid-2"><div class="form-group"><label>产品类型</label><select id="erpStep1ProdType"><option value="">请选择（选填）</option><option value="专户资管">专户资管</option><option value="信托计划">信托计划</option><option value="保交所ABS">保交所ABS</option><option value="票据">票据</option><option value="碳金融">碳金融</option></select></div>';
-                html += '<div class="form-group"><label>项目</label><select id="erpStep1Project"><option value="">请选择（选填）</option><option value="创新金融业务总部-自营">创新金融业务总部-自营</option><option value="FICC固定收益业务总部-自营">FICC固定收益业务总部-自营</option><option value="证券投资部-自营">证券投资部-自营</option><option value="理财资金">理财资金</option></select></div></div>';
-                html += '<div class="grid-2"><div class="form-group"><label>用款资金是否来源于上存提取资金 *</label><select><option value="否">否</option><option value="是">是</option></select></div>';
-                html += '<div class="form-group"><label>资金用途 *</label><input type="text" placeholder="资金用途"></div></div>';
-                html += '<div class="grid-2"><div class="form-group"><label>是否历史数据补录（暂）*</label><select><option value="否">否</option><option value="是">是</option></select></div>';
-                html += '<div class="form-group"><label>划拨信息-预约单号 *</label><select id="erpStep1OrderNo"><option value="">请选择</option><option value="YY20260310001">YY20260310001</option><option value="YY20260508002">YY20260508002</option><option value="YY20260615003">YY20260615003</option><option value="YY20260720004">YY20260720004</option></select></div></div>';
-                html += '<div class="grid-2"><div class="form-group"><label>划拨日期 *</label><input type="date"></div>';
-                html += '<div class="form-group"><label>划拨时间 *</label><input type="time"></div></div>';
-                html += '<div class="grid-2"><div class="form-group"><label>计划还款日期 *</label><input type="date"></div>';
-                html += '<div class="form-group"><label>计划还款时间 *</label><input type="time"></div></div>';
-                html += '<div class="grid-2"><div class="form-group"><label>划拨金额（本金）*</label><input type="number" placeholder="划拨本金"></div>';
-                html += '<div class="form-group"><label>划拨金额（利息）*</label><input type="number" placeholder="划拨利息"></div></div>';
-                html += '<div class="grid-2"><div class="form-group"><label>归还融资（本金）*</label><input type="number" placeholder="归还本金"></div>';
-                html += '<div class="form-group"><label>归还融资（利息）*</label><input type="number" placeholder="归还利息"></div></div>';
-                html += '<div class="grid-2"><div class="form-group"><label>付款账号 *</label><input type="text" placeholder="付款账号（ERP独立）"></div>';
-                html += '<div class="form-group"><label>收款账号 *</label><input type="text" placeholder="收款账号（ERP独立）"></div></div>';
-                // 银行间头寸调拨与存放专项信息区域
-                html += '<div class="erp-sub-section">';
-                html += '<div class="erp-sub-section-title" onclick="var body=this.nextElementSibling;if(body.style.display===\'none\'){body.style.display=\'block\';this.innerHTML=this.innerHTML.replace(\'▶\',\'▼\');}else{body.style.display=\'none\';this.innerHTML=this.innerHTML.replace(\'▼\',\'▶\');}">▼ 银行间头寸调拨与存放专项信息 <span style="font-weight:400;font-size:11px;color:var(--text-muted);">（非此业务类型无需填写）</span></div>';
-                html += '<div class="erp-sub-section-body">';
-                html += '<div class="grid-2"><div class="form-group"><label>存款期限（天）</label><input type="number" id="erpInterbankTerm" placeholder="如：7"></div>';
-                html += '<div class="form-group"><label>存款利率（%）</label><input type="number" step="0.01" id="erpInterbankRate" placeholder="如：2.35"></div></div>';
-                html += '</div></div>';
+                // 专户（资管计划）
+                fields = fields.concat([
+                    ['交易市场', product.tradeMarket],
+                    ['币种', product.currency || 'CNY'],
+                    ['成立/发行日', product.establishDate],
+                    ['预计到期日', product.expireDate],
+                    ['管理人', product.manager]
+                ]);
             }
-            // 步骤1备注（独立）
-            html += '<div class="form-group" style="margin-top:4px;"><label>备注（步骤1）</label><textarea rows="2" id="erpStep1Remark" placeholder="请输入步骤1备注（资金划拨）"></textarea></div>';
-            // 附件（步骤1）
-            html += '<div class="form-group"><label>附件</label><div class="file-upload" id="erpAttach1"><input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png" onchange="onFileSelected(this,\'erpAttach1\')"><label>选择附件</label><p>支持 PDF、Word、Excel、图片格式</p><div class="file-name"></div></div></div>';
-            html += '</div></div>';
+            fields.push(['备注', product.remark]);
 
-            // 自动触发箭头
-            html += '<div class="erp-flow-arrow">↓</div>';
-            html += '<div class="erp-flow-arrow-text">步骤1完成后系统自动触发步骤2</div>';
-
-            // 步骤2字段区：创新金融子流程
-            html += '<div class="erp-step-card">';
-            html += '<div class="erp-step-header">步骤2：' + step2Title + '<span class="erp-step-tag">步骤1完成后自动发起</span></div>';
-            html += '<div class="erp-step-body">';
-            html += '<div class="grid-2"><div class="form-group"><label>划款业务类型 *</label><select id="erpStep2BizType"><option value="">请选择</option><option value="对外投资">对外投资</option><option value="衍生品保证金">衍生品保证金</option><option value="其他">其他</option></select></div>';
-            html += '<div class="form-group"><label>付款用途 *</label><input type="text" placeholder="付款用途（创新金融独立）"></div></div>';
-            html += '<div class="grid-2"><div class="form-group"><label>用款期限（天）</label><input type="number" placeholder="用款期限"></div>';
-            html += '<div class="form-group"><label>利率（%）</label><input type="number" step="0.01" placeholder="利率"></div></div>';
-            html += '<div class="grid-2"><div class="form-group"><label>付款金额 *</label><input type="number" placeholder="付款金额"></div>';
-            html += '<div class="form-group"><label>划款账户 *</label><select id="erpStep2PayAccount"><option value="">请选择</option><option value="ACC001">招商银行-总公司基本户(6225****0001)</option><option value="ACC002">工商银行-专用存款户(6222****0002)</option></select></div></div>';
-            html += '<div class="form-group"><label>收款单位账户 *</label><select id="erpStep2RcvAccount"><option value="">请选择</option><option value="ACC101">平安信托-信托财产专户(6230****0101)</option><option value="ACC102">中保登-结算备付金户(6230****0102)</option></select></div>';
-            // 步骤2备注（独立）
-            html += '<div class="form-group" style="margin-top:4px;"><label>备注（步骤2）</label><textarea rows="2" id="erpStep2Remark" placeholder="请输入步骤2备注（创新金融）"></textarea></div>';
-            // 附件（步骤2）
-            html += '<div class="form-group"><label>附件</label><div class="file-upload" id="erpAttach2"><input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png" onchange="onFileSelected(this,\'erpAttach2\')"><label>选择附件</label><p>支持 PDF、Word、Excel、图片格式</p><div class="file-name"></div></div></div>';
-            html += '</div></div>';
-
+            var html = '<div class="grid-2">';
+            fields.forEach(function(f) {
+                var v = (f[1] === undefined || f[1] === null || f[1] === '') ? '-' : f[1];
+                html += '<div class="form-group"><label>' + f[0] + '</label><input type="text" value="' + String(v).replace(/"/g, '&quot;') + '" readonly style="background:var(--border-light);cursor:not-allowed;"></div>';
+            });
+            html += '</div>';
             el.innerHTML = html;
         }
 
-        function renderIBorFields(assetType) {
+        // 交易流程说明（仅赎回展示7节点流程；申购不展示流程说明，整个板块隐藏）
+        function renderFlowNote(type) {
+            var block = document.getElementById('flowNoteBlock');
+            var el = document.getElementById('flowNoteContent');
+            var titleText = document.getElementById('flowNoteTitleText');
+            var subText = document.getElementById('flowNoteSubText');
+            var html = '';
+            var isRedeem = type === '赎回';
+
+            if (!isRedeem) {
+                if (block) block.style.display = 'none';
+                return;
+            }
+            if (block) block.style.display = 'block';
+
+            // 赎回新流程：不经过ERP资金划拨，三级审批通过后由财务在审批中心对账确认
+            if (titleText) titleText.textContent = '🔁 赎回流程说明';
+            if (subText) subText.textContent = '三级审批 → 交易执行中（财务对账确认）→ 交易员补充信息';
+            html += '<div class="erp-flow-tip">';
+            html += '<b>赎回流程（不经过ERP资金划拨）：</b>提交后进入OMS三级审批（投资经理→风控→部门经理），三级审批通过后进入"交易执行中"，由<b>财务人员在审批中心</b>填写对账信息（对账表单填写提交即代表交易执行成功），最后由交易员补充实际到账信息，流程结束。';
+            html += '</div>';
+            html += '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;">';
+            var redeemNodes = ['交易员发起', '投资经理审批', '风控审批', '部门经理审批', '交易执行中（财务对账确认）', '交易员补充信息', '流程结束'];
+            redeemNodes.forEach(function(n, i) {
+                var isFinance = n.indexOf('财务对账确认') >= 0;
+                html += '<span style="padding:4px 10px;border-radius:20px;font-size:12px;white-space:nowrap;' + (isFinance ? 'background:#FFF7ED;color:#B45309;border:1px solid #FDBA74;' : 'background:var(--info-bg);color:var(--primary);border:1px solid rgba(59,130,246,0.3);') + '">' + n + '</span>';
+                if (i < redeemNodes.length - 1) html += '<span style="color:var(--border);font-size:12px;">→</span>';
+            });
+            html += '</div>';
+            el.innerHTML = html;
+        }
+
+        function renderIBorFields(assetType, product) {
             var el = document.getElementById('iborFieldsContent');
             var labelEl = document.getElementById('iborAssetTypeLabel');
             var html = '';
@@ -1088,96 +1258,136 @@
             }
 
             // 提示
-            html += '<div class="erp-flow-tip"><b>iBor资产类型：</b>' + iborType + '（交易结束后推送iBor，以下为iBor需求文档v3.0定义的交易类和价格类字段）</div>';
+            html += '<div class="erp-flow-tip"><b>iBor资产类型：</b>' + iborType + '（交易结束后推送iBor，以下为《OMS平台字段》交易发起字段sheet定义的该账套类型交易类字段）</div>';
 
             // 交易编号：自动生成、只读
             var tradeNo = 'IB' + new Date().toISOString().slice(0,10).replace(/-/g,'') + String(Math.floor(Math.random()*900)+100);
+            var isZg = iborType === '资管计划'; // 专户（资管计划）
 
             // ===== 交易类字段 =====
             html += '<div class="erp-step-card">';
-            html += '<div class="erp-step-header">交易类字段<span class="erp-step-tag">iBor v3.0 - 交易数据主题</span></div>';
+            html += '<div class="erp-step-header">交易类字段<span class="erp-step-tag">交易数据主题</span></div>';
             html += '<div class="erp-step-body">';
 
-            // 交易编号（自动生成，只读）
-            html += '<div class="grid-2"><div class="form-group"><label>交易编号 <span style="font-size:11px;color:var(--text-muted);">（自动生成）</span></label><input type="text" value="' + tradeNo + '" readonly style="background:var(--border-light);"></div>';
-            // 投资组合
-            html += '<div class="form-group"><label>投资组合 *</label><select><option value="">请选择</option><option value="PORT001">创新金融-自营</option><option value="PORT002">FICC-自营</option><option value="PORT003">证券投资-自营</option><option value="PORT004">理财资金</option></select></div></div>';
+            // 交易编号（自动生成，只读，按OMS规则来）
+            html += '<div class="grid-2"><div class="form-group"><label>交易编号 <span style="font-size:11px;color:var(--text-muted);">（自动生成）</span></label><input type="text" value="' + tradeNo + '" readonly style="background:var(--border-light);"><div class="form-hint">按OMS规则生成</div></div>';
+            // 投资组合（按产品账套自动带出，传输iBor时转换为组合ID）
+            var portfolioName = product && product.accountType ? product.accountType : '';
+            var portfolioId = typeof getPortfolioId === 'function' ? getPortfolioId(portfolioName) : '';
+            html += '<div class="form-group"><label>投资组合 <span style="font-size:11px;color:var(--text-muted);">（按产品账套自动带出）</span></label><input type="text" value="' + (portfolioName || '请先选择产品') + '" readonly style="background:var(--border-light);"><div class="form-hint">OMS组合映射到iBor portfolio_id，传输时自动转换为组合ID：' + (portfolioId || '-') + '</div></div></div>';
 
             // 交易日期、结算日期
-            html += '<div class="grid-2"><div class="form-group"><label>交易日期 *</label><input type="date"></div>';
-            html += '<div class="form-group"><label>结算日期 *</label><input type="date"></div></div>';
+            html += '<div class="grid-2"><div class="form-group"><label>交易日期 *</label><input type="date" id="iborTradeDate"><div class="form-hint">口径：' + (isZg ? '成交确认日期（交易员填）' : '认购日期') + '</div></div>';
+            html += '<div class="form-group"><label>结算日期 *</label><input type="date" id="iborSettleDate">' + (isZg ? '<div class="form-hint">口径：资金交收日期（交易员填）</div>' : '') + '</div></div>';
 
-            // 交易方向（映射交易类型，只读）
-            html += '<div class="grid-2"><div class="form-group"><label>交易方向 <span style="font-size:11px;color:var(--text-muted);">（映射上方交易类型）</span></label><input type="text" value="认购/申购/赎回" readonly style="background:var(--border-light);"></div>';
+            // 交易方向（映射交易类型，只读，OMS确定）
+            html += '<div class="grid-2"><div class="form-group"><label>交易方向 <span style="font-size:11px;color:var(--text-muted);">（映射上方交易类型）</span></label><input type="text" value="认购/申购/赎回" readonly style="background:var(--border-light);"><div class="form-hint">OMS确定</div></div>';
             // 交易数量
-            html += '<div class="form-group"><label>交易数量 *</label><input type="number" id="iborTradeShares" placeholder="份额/张数或面值数量" oninput="onIborTradeSharesInput()"></div></div>';
-            html += '<div class="grid-2"><div class="form-group"><label>交易价格' + (iborType === '资管计划' ? '/净值' : '') + ' *</label><input type="number" step="0.0001" id="iborTradePrice" placeholder="成交价格" oninput="onIborTradePriceInput()"></div>';
+            html += '<div class="form-group"><label>交易数量 *</label><input type="number" id="iborTradeShares" placeholder="' + (isZg ? '资管计划份额' : '份额/张数或面值数量，需配单位') + '" oninput="onIborTradeSharesInput()"></div></div>';
+            html += '<div class="grid-2"><div class="form-group"><label>交易价格' + (isZg ? '/净值' : '') + ' *</label><input type="number" step="0.01" id="iborTradePrice" placeholder="' + (isZg ? '成交单位净值或单位价格' : '成交的交易价格') + '" oninput="onIborTradePriceInput()"></div>';
             // 交易金额
-            html += '<div class="form-group"><label>交易金额 *</label><input type="number" id="iborTradeAmount" placeholder="不含费用成交金额" oninput="onIborTradeAmountInput()"></div></div>';
+            html += '<div class="form-group"><label>交易金额 *</label><input type="number" id="iborTradeAmount" placeholder="' + (isZg ? '不含费用成交金额' : '不含费用金额') + '" oninput="onIborTradeAmountInput()"></div></div>';
 
             // 交易费用（资管计划/信托计划/保交所ABS为选填，碳金融为必填）
             var feeRequired = (iborType === '碳金融');
-            html += '<div class="grid-2"><div class="form-group"><label>交易费用' + (feeRequired ? ' *' : '') + '</label><input type="number" step="0.01" placeholder="费用分项' + (feeRequired ? '' : '（选填）') + '"></div>';
-
-            // 交易对手方（信托计划/保交所ABS需要）
-            if (iborType === '信托计划' || iborType === '保交所资产支持证券') {
-                html += '<div class="form-group"><label>交易对手方</label><input type="text" placeholder="标准机构代码和名称（选填）"></div></div>';
-            } else {
-                html += '</div>';
-            }
+            var feeHint = isZg ? '费用和其他费用分开或合计传输' : '费用分项';
+            html += '<div class="grid-2"><div class="form-group"><label>交易费用' + (feeRequired ? ' *' : '') + '</label><input type="number" step="0.01" placeholder="' + feeHint + (feeRequired ? '' : '（选填）') + '"></div></div>';
 
             html += '</div></div>';
 
-            // ===== 价格类字段 =====
-            // 碳金融无价格类字段
-            if (iborType !== '碳金融') {
-                html += '<div class="erp-step-card">';
-                html += '<div class="erp-step-header">价格类字段<span class="erp-step-tag">iBor v3.0 - 价格数据主题</span></div>';
-                html += '<div class="erp-step-body">';
-
-                // 价格日期（所有有价格类的产品都需要）
-                html += '<div class="grid-2"><div class="form-group"><label>价格日期 *</label><input type="date"></div>';
-
-                if (iborType === '资管计划') {
-                    // 资管计划：解析日期 + 单位净值
-                    html += '<div class="form-group"><label>解析日期 *</label><input type="date"></div></div>';
-                    html += '<div class="grid-2"><div class="form-group"><label>单位净值 *</label><input type="number" step="0.0001" placeholder="OMS单位净值"></div>';
-                    html += '</div>';
-                } else {
-                    // 信托计划/保交所ABS：净价
-                    html += '<div class="form-group"><label>净价 *</label><input type="number" step="0.0001" placeholder="净价/估值净价"></div></div>';
-                }
-
-                html += '</div></div>';
-            }
-
             el.innerHTML = html;
+            _iborResetCalcState(); // 重置填二算一联动状态（切换产品/重开弹窗）
         }
 
-        // iBor板块交易金额/价格/数量联动：填两个自动算第三个
-        function _iborNum(id) { var el = document.getElementById(id); if (!el) return 0; var v = parseFloat(el.value); return isNaN(v) ? 0 : v; }
-        function _iborSet(id, val) { var el = document.getElementById(id); if (el) el.value = Math.round(val * 10000) / 10000; }
-        function onIborTradeAmountInput() {
-            var amt = _iborNum('iborTradeAmount'), price = _iborNum('iborTradePrice'), shares = _iborNum('iborTradeShares');
-            if (amt <= 0) return;
-            if (price > 0 && shares <= 0) { _iborSet('iborTradeShares', amt / price); }
-            else if (shares > 0 && price <= 0) { _iborSet('iborTradePrice', amt / shares); }
-            validateTradeForm();
+        // ===== iBor板块交易金额/价格/数量联动：填二算一（单价×数量=总价） =====
+        // 规则：任意填写其中两个字段，系统自动计算并回填第三个字段；
+        //      修改已填字段时，以"用户最近编辑的两个字段"为基准重算第三个（覆盖原计算值）；
+        //      计算值以灰斜体展示（可修改，修改后转为用户手输值）；除数为0/空时不计算。
+        var _iborIds = { amount: 'iborTradeAmount', price: 'iborTradePrice', shares: 'iborTradeShares' };
+        var _iborPrec = { amount: 2, price: 2, shares: 2 };  // 精度（PRD（五）830问题优化-3）：统一保留2位小数，四舍五入
+        var _iborSeq = { amount: 0, price: 0, shares: 0 };   // 用户编辑序号（全局递增）
+        var _iborSeqCounter = 0;
+
+        function _iborNum(id) { var el = document.getElementById(id); if (!el) return 0; var v = parseFloat(el.value); return isNaN(v) || v < 0 ? 0 : v; }
+        function _iborVal(key) { return _iborNum(_iborIds[key]); }
+
+        // 回填计算值：灰斜体标识 + title提示"系统计算值"
+        function _iborSet(key, val) {
+            var el = document.getElementById(_iborIds[key]); if (!el) return;
+            var f = Math.pow(10, _iborPrec[key]);
+            el.value = Math.round(val * f) / f;
+            el.style.color = '#888';
+            el.style.fontStyle = 'italic';
+            el.title = '系统计算值（可修改）';
         }
-        function onIborTradePriceInput() {
-            var amt = _iborNum('iborTradeAmount'), price = _iborNum('iborTradePrice'), shares = _iborNum('iborTradeShares');
-            if (price <= 0) return;
-            if (amt > 0 && shares <= 0) { _iborSet('iborTradeShares', amt / price); }
-            else if (shares > 0 && amt <= 0) { _iborSet('iborTradeAmount', price * shares); }
+
+        // 用户手动编辑：清除计算值标识，转为手输状态
+        function _iborMarkManual(key) {
+            var el = document.getElementById(_iborIds[key]);
+            if (el) { el.style.color = ''; el.style.fontStyle = ''; el.title = ''; }
         }
-        function onIborTradeSharesInput() {
-            var amt = _iborNum('iborTradeAmount'), price = _iborNum('iborTradePrice'), shares = _iborNum('iborTradeShares');
-            if (shares <= 0) return;
-            if (amt > 0 && price <= 0) { _iborSet('iborTradePrice', amt / shares); }
-            else if (price > 0 && amt <= 0) { _iborSet('iborTradeAmount', price * shares); }
+
+        // 渲染iBor字段（切换产品/重开弹窗）时重置联动状态
+        function _iborResetCalcState() {
+            _iborSeqCounter = 0;
+            _iborSeq = { amount: 0, price: 0, shares: 0 };
         }
+
+        function _iborOnInput(changedKey) {
+            _iborSeqCounter++;
+            _iborSeq[changedKey] = _iborSeqCounter;
+            _iborMarkManual(changedKey);
+            var v = _iborVal(changedKey);
+            if (v <= 0) return; // 清空字段 → 联动重置，等待输入
+            // 除当前字段外，找"最近被用户编辑且有值"的伙伴字段（计算回填的字段seq不更新，自然不参与基准）
+            var keys = ['amount', 'price', 'shares'];
+            var partnerKey = null;
+            keys.forEach(function(k) {
+                if (k === changedKey) return;
+                if (_iborVal(k) > 0 && _iborSeq[k] > 0 && (partnerKey === null || _iborSeq[k] > _iborSeq[partnerKey])) {
+                    partnerKey = k;
+                }
+            });
+            if (!partnerKey) return; // 只填了一项，等待第二项
+            var targetKey = keys.filter(function(k) { return k !== changedKey && k !== partnerKey; })[0];
+            // 计算目标字段：总价=单价×数量；单价=总价÷数量；数量=总价÷单价（除零保护）
+            var result = null;
+            if (targetKey === 'amount') { result = _iborVal('price') * _iborVal('shares'); }
+            else if (targetKey === 'price') { if (_iborVal('shares') > 0) result = _iborVal('amount') / _iborVal('shares'); }
+            else { if (_iborVal('price') > 0) result = _iborVal('amount') / _iborVal('price'); }
+            if (result === null || !isFinite(result)) return;
+            _iborSet(targetKey, result);
+        }
+
+        function onIborTradeAmountInput() { _iborOnInput('amount'); validateTradeForm(); }
+        function onIborTradePriceInput() { _iborOnInput('price'); validateTradeForm(); }
+        function onIborTradeSharesInput() { _iborOnInput('shares'); validateTradeForm(); }
         function getTradeAmount() { return _iborNum('iborTradeAmount'); }
         function getTradeSharesVal() { var v = _iborNum('iborTradeShares'); return v > 0 ? v : ''; }
+
+        // 产品优先级（多选checkbox）：取值为'、'拼接；回填按拆分勾选
+        function _getTradePriority() {
+            var vals = [];
+            document.querySelectorAll('input[name="tradePriority"]:checked').forEach(function(cb) { vals.push(cb.value); });
+            return vals.join('、');
+        }
+        function _setTradePriorityValues(vals) {
+            document.querySelectorAll('input[name="tradePriority"]').forEach(function(cb) {
+                cb.checked = vals.indexOf(cb.value) >= 0;
+            });
+        }
+
+        // 提交时校验恒等关系：交易金额 ≈ 单价 × 数量（容差±0.01，允许精度舍入误差）
+        function _iborCheckConsistency() {
+            var amt = _iborVal('amount'), price = _iborVal('price'), shares = _iborVal('shares');
+            if (amt > 0 && price > 0 && shares > 0) {
+                var diff = Math.abs(price * shares - amt);
+                if (diff > 0.01) {
+                    return confirm('检测到交易金额与 单价×数量 不一致（相差 ' + diff.toFixed(4) + ' 元，容差 ±0.01）。\n\n是否仍按当前填写值提交？');
+                }
+            }
+            return true;
+        }
 
         function validateTradeForm() {
             var tipEl = document.getElementById('tradeValidationTip');
@@ -1208,11 +1418,13 @@
             var amount = getTradeAmount();
             var type = document.getElementById('tradeType').value;
             if (isNaN(amount) || amount <= 0) { alert('草稿需填写有效的交易金额'); return; }
-            var counterpartyId = document.getElementById('tradeCounterparty').value;
+            if (!_iborCheckConsistency()) return;
             var planId = document.getElementById('tradeFormModal').getAttribute('data-plan-id');
             var productId = document.getElementById('tradeFormModal').getAttribute('data-product-id');
             var plan = PLANS.find(function(p) { return p.id === planId; });
             var product = getProductById(productId);
+            // 管理人/对手方直接从产品入池档案带出，无需输入
+            var counterpartyId = product ? (product.counterparty || '') : '';
             var cp = COUNTERPARTIES.find(function(c) { return c.id === counterpartyId; });
             var assetType = document.getElementById('tradeAssetType').value;
             var now = new Date().toISOString().slice(0,16).replace('T',' ');
@@ -1226,7 +1438,7 @@
                 type: type,
                 applyAmount: amount,
                 shares: getTradeSharesVal(),
-                priority: document.getElementById('tradePriority').value,
+                priority: _getTradePriority(),
                 expectedDate: document.getElementById('tradeExpectedDate').value,
                 dealAmount: 0,
                 status: '未提交',
@@ -1234,11 +1446,11 @@
                 createTime: now,
                 remark: document.getElementById('tradeRemark').value + ' [草稿]',
                 assetType: assetType,
-                erpStep1Status: '待执行',
-                erpStep1Type: type === '赎回' ? '资金划拨(还款)' : '资金划拨(用款)',
+                erpStep1Status: type === '赎回' ? '不适用' : '待执行',
+                erpStep1Type: type === '赎回' ? '' : '资金划拨(用款)',
                 erpStep1Time: '',
-                erpStep2Status: '待执行',
-                erpStep2Type: '创新金融-资金划拨申请',
+                erpStep2Status: type === '赎回' ? '不适用' : '待执行',
+                erpStep2Type: type === '赎回' ? '' : '创新金融-资金划拨申请',
                 erpStep2Time: '',
                 traderConfirmStatus: '待确认',
                 actualDealAmount: 0,
@@ -1255,7 +1467,7 @@
             var amount = getTradeAmount();
             var type = document.getElementById('tradeType').value;
             if (isNaN(amount) || amount <= 0) { alert('请输入有效的交易金额'); return; }
-            var counterpartyId = document.getElementById('tradeCounterparty').value;
+            if (!_iborCheckConsistency()) return;
             var planId = document.getElementById('tradeFormModal').getAttribute('data-plan-id');
             var productId = document.getElementById('tradeFormModal').getAttribute('data-product-id');
             var plan = PLANS.find(function(p) { return p.id === planId; });
@@ -1267,11 +1479,21 @@
             if (product && type === '买入(开仓)') {
                 if (product.status !== '在投' && product.status !== '无计划') { alert('产品当前状态为"' + product.status + '"，不在池中，无法发起买入交易'); return; }
             }
+            // 赎回校验：赎回金额不可超过持仓金额
+            if (product && type === '赎回') {
+                if (!product.holdAmount || product.holdAmount <= 0) { alert('该产品当前无持仓，无法发起赎回交易'); return; }
+                if (amount > product.holdAmount) { alert('赎回金额不可超过持仓金额（' + formatMoney(product.holdAmount) + '），请调整'); return; }
+            }
             // 二次确认
-            if (!confirm('确认提交交易？\n\n交易类型：' + type + '\n交易金额：' + formatMoney(amount) + '\n关联产品：' + (product ? product.shortName : '') + '\n\n提交后将直接进入ERP流程，请确认信息无误。')) return;
+            var isRedeem = type === '赎回';
+            var confirmMsg = '确认提交交易？\n\n交易类型：' + type + '\n交易金额：' + formatMoney(amount) + '\n关联产品：' + (product ? product.shortName : '') + '\n\n';
+            confirmMsg += '提交后进入OMS三级审批（投资经理→风控→部门经理）' + (isRedeem ? '' : '，审批通过后自动触发ERP用款流程') + '，请确认信息无误。';
+            if (!confirm(confirmMsg)) return;
+            // 管理人/对手方直接从产品入池档案带出，无需输入
+            var counterpartyId = product ? (product.counterparty || '') : '';
             var cp = COUNTERPARTIES.find(function(c) { return c.id === counterpartyId; });
             var assetType = document.getElementById('tradeAssetType').value;
-            var erpStep1Type = type === '赎回' ? '资金划拨(还款)' : '资金划拨(用款)';
+            var erpStep1Type = '资金划拨(用款)';
             var now = new Date().toISOString().slice(0,16).replace('T',' ');
             var newTrade = {
                 id: 'TRX' + new Date().toISOString().slice(0,10).replace(/-/g,'') + String(Math.floor(Math.random() * 900) + 100),
@@ -1283,7 +1505,7 @@
                 type: type,
                 applyAmount: amount,
                 shares: getTradeSharesVal(),
-                priority: document.getElementById('tradePriority').value,
+                priority: _getTradePriority(),
                 expectedDate: document.getElementById('tradeExpectedDate').value,
                 dealAmount: 0,
                 status: '交易审批中',
@@ -1291,36 +1513,76 @@
                 createTime: now,
                 remark: document.getElementById('tradeRemark').value,
                 assetType: assetType,
-                erpStep1Status: '待执行',
-                erpStep1Type: erpStep1Type,
+                erpStep1Status: isRedeem ? '不适用' : '待执行',
+                erpStep1Type: isRedeem ? '' : erpStep1Type,
                 erpStep1Time: '',
-                erpStep2Status: '待执行',
-                erpStep2Type: '创新金融-资金划拨申请',
+                erpStep2Status: isRedeem ? '不适用' : '待执行',
+                erpStep2Type: isRedeem ? '' : '创新金融-资金划拨申请',
                 erpStep2Time: '',
                 traderConfirmStatus: '待确认',
                 actualDealAmount: 0,
                 traderConfirmTime: '',
-                voucherStatus: '待生成'
+                voucherStatus: '待生成',
+                financeConfirmStatus: isRedeem ? '待确认' : undefined,
+                financeConfirmUser: '',
+                financeConfirmTime: '',
+                statementFile: '',
+                actualArrivalAmount: 0,
+                actualArrivalShares: 0,
+                actualArrivalDate: '',
+                redeemFee: 0,
+                diffRemark: '',
+                traderSupplementStatus: isRedeem ? '待补充' : undefined,
+                traderSupplementTime: '',
+                supplementFile: '',
+                supplementRemark: '',
+                actualNav: 0
             };
             TRADES.push(newTrade);
 
-            // 创建交易审批记录
-            var erpStep1Title = type === '赎回' ? 'ERP流程-资金划拨（还款）' : 'ERP流程-资金划拨（用款）';
-            var newApproval = {
-                id: 'APR' + new Date().toISOString().slice(0,10).replace(/-/g,'') + String(Math.floor(Math.random() * 900) + 100),
-                type: '交易审批',
-                object: newTrade.id,
-                objectName: newTrade.productName + '-' + (type === '赎回' ? '赎回' : '买入'),
-                applicant: getCurrentRole().label,
-                applyTime: now,
-                status: '审批中',
-                steps: [
-                    {title: erpStep1Title, user: '系统', time: '', status: '当前'},
-                    {title: 'ERP流程-创新金融（资金划拨申请）', user: '系统', time: '', status: '待处理'},
-                    {title: '交易员线（金额修正+合同上传）', user: newTrade.trader, time: '', status: '待处理'},
-                    {title: '交易员确认结束', user: newTrade.trader, time: '', status: '待处理'}
-                ]
-            };
+            // 创建交易审批记录（申购/赎回均前置OMS三级审批；申购审批通过后自动触发ERP用款流程）
+            var newApproval;
+            if (isRedeem) {
+                newApproval = {
+                    id: 'APR' + new Date().toISOString().slice(0,10).replace(/-/g,'') + String(Math.floor(Math.random() * 900) + 100),
+                    type: '交易审批',
+                    object: newTrade.id,
+                    objectName: newTrade.productName + '-赎回',
+                    applicant: getCurrentRole().label,
+                    applyTime: now,
+                    status: '审批中',
+                    steps: [
+                        {title: '交易员发起', user: newTrade.trader, time: now, status: '已完成'},
+                        {title: '投资经理审批', user: '张明', time: '', status: '当前'},
+                        {title: '风控审批', user: '刘伟', time: '', status: '待处理'},
+                        {title: '部门经理审批', user: '孙磊', time: '', status: '待处理'},
+                        {title: '交易执行中-财务对账确认', user: '赵静', time: '', status: '待处理'},
+                        {title: '交易员补充信息', user: newTrade.trader, time: '', status: '待处理'},
+                        {title: '流程结束', user: '系统', time: '', status: '待处理'}
+                    ]
+                };
+            } else {
+                // 申购（PRD（二）申购流程补充）：交易员发起→三级审批→审批通过自动触发ERP用款→交易员确认→流程结束
+                newApproval = {
+                    id: 'APR' + new Date().toISOString().slice(0,10).replace(/-/g,'') + String(Math.floor(Math.random() * 900) + 100),
+                    type: '交易审批',
+                    object: newTrade.id,
+                    objectName: newTrade.productName + '-买入',
+                    applicant: getCurrentRole().label,
+                    applyTime: now,
+                    status: '审批中',
+                    steps: [
+                        {title: '交易员发起', user: newTrade.trader, time: now, status: '已完成'},
+                        {title: '投资经理审批', user: '张明', time: '', status: '当前'},
+                        {title: '风控审批', user: '刘伟', time: '', status: '待处理'},
+                        {title: '部门经理审批', user: '孙磊', time: '', status: '待处理'},
+                        {title: 'ERP流程-资金划拨（用款）', user: '系统', time: '', status: '待处理'},
+                        {title: 'ERP流程-创新金融（资金划拨申请）', user: '系统', time: '', status: '待处理'},
+                        {title: '交易员确认（金额修正+合同上传）', user: newTrade.trader, time: '', status: '待处理'},
+                        {title: '流程结束', user: '系统', time: '', status: '待处理'}
+                    ]
+                };
+            }
             APPROVALS.push(newApproval);
 
             var contractRows = document.querySelectorAll('#contractRowsContainer .contract-row');
@@ -1412,6 +1674,7 @@
 
         function renderTradeDetail(trade) {
             var html = '';
+            var detailProduct = getProductById(trade.productId);
             // 基本信息
             html += '<div style="margin-bottom:20px;"><div style="font-weight:600;font-size:15px;margin-bottom:10px;color:var(--text-primary);">基本信息</div>';
             html += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr 1fr;">';
@@ -1423,6 +1686,8 @@
             html += '<div class="detail-info-item"><div class="info-label">实际成交金额</div><div class="info-value text-mono">' + (trade.actualDealAmount > 0 ? formatMoneyFull(trade.actualDealAmount) : '-') + '</div></div>';
             html += '<div class="detail-info-item"><div class="info-label">交易状态</div><div class="info-value"><span class="status-badge ' + getStatusClass(trade.status) + '">' + trade.status + '</span></div></div>';
             html += '<div class="detail-info-item"><div class="info-label">资产类型</div><div class="info-value">' + (trade.assetType || '-') + '</div></div>';
+            html += '<div class="detail-info-item"><div class="info-label">投资组合（账套）</div><div class="info-value">' + (detailProduct && detailProduct.accountType ? detailProduct.accountType : '-') + '</div></div>';
+            html += '<div class="detail-info-item"><div class="info-label">投资组合ID（iBor）</div><div class="info-value text-mono" style="font-size:12px;">' + (detailProduct && detailProduct.accountType && typeof getPortfolioId === 'function' ? (getPortfolioId(detailProduct.accountType) || '-') : '-') + '</div></div>';
             html += '<div class="detail-info-item"><div class="info-label">对手方</div><div class="info-value">' + (trade.counterpartyName || '-') + '</div></div>';
             html += '<div class="detail-info-item"><div class="info-label">交易员</div><div class="info-value">' + trade.trader + '</div></div>';
             html += '<div class="detail-info-item"><div class="info-label">创建时间</div><div class="info-value" style="font-size:12px;">' + trade.createTime + '</div></div>';
@@ -1447,9 +1712,80 @@
                 html += '</div></div>';
             }
 
-            // ERP流程跟踪
-            html += '<div style="margin-bottom:20px;"><div style="font-weight:600;font-size:15px;margin-bottom:10px;color:var(--text-primary);">ERP流程跟踪 <span style="font-weight:400;font-size:12px;color:var(--text-muted);">（两步自动串行）</span></div>';
-            html += '<div style="padding:8px 12px;background:var(--info-bg);border:1px solid var(--info);border-radius:6px;font-size:12px;color:var(--text-secondary);margin-bottom:12px;">交易员发起后系统自动发起步骤1，步骤1完成后自动触发步骤2，无需人工干预</div>';
+            if (trade.type === '赎回' && trade.erpStep1Status === '不适用') {
+                // ============ 赎回新流程：流程跟踪（7节点） ============
+                html += '<div style="margin-bottom:20px;"><div style="font-weight:600;font-size:15px;margin-bottom:10px;color:var(--text-primary);">赎回流程跟踪 <span style="font-weight:400;font-size:12px;color:var(--text-muted);">（三级审批 → 财务对账确认 → 交易员补充信息）</span></div>';
+                html += '<div style="padding:8px 12px;background:#FFF7ED;border:1px solid #FDBA74;border-radius:6px;font-size:12px;color:#92400E;margin-bottom:12px;">三级审批（投资经理→风控→部门经理）通过后进入"交易执行中"，由财务人员在<b>审批中心</b>填写对账表单（提交即代表交易执行成功），再由交易员补充实际到账信息，流程结束</div>';
+                html += '<div class="erp-timeline">';
+                if (approval) {
+                    approval.steps.forEach(function(step) {
+                        var cls = step.status === '已完成' ? 'step-done' : step.status === '当前' ? 'step-current' : '';
+                        html += '<div class="erp-step ' + cls + '">';
+                        html += '<div class="step-title">' + step.title + '</div>';
+                        html += '<div class="step-user">处理人：' + (step.user || '-') + '</div>';
+                        if (step.time) html += '<div class="step-time">完成时间：' + step.time + '</div>';
+                        if (step.status === '当前') html += '<div class="step-time" style="color:var(--primary);">进行中...</div>';
+                        if (step.status === '待处理') html += '<div class="step-time" style="color:var(--text-muted);">待处理</div>';
+                        if (step.result === '驳回' && step.reason) html += '<div class="step-time" style="color:var(--danger);">驳回原因：' + step.reason + '</div>';
+                        if (step.result === '发起人终止' || step.result === '发起人撤回') html += '<div class="step-time" style="color:var(--danger);">' + step.result + '</div>';
+                        html += '</div>';
+                    });
+                }
+                html += '</div>';
+
+                // ============ 财务对账确认信息（赎回） ============
+                html += '<div style="margin-bottom:20px;"><div style="font-weight:600;font-size:15px;margin-bottom:10px;color:var(--text-primary);">财务对账确认信息</div>';
+                if (trade.financeConfirmStatus === '已确认') {
+                    html += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;">';
+                    html += '<div class="detail-info-item"><div class="info-label">实际到账金额</div><div class="info-value text-mono">' + formatMoneyFull(trade.actualArrivalAmount) + '</div></div>';
+                    html += '<div class="detail-info-item"><div class="info-label">实际到账份额</div><div class="info-value text-mono">' + (trade.actualArrivalShares > 0 ? trade.actualArrivalShares.toLocaleString() : '-') + '</div></div>';
+                    html += '<div class="detail-info-item"><div class="info-label">到账日期</div><div class="info-value">' + (trade.actualArrivalDate || '-') + '</div></div>';
+                    html += '<div class="detail-info-item"><div class="info-label">赎回费用</div><div class="info-value text-mono">' + (trade.redeemFee > 0 ? formatMoneyFull(trade.redeemFee) : '无') + '</div></div>';
+                    html += '<div class="detail-info-item"><div class="info-label">对账单文件</div><div class="info-value">' + (trade.statementFile || '-') + '</div></div>';
+                    html += '<div class="detail-info-item"><div class="info-label">差异说明</div><div class="info-value" style="font-size:12px;">' + (trade.diffRemark || '-') + '</div></div>';
+                    html += '<div class="detail-info-item"><div class="info-label">财务确认人</div><div class="info-value">' + trade.financeConfirmUser + '</div></div>';
+                    html += '<div class="detail-info-item"><div class="info-label">确认时间</div><div class="info-value" style="font-size:12px;">' + (trade.financeConfirmTime || '-') + '</div></div>';
+                    html += '</div>';
+                } else {
+                    html += '<div style="padding:10px 14px;background:var(--info-bg);border:1px dashed var(--info);border-radius:6px;font-size:13px;color:var(--text-secondary);">等待财务人员在审批中心填写对账表单（提交对账表单即代表交易执行成功）</div>';
+                }
+                html += '</div>';
+
+                // ============ 交易员补充信息（赎回新流程） ============
+                if (trade.status === '待交易员补充信息' || trade.traderSupplementStatus === '已补充') {
+                    html += '<div style="margin-bottom:20px;padding:16px;border:1px solid var(--border);border-radius:8px;background:var(--border-light);">';
+                    html += '<div style="font-weight:600;font-size:15px;margin-bottom:12px;color:var(--text-primary);">交易员补充信息</div>';
+                    if (trade.traderSupplementStatus === '已补充') {
+                        html += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;">';
+                        html += '<div class="detail-info-item"><div class="info-label">最终实际到账金额</div><div class="info-value text-mono">' + formatMoneyFull(trade.actualArrivalAmount) + '</div></div>';
+                        html += '<div class="detail-info-item"><div class="info-label">最终实际到账份额</div><div class="info-value text-mono">' + (trade.actualArrivalShares > 0 ? trade.actualArrivalShares.toLocaleString() : '-') + '</div></div>';
+                        html += '<div class="detail-info-item"><div class="info-label">赎回净值</div><div class="info-value text-mono">' + (trade.actualNav > 0 ? trade.actualNav.toFixed(4) : '-') + '</div></div>';
+                        html += '<div class="detail-info-item"><div class="info-label">补充附件</div><div class="info-value">' + (trade.supplementFile || '-') + '</div></div>';
+                        html += '<div class="detail-info-item"><div class="info-label">补充备注</div><div class="info-value" style="font-size:12px;">' + (trade.supplementRemark || '-') + '</div></div>';
+                        html += '<div class="detail-info-item"><div class="info-label">补充时间</div><div class="info-value" style="font-size:12px;">' + (trade.traderSupplementTime || '-') + '</div></div>';
+                        html += '</div>';
+                    } else if (!_isReadOnly) {
+                        html += '<div style="padding:8px 12px;background:var(--info-bg);border:1px solid var(--info);border-radius:6px;font-size:12px;color:var(--text-secondary);margin-bottom:12px;">默认带入财务对账确认的实际到账金额/份额，<b>允许修改</b>；确认后流程结束，持仓核销，财务可生成凭证</div>';
+                        html += '<div class="grid-2">';
+                        html += '<div class="form-group"><label>实际到账金额（元）*</label><input type="number" id="supplementAmount" step="0.01" value="' + (trade.actualArrivalAmount || trade.applyAmount) + '"></div>';
+                        html += '<div class="form-group"><label>实际到账份额</label><input type="number" id="supplementShares" step="0.01" value="' + (trade.actualArrivalShares || trade.shares || '') + '" placeholder="可修改财务确认值"></div>';
+                        html += '<div class="form-group"><label>赎回净值（元/份）</label><input type="number" id="supplementNav" step="0.0001" value="' + (trade.actualNav > 0 ? trade.actualNav : '') + '" placeholder="选填"></div>';
+                        html += '<div class="form-group"><label>到账日期</label><input type="date" id="supplementArrivalDate" value="' + (trade.actualArrivalDate || '') + '"></div>';
+                        html += '</div>';
+                        html += '<div class="form-group"><label>补充附件（赎回确认单/对账单）</label><div class="file-upload" id="supplementFileUpload"><input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.png" onchange="onFileSelected(this,\'supplementFileUpload\')"><label>选择附件</label><p>支持 PDF、Word、Excel、图片格式</p><div class="file-name"></div></div></div>';
+                        html += '<div class="form-group"><label>补充备注</label><textarea id="supplementRemark" rows="2" placeholder="选填，如净值核对说明"></textarea></div>';
+                        html += '<div style="display:flex;gap:8px;align-items:center;margin-top:8px;">';
+                        html += '<button class="btn btn-primary" onclick="submitTraderSupplement(\'' + trade.id + '\')">确认补充并结束流程</button>';
+                        html += '</div>';
+                    } else {
+                        html += '<div style="color:var(--text-muted);">待交易员补充信息</div>';
+                    }
+                    html += '</div>';
+                }
+            } else {
+            // ============ 申购：ERP流程跟踪（三级审批通过后自动发起，两步自动串行） ============
+                html += '<div style="margin-bottom:20px;"><div style="font-weight:600;font-size:15px;margin-bottom:10px;color:var(--text-primary);">ERP流程跟踪 <span style="font-weight:400;font-size:12px;color:var(--text-muted);">（三级审批通过后自动发起，两步自动串行）</span></div>';
+                html += '<div style="padding:8px 12px;background:var(--info-bg);border:1px solid var(--info);border-radius:6px;font-size:12px;color:var(--text-secondary);margin-bottom:12px;">OMS三级审批（投资经理→风控→部门经理）通过后系统自动发起步骤1（ERP用款划拨），步骤1完成后自动触发步骤2，无需人工干预</div>';
             html += '<div class="erp-timeline">';
             var step1Done = trade.erpStep1Status === '已完成';
             var step1Current = trade.erpStep1Status === '执行中';
@@ -1475,6 +1811,7 @@
             if (!step2Done && !step2Current && !step1Done) html += '<div class="step-time" style="color:var(--text-muted);">等待步骤1完成</div>';
             html += '</div>';
             html += '</div>';
+            }
 
             // 可执行操作区（根据状态显示对应操作）
             html += renderTradeActions(trade);
@@ -1555,6 +1892,13 @@
                     actions.push({ label: '↩ 撤回交易', onclick: "withdrawTrade('" + trade.id + "')", className: 'btn-withdraw' });
                     actions.push({ label: '⏹ 终止交易', onclick: "terminateTrade('" + trade.id + "')", className: 'btn-ghost' });
                 }
+            } else if (trade.status === '交易执行中' && trade.type === '赎回' && trade.erpStep1Status === '不适用') {
+                // 赎回新流程：三级审批已通过，等待财务在审批中心对账确认
+                actions.push({ label: '💰 前往审批中心（财务对账确认）', onclick: "goToApproval('" + trade.id + "')", className: 'btn-info' });
+            } else if (trade.status === '待交易员补充信息') {
+                // 赎回新流程：财务对账已确认，等待交易员补充信息
+                actions.push({ label: '📝 填写补充信息', onclick: "openTradeDetail('" + trade.id + "')", className: 'btn-primary' });
+                actions.push({ label: '🔗 前往审批中心查看', onclick: "goToApproval('" + trade.id + "')", className: 'btn-ghost' });
             } else if (trade.status === '交易执行中' || trade.status === '待到账') {
                 // ERP流程执行中/等待赎回到账：根据ERP步骤状态显示对应操作
                 if (trade.erpStep1Status === '执行中') {
@@ -1664,11 +2008,12 @@
             // 预填已有数据
             setTimeout(function() {
                 document.getElementById('tradeType').value = trade.type;
-                document.getElementById('tradeAmount').value = trade.applyAmount;
-                if (trade.priority) document.getElementById('tradePriority').value = trade.priority;
+                onTradeTypeChange(); // 联动是否清盘/产品优先级显隐及流程说明
+                var amtEl = document.getElementById('iborTradeAmount');
+                if (amtEl) { amtEl.value = trade.applyAmount; _iborMarkManual('amount'); }
+                if (trade.priority) _setTradePriorityValues(String(trade.priority).split('、'));
                 if (trade.expectedDate) document.getElementById('tradeExpectedDate').value = trade.expectedDate;
                 if (trade.remark) document.getElementById('tradeRemark').value = trade.remark.replace(' [草稿]', '');
-                if (trade.counterpartyId) document.getElementById('tradeCounterparty').value = trade.counterpartyId;
                 if (mode === 'resubmit' || mode === 'submit') {
                     // 删除旧记录，提交后生成新记录
                     var idx = TRADES.findIndex(function(t) { return t.id === tradeId; });
@@ -1725,7 +2070,7 @@
                 approval.steps.forEach(function(s) {
                     if (s.status === '当前' && s.title.indexOf('ERP流程-创新金融') === 0) {
                         s.status = '已完成'; s.time = trade.erpStep2Time;
-                    } else if (s.status === '待处理' && s.title.indexOf('交易员线') === 0) {
+                    } else if (s.status === '待处理' && s.title.indexOf('交易员确认') === 0) {
                         s.status = '当前';
                     }
                 });
@@ -1748,7 +2093,7 @@
             var approval = APPROVALS.find(function(a) { return a.object === tradeId && a.type === '交易审批'; });
             if (approval) {
                 approval.steps.forEach(function(s) {
-                    if (s.title.indexOf('交易员线') === 0 || s.title.indexOf('交易员确认') === 0) {
+                    if (s.title.indexOf('交易员确认') === 0) {
                         s.status = '已完成'; s.time = trade.traderConfirmTime;
                     }
                 });
@@ -1763,156 +2108,62 @@
             renderTradeDetail(trade);
         }
 
-        function openPlanDetail(planId) {
-            currentDetailPlanId = planId;
-            var plan = PLANS.find(function(p) { return p.id === planId; });
-            if (!plan) return;
-            document.getElementById('planDetailTitle').textContent = '计划书详情 - ' + plan.name;
-            switchDetailTab('basic');
-            document.getElementById('planDetailModal').style.display = 'block';
-        }
+        // 赎回新流程：交易员补充信息确认（可修改财务确认的实际到账金额/份额）
+        function submitTraderSupplement(tradeId) {
+            var trade = TRADES.find(function(t) { return t.id === tradeId; });
+            if (!trade) return;
+            var amount = parseFloat(document.getElementById('supplementAmount').value);
+            if (isNaN(amount) || amount <= 0) { alert('请输入有效的实际到账金额'); return; }
+            var shares = parseFloat(document.getElementById('supplementShares').value);
+            var nav = parseFloat(document.getElementById('supplementNav').value);
+            var arrivalDate = document.getElementById('supplementArrivalDate').value;
+            var remark = document.getElementById('supplementRemark').value;
+            var supplementUpload = document.getElementById('supplementFileUpload');
+            var fileNameEl = supplementUpload ? supplementUpload.querySelector('.file-name') : null;
+            var fileName = fileNameEl ? (fileNameEl.textContent || '').replace('✕', '').trim() : '';
+            var now = new Date().toISOString().slice(0,16).replace('T',' ');
 
-        function closePlanDetailModal() { document.getElementById('planDetailModal').style.display = 'none'; }
-
-        function switchDetailTab(tab) {
-            document.querySelectorAll('#detailTabBar .tab-item').forEach(function(t) { t.classList.remove('active'); });
-            var tabs = ['basic', 'products', 'trades', 'approval'];
-            var idx = tabs.indexOf(tab);
-            document.querySelectorAll('#detailTabBar .tab-item')[idx].classList.add('active');
-            document.getElementById('detailTabBasic').classList.remove('active');
-            document.getElementById('detailTabProducts').classList.remove('active');
-            document.getElementById('detailTabTrades').classList.remove('active');
-            document.getElementById('detailTabApproval').classList.remove('active');
-            document.getElementById('detailTab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
-            var plan = PLANS.find(function(p) { return p.id === currentDetailPlanId; });
-            if (!plan) return;
-            if (tab === 'basic') renderDetailBasic(plan);
-            else if (tab === 'products') renderDetailProducts(plan);
-            else if (tab === 'trades') renderDetailTrades(plan);
-            else if (tab === 'approval') renderDetailApproval(plan);
-        }
-
-        function renderDetailBasic(plan) {
-            var remainAmount = plan.totalAmount - plan.usedAmount;
-            var el = document.getElementById('detailTabBasic');
-            el.innerHTML = '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;">' +
-                '<div class="detail-info-item"><div class="info-label">计划书编号</div><div class="info-value">' + plan.id + '</div></div>' +
-                '<div class="detail-info-item"><div class="info-label">计划书名称</div><div class="info-value">' + plan.name + '</div></div>' +
-                '<div class="detail-info-item"><div class="info-label">业务部门</div><div class="info-value">' + (plan.dept || '-') + '</div></div>' +
-                '<div class="detail-info-item"><div class="info-label">投资组</div><div class="info-value">' + (plan.group || '-') + '</div></div>' +
-                '<div class="detail-info-item"><div class="info-label">总额度</div><div class="info-value text-mono">' + formatMoneyFull(plan.totalAmount) + '</div></div>' +
-                '<div class="detail-info-item"><div class="info-label">已用额度</div><div class="info-value text-mono">' + formatMoneyFull(plan.usedAmount) + '</div></div>' +
-                '<div class="detail-info-item"><div class="info-label">剩余额度</div><div class="info-value text-mono" style="color:var(--primary);">' + formatMoneyFull(remainAmount) + '</div></div>' +
-                '<div class="detail-info-item"><div class="info-label">交易员</div><div class="info-value">' + plan.trader + '</div></div>' +
-                '<div class="detail-info-item"><div class="info-label">创建人</div><div class="info-value">' + plan.creator + '</div></div>' +
-                '<div class="detail-info-item"><div class="info-label">创建时间</div><div class="info-value">' + plan.createTime + '</div></div>' +
-                '<div class="detail-info-item"><div class="info-label">提交时间</div><div class="info-value">' + (plan.submitTime || '-') + '</div></div>' +
-                '<div class="detail-info-item"><div class="info-label">状态</div><div class="info-value"><span class="status-badge ' + getStatusClass(plan.status) + '">' + plan.status + '</span></div></div>' +
-                '<div class="detail-info-item"><div class="info-label">关联文件</div><div class="info-value">' + (plan.file || '-') + '</div></div>' +
-                '<div class="detail-info-item" style="grid-column:span 2;"><div class="info-label">备注</div><div class="info-value">' + (plan.remark || '-') + '</div></div>' +
-                '</div>';
-        }
-
-        function renderDetailProducts(plan) {
-            var el = document.getElementById('detailTabProducts');
-            if (plan.products.length === 0) {
-                var emptyHtml = '<div style="color:var(--text-muted);text-align:center;padding:20px;">暂无关联产品</div>';
-                el.innerHTML = emptyHtml;
-                return;
+            // 与财务确认值比对提示
+            if (trade.financeConfirmStatus === '已确认' && amount !== trade.actualArrivalAmount) {
+                if (!confirm('修改提示：实际到账金额（' + formatMoney(amount) + '）与财务对账确认值（' + formatMoney(trade.actualArrivalAmount) + '）不一致。\n\n确认以修改后的值为准提交？')) return;
             }
-            var html = '';
-            html += '<table class="data-table"><thead><tr><th>产品ID</th><th>产品简称</th><th>恒泰代码</th><th>产品类型</th><th>资产类型</th><th>最新净值</th><th>计划额度</th><th>已用额度</th><th>状态</th><th>操作</th></tr></thead><tbody>';
-            plan.products.forEach(function(pid) {
-                var p = getProductById(pid);
-                if (!p) return;
-                html += '<tr>';
-                html += '<td>' + p.id + '</td>';
-                html += '<td style="font-weight:500;color:var(--primary);">' + p.shortName + '</td>';
-                html += '<td class="text-mono">' + p.hengtaiCode + '</td>';
-                html += '<td>' + p.productType + '</td>';
-                html += '<td>' + p.assetType + '</td>';
-                html += '<td class="text-mono">' + p.nav.toFixed(4) + '</td>';
-                html += '<td class="text-mono">' + formatMoney(p.planAmount) + '</td>';
-                html += '<td class="text-mono">' + formatMoney(p.usedAmount) + '</td>';
-                html += '<td><span class="status-badge ' + getStatusClass(p.status) + '">' + p.status + '</span></td>';
-                html += '<td>';
-                if (!_isReadOnly) {
-                    if (plan.status === '已通过' && _canCreateTrade) {
-                        html += '<button class="btn btn-primary btn-sm" data-logic-id="btn_initiate_trade" onclick="openTradeForm(\'' + plan.id + '\',\'' + p.id + '\')">发起交易</button> ';
-                    }
-                    if (_canUploadPlan) {
-                        html += '<button class="btn btn-info btn-sm" data-logic-id="btn_contract_entry" onclick="contractEntry(\'' + plan.id + '\',\'' + p.id + '\')">合同录入</button> ';
-                    }
-                }
-                html += '</td>';
-                html += '</tr>';
-            });
-            html += '</tbody></table>';
-            el.innerHTML = html;
-        }
 
-        function renderDetailTrades(plan) {
-            var el = document.getElementById('detailTabTrades');
-            var filtered = TRADES.filter(function(t) { return t.planId === plan.id; });
-            if (filtered.length === 0) {
-                el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:30px;">暂无交易记录</div>';
-                return;
-            }
-            var html = '<table class="data-table"><thead><tr><th>交易编号</th><th>产品</th><th>类型</th><th>申请金额</th><th>成交金额</th><th>状态</th><th>交易员</th><th>时间</th><th>备注</th><th>操作</th></tr></thead><tbody>';
-            filtered.forEach(function(t) {
-                var typeClass = t.type === '买入' || t.type === '买入(开仓)' ? 'status-investing' : 'status-rejected';
-                html += '<tr>';
-                html += '<td class="text-mono" style="font-size:var(--font-size-xs);">' + t.id + '</td>';
-                html += '<td>' + t.productName + '</td>';
-                html += '<td><span class="status-badge ' + typeClass + '">' + t.type + '</span></td>';
-                html += '<td class="text-mono">' + formatMoney(t.applyAmount) + '</td>';
-                html += '<td class="text-mono">' + (t.dealAmount > 0 ? formatMoney(t.dealAmount) : '-') + '</td>';
-                html += '<td><span class="status-badge ' + getStatusClass(t.status) + '">' + t.status + '</span></td>';
-                html += '<td>' + t.trader + '</td>';
-                html += '<td style="font-size:var(--font-size-xs);">' + t.createTime + '</td>';
-                html += '<td style="font-size:var(--font-size-xs);color:var(--text-muted);">' + (t.remark || '-') + '</td>';
-                html += '<td><button class="btn btn-ghost btn-sm" onclick="openTradeDetail(\'' + t.id + '\')">详情</button></td>';
-                html += '</tr>';
-                if (t.status === '已结束') {
-                    var tradeContracts = CONTRACTS.filter(function(c) { return c.tradeId === t.id; });
-                    if (tradeContracts.length > 0) {
-                        html += '<tr><td colspan="10" style="padding:0 0 8px 24px;"><div style="font-size:var(--font-size-xs);color:var(--text-secondary);font-weight:600;margin-bottom:4px;">关联合同</div>';
-                        tradeContracts.forEach(function(ct) {
-                            html += renderContractInfoCard(ct);
-                        });
-                        html += '</td></tr>';
-                    }
-                }
-            });
-            html += '</tbody></table>';
-            el.innerHTML = html;
-        }
+            trade.actualArrivalAmount = amount;
+            trade.actualDealAmount = amount;
+            trade.dealAmount = amount;
+            if (!isNaN(shares) && shares > 0) trade.actualArrivalShares = shares;
+            if (!isNaN(nav) && nav > 0) trade.actualNav = nav;
+            if (arrivalDate) trade.actualArrivalDate = arrivalDate;
+            trade.supplementRemark = remark || '';
+            trade.supplementFile = fileName || '赎回确认单_' + now.slice(0,10).replace(/-/g,'') + '.pdf';
+            trade.traderSupplementStatus = '已补充';
+            trade.traderSupplementTime = now;
+            trade.traderConfirmStatus = '已确认';
+            trade.traderConfirmTime = now;
+            trade.status = '已结束';
+            trade.voucherStatus = '待生成';
 
-        function renderDetailApproval(plan) {
-            var el = document.getElementById('detailTabApproval');
-            var approval = APPROVALS.find(function(a) { return a.object === plan.id; });
-            if (!approval) {
-                el.innerHTML = '<div style="text-align:center;color:var(--text-muted);padding:30px;">暂无审批流程</div>';
-                return;
+            // 更新审批流程节点：交易员补充信息完成 → 流程结束
+            var approval = APPROVALS.find(function(a) { return a.object === tradeId && a.type === '交易审批'; });
+            if (approval) {
+                approval.steps.forEach(function(s) {
+                    if (s.title === '交易员补充信息' && s.status === '当前') { s.status = '已完成'; s.time = now; }
+                    if (s.title === '流程结束') { s.status = '已完成'; s.time = now; }
+                });
+                if (approval.steps.every(function(s) { return s.status === '已完成'; })) approval.status = '已通过';
             }
-            var html = '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr 1fr;margin-bottom:14px;">';
-            html += '<div class="detail-info-item"><div class="info-label">审批编号</div><div class="info-value">' + approval.id + '</div></div>';
-            html += '<div class="detail-info-item"><div class="info-label">审批类型</div><div class="info-value">' + approval.type + '</div></div>';
-            html += '<div class="detail-info-item"><div class="info-label">当前状态</div><div class="info-value"><span class="status-badge ' + getStatusClass(approval.status) + '">' + approval.status + '</span></div></div>';
-            html += '</div>';
-            html += '<div class="detail-section-title">审批流程</div>';
-            html += '<div class="erp-timeline">';
-            approval.steps.forEach(function(step) {
-                var cls = step.status === '已完成' ? 'step-done' : step.status === '当前' ? 'step-current' : '';
-                html += '<div class="erp-step ' + cls + '">';
-                html += '<div class="step-title">' + step.title + '</div>';
-                if (step.user) html += '<div class="step-user">' + step.user + '</div>';
-                if (step.time) html += '<div class="step-time">' + step.time + '</div>';
-                if (step.result) html += '<div style="font-size:var(--font-size-xs);color:var(--danger);">结果: ' + step.result + (step.reason ? ' - ' + step.reason : '') + '</div>';
-                html += '</div>';
-            });
-            html += '</div>';
-            el.innerHTML = html;
+
+            // 持仓核销：扣减产品持仓金额/份额
+            var product = PRODUCTS.find(function(p) { return p.id === trade.productId; });
+            if (product) {
+                if (product.holdAmount) product.holdAmount = Math.max(0, product.holdAmount - amount);
+                if (product.holdShares && trade.actualArrivalShares > 0) product.holdShares = Math.max(0, product.holdShares - trade.actualArrivalShares);
+                if (product.holdAmount <= 0) { product.holdShares = 0; }
+            }
+
+            alert('补充信息已确认，赎回流程结束。\n最终实际到账金额：' + formatMoney(amount) + '\n持仓已核销，凭证待生成（财务核算模块）。');
+            renderTradeDetail(trade);
+            renderTable();
         }
 
         function renderContractInfoCard(ct) {
@@ -2026,88 +2277,6 @@
             return '';
         }
 
-        function contractEntry(planId, productId) {
-            var plan = PLANS.find(function(p) { return p.id === planId; });
-            var product = getProductById(productId);
-            if (!plan || !product) return;
-            currentContractEntry = { planId: planId, productId: productId };
-            // 填充弹窗信息
-            var infoHtml = '<div class="detail-info-item"><div class="info-label">关联计划书</div><div class="info-value">' + plan.name + '</div></div>';
-            infoHtml += '<div class="detail-info-item"><div class="info-label">关联产品</div><div class="info-value">' + product.shortName + ' (' + product.hengtaiCode + ')</div></div>';
-            infoHtml += '<div class="detail-info-item"><div class="info-label">资产类型</div><div class="info-value">' + (product.assetType || '-') + '</div></div>';
-            infoHtml += '<div class="detail-info-item"><div class="info-label">账套类型</div><div class="info-value">' + (product.accountType || '-') + '</div></div>';
-            document.getElementById('contractEntryInfo').innerHTML = infoHtml;
-            // 重置表单
-            document.getElementById('contractEntryType').value = '专户资管合同';
-            document.getElementById('contractEntryVersion').value = '初始版本';
-            var cpSelect = document.getElementById('contractEntryCounterparty');
-            cpSelect.innerHTML = '<option value="">请选择对手方（选填）</option>';
-            COUNTERPARTIES.filter(function(cp) { return cp.status === '在池'; }).forEach(function(cp) {
-                cpSelect.innerHTML += '<option value="' + cp.id + '">' + cp.shortName + '</option>';
-            });
-            document.getElementById('contractEntryAmount').value = '';
-            document.getElementById('contractEntrySignDate').value = '';
-            document.getElementById('contractEntryExpireDate').value = '';
-            document.getElementById('contractEntryRemark').value = '';
-            clearFileSelection('contractEntryUpload', 'contractEntryFile');
-            document.getElementById('contractEntryModal').style.display = 'block';
-        }
-
-        function closeContractEntryModal() {
-            document.getElementById('contractEntryModal').style.display = 'none';
-            currentContractEntry = null;
-        }
-
-        function submitContractEntry() {
-            if (!currentContractEntry) return;
-            var ctType = document.getElementById('contractEntryType').value;
-            var ctVersion = document.getElementById('contractEntryVersion').value;
-            var cpId = document.getElementById('contractEntryCounterparty').value;
-            var amount = parseFloat(document.getElementById('contractEntryAmount').value);
-            var signDate = document.getElementById('contractEntrySignDate').value;
-            if (!signDate) { alert('请选择签署日期'); return; }
-            var cp = COUNTERPARTIES.find(function(c) { return c.id === cpId; });
-            var fileName = getSelectedFileName('contractEntryFile');
-            if (!fileName) { alert('请上传合同文件'); return; }
-            var product = getProductById(currentContractEntry.productId);
-            // 查找该产品最新的交易ID（用于关联）
-            var productTrades = TRADES.filter(function(t) { return t.productId === currentContractEntry.productId; });
-            var tradeId = productTrades.length > 0 ? productTrades[productTrades.length - 1].id : '';
-            var now = new Date();
-            var contractId = 'CT' + now.getFullYear() +
-                String(now.getMonth() + 1).padStart(2, '0') +
-                String(now.getDate()).padStart(2, '0') + '001';
-            // 确保ID唯一
-            while (CONTRACTS.some(function(c) { return c.id === contractId; })) {
-                contractId = String(parseInt(contractId) + 1);
-            }
-            var initFile = ctVersion === '用印版本' ? '' : fileName;
-            var sealFile = ctVersion === '用印版本' ? fileName : '';
-            var status = ctVersion === '用印版本' ? '待推送' : '待上传用印';
-            var newContract = {
-                id: contractId,
-                tradeId: tradeId,
-                productId: currentContractEntry.productId,
-                productName: product ? product.shortName : '',
-                counterpartyId: cpId,
-                counterpartyName: cp ? cp.shortName : '',
-                manager: '',
-                type: ctType,
-                amount: isNaN(amount) ? 0 : amount,
-                signDate: signDate,
-                expireDate: document.getElementById('contractEntryExpireDate').value,
-                initFile: initFile,
-                sealFile: sealFile,
-                version: ctVersion,
-                status: status,
-                remark: document.getElementById('contractEntryRemark').value
-            };
-            CONTRACTS.push(newContract);
-            alert('合同 ' + contractId + ' 已录入成功\n文件：' + fileName + '\n状态：' + status);
-            closeContractEntryModal();
-            renderTable();
-        }
-
         function addProductToPlan(planId) {
             var plan = PLANS.find(function(p) { return p.id === planId; });
             if (!plan) return;
@@ -2115,7 +2284,7 @@
         }
 
         window.addEventListener('click', function(event) {
-            ['planFormModal', 'tradeFormModal', 'tradeRecordModal', 'planDetailModal', 'uploadSealModal', 'contractEntryModal'].forEach(function(id) {
+            ['planFormModal', 'planApprovalViewModal', 'planFileViewModal', 'tradeFormModal', 'tradeRecordModal', 'uploadSealModal'].forEach(function(id) {
                 if (event.target === document.getElementById(id)) {
                     document.getElementById(id).style.display = 'none';
                 }
@@ -2200,17 +2369,13 @@ var logicData = {
     name: "发起交易",
     logic: "## 功能描述\n对已通过计划书的关联产品发起交易，输入投资金额。\n\n## 核心交互流程\n1. 投资经理在计划书详情中点击关联产品的\"发起交易\"按钮\n2. 输入投资金额，提交交易审批\n3. 交易审批通过后，进入ERP执行流程\n4. 交易成交后，系统自动生成会计凭证\n\n## 交易表单字段\n- 关联计划书（只读）\n- 产品名称（只读）\n- 管理人/对手方（选填）\n- 交易类型：买入(开仓)/赎回\n- 优先级：优先级/次级（选填）\n- 交易金额（必填）\n- 申报份额（选填）\n- 预计执行时间（选填）\n- 合同附件上传（可选）\n\n## 校验规则\n<span class=\"logic-tag rule\">BR-001</span> 交易金额不可超过产品剩余可投额度（计划额度 - 已投额度）\n<span class=\"logic-tag condition\">条件</span> 申报金额 ≤ 剩余可投额度\n<span class=\"logic-tag condition\">条件</span> 产品状态为在池（在投/待投）\n\n## 审批流程\n投资经理提交 → 风控审批 → 财务确认 → 交易执行\n\n## 边界条件\n- 仅已通过的计划书可发起交易\n- 交易金额不可超过产品剩余可投额度（BR-001）\n- 产品\"已完结\"后不可再发起交易"
   },
-  "btn_contract_entry": {
-    name: "合同录入",
-    logic: "## 功能描述\n在交易管理-计划书产品行点击\"合同录入\"按钮，打开合同录入弹窗。\n\n## 核心交互流程\n1. 投资经理在交易管理-计划书产品行点击\"合同录入\"按钮\n2. 弹窗展示产品历史合同列表和新建合同表单\n3. 填写合同类型、对手方、金额、签署日期、到期日期等字段\n4. 提交前可二次编辑合同信息\n5. 点击\"提交合同系统流程\"，校验后提交至合同系统\n6. 合同系统完成签署后，状态自动更新为\"已签署\"\n\n## 合同字段\n- 合同编号：系统自动生成，格式 CT+YYYYMMDD+序号\n- 合同类型：专户资管合同/FOF投资合同/权益投资合同/信托投资合同/托管合同/补充协议\n- 对手方（必填）\n- 管理人（选填）\n- 合同金额（必填）\n- 合同文件上传\n\n## 合同状态流转\n```\n待上传用印 →(上传用印版)→ 待推送 →(推送合同系统)→ 已推送 →(签署完成)→ 已签署\n```\n\n## 边界条件\n- 合同到期日期必须晚于签署日期\n- 一份合同必须关联一个产品和一个对手方\n- 补充协议类型合同需关联原始主合同\n- 合同提交合同系统后，不可在OMS内修改"
-  },
   "btn_trade_record": {
     name: "交易记录",
     logic: "## 功能描述\n查看产品的历史交易记录。\n\n## 列表字段\n- 交易编号\n- 产品名称\n- 交易类型：买入(开仓)/赎回\n- 申请金额/成交金额\n- 状态：待审批/审批中/待执行/已成交/已撤回/已驳回\n- 交易员\n- 时间\n- 备注\n\n## 交易状态\n- 待审批：刚提交的交易\n- 审批中：进入审批流程\n- 待执行：审批通过，等待执行\n- 已成交：交易完成\n- 已撤回：交易被撤回\n- 已驳回：审批被驳回\n\n## 关联合同\n已成交的交易下方展示关联合同信息卡片，包含合同编号、类型、对手方、金额、状态等"
   },
   "btn_plan_detail": {
     name: "计划书详情",
-    logic: "## 功能描述\n查看计划书的完整信息，包含四个Tab页。\n\n## Tab页结构\n1. **基础信息**：计划书编号、名称、部门、投资组、总额度、已用额度、剩余额度、交易员、创建人、创建时间、状态、关联文件、备注\n2. **关联产品**：产品列表，含产品ID、简称、恒泰代码、产品类型、资产类型、最新净值、计划额度、已用额度、状态，支持发起交易和合同录入\n3. **交易记录**：该计划书下所有交易的明细\n4. **审批流程**：审批时间线，展示每个审批步骤的标题、操作人、完成时间、步骤状态\n\n## 审批流程时间线\n- 已完成步骤：绿色圆点\n- 当前步骤：蓝色圆点（带光晕）\n- 待处理步骤：灰色圆点"
+    logic: "## 功能描述\n点击后跳转至独立的计划书详情页（plan_detail.html?id=计划书编号），完整展示计划书信息。\n\n## 页面结构\n1. **审批概要**：审批编号、当前状态、提交时间 + 横向审批步骤条（提交 → 风控审批 → 部门负责人审批）\n2. **基础信息**：三列式表格，含编号、名称、业务部门、总额度、已用额度、状态、交易员、投资经理、创建人、创建时间、提交时间、备注\n3. **关联产品**：全字段产品表格（产品内部编号/产品名称/外部编码/产品类型/账套类型/计划额度/已用额度/投资方向/运作方式/投资方式/持有期限），产品名称可跳转至产品详情页\n4. **附件**：计划书文件，支持下载\n5. **审批记录**：竖向时间线，展示每个审批步骤的标题、操作人、完成时间、步骤状态及驳回原因\n\n## 审批节点状态\n- 已完成步骤：绿色\n- 当前步骤：橙色高亮\n- 驳回步骤：红色，并展示驳回原因\n- 待处理步骤：灰色"
   },
   "plan_form": {
     name: "新建计划书表单",

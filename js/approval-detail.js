@@ -451,7 +451,7 @@ function _adSyncTradeOnStepComplete(approval, completedStep) {
     } else if (title.indexOf('ERP流程-创新金融') === 0) {
         trade.erpStep2Status = '已完成';
         trade.erpStep2Time = now;
-    } else if (title === '交易员确认结束') {
+    } else if (title.indexOf('交易员确认') === 0) {
         trade.traderConfirmStatus = '已确认';
         trade.status = '已成交';
         trade.actualDealAmount = trade.applyAmount;

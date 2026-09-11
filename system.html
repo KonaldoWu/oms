@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -264,11 +264,11 @@
     <script src="js/script.js"></script>
     <script>
         initLayout('system.html', '系统管理');
-        if (getCurrentRoleKey() !== 'admin' && getCurrentRoleKey() !== 'demo') { alert('仅平台管理员可访问系统管理'); location.href = 'investment_manager.html'; }
+        if (getCurrentRoleKey() !== 'admin' && getCurrentRoleKey() !== 'demo') { alert('仅平台管理员可访问系统管理'); location.href = 'product.html'; }
 
         var _roleKey = getCurrentRoleKey();
         if (_roleKey !== 'admin' && _roleKey !== 'demo') {
-            location.replace('investment_manager.html');
+            location.replace('product.html');
         }
 
         var configData = {
@@ -309,6 +309,12 @@
                 template: '【OMS预警】${alertType} - ${detail}',
                 rules: '预警触发时推送, 工作日9:00-18:00'
             },
+            // PRD（五）830问题优化-4：iBor每日交易信息传输（申购/赎回/兑息兑付字段每日提供给iBor）
+            iborTrade: {
+                pushTime: '18:00',
+                retryCount: '3',
+                scope: '申购交易、赎回交易、兑息兑付'
+            },
             backup: {
                 time: '02:00',
                 retainDays: '90',
@@ -319,6 +325,8 @@
         var logData = [
             { time: '2026-05-19 09:15:23', type: '操作日志', user: '管理员', content: '修改邮箱配置-接收时间由16:00改为17:00', ip: '192.168.1.100', result: '成功' },
             { time: '2026-05-19 08:30:00', type: '系统运行日志', user: '系统', content: '定时任务-邮件自动接收执行完成，收到3封净值邮件', ip: '127.0.0.1', result: '成功' },
+            { time: '2026-05-18 18:00:05', type: 'iBor传输日志', user: '系统', content: 'iBor每日交易信息传输完成：申购2笔/赎回1笔/兑息兑付1笔，投资组合ID已按产品账套自动转换（XIR_cxjrb_gszh等）', ip: '127.0.0.1', result: '成功' },
+            { time: '2026-05-17 18:00:04', type: 'iBor传输日志', user: '系统', content: 'iBor每日交易信息传输完成：赎回1笔/兑息兑付2笔，全部字段推送成功', ip: '127.0.0.1', result: '成功' },
             { time: '2026-05-18 17:30:15', type: '邮件解析日志', user: '系统', content: '解析天玑13号净值邮件，净值1.0234，日期2026-05-17', ip: '127.0.0.1', result: '成功' },
             { time: '2026-05-18 17:31:02', type: '邮件解析日志', user: '系统', content: '解析盛乾同行2号净值邮件，净值0.9876，日期2026-05-17', ip: '127.0.0.1', result: '成功' },
             { time: '2026-05-18 17:45:33', type: 'NC推送日志', user: '系统', content: '推送凭证VCH20260517001至NC系统', ip: '127.0.0.1', result: '成功' },
@@ -390,6 +398,31 @@
             html += '<div class="form-group"><label>重试次数</label><input type="number" id="cfgNcRetryCount" value="' + configData.nc.retryCount + '"></div>';
             html += '</div>';
             html += '<div class="config-save-bar"><button class="btn btn-ghost" onclick="cancelConfig(\'configNC\',\'nc\')">取消</button><button class="btn btn-primary" onclick="saveNcConfig()">保存</button></div>';
+            html += '</div></div>';
+
+            // PRD（五）830问题优化-4：iBor每日交易信息传输配置
+            html += '<div class="config-card" id="configIborTrade" data-logic-id="module_ibor_integration">';
+            html += '<div class="config-card-header" onclick="toggleConfigCard(\'configIborTrade\')">';
+            html += '<div class="config-card-title"><span class="config-icon">🔄</span>iBor每日交易信息传输</div>';
+            html += '<div class="config-card-actions"><span class="config-card-summary">每日' + configData.iborTrade.pushTime + ' / ' + configData.iborTrade.scope + '</span><span class="config-toggle-icon">▼</span></div>';
+            html += '</div>';
+            html += '<div class="config-card-body">';
+            html += '<div class="config-form-row">';
+            html += '<div class="form-group"><label>传输频率</label><input type="text" value="每日" readonly style="background:var(--border-light);"><div class="form-hint">PRD（五）830优化-4：申购/赎回/兑息兑付的iBor字段每日提供给iBor</div></div>';
+            html += '<div class="form-group"><label>传输时间（每日）</label><input type="time" id="cfgIborTradePushTime" value="' + configData.iborTrade.pushTime + '"></div>';
+            html += '<div class="form-group"><label>失败重试次数</label><input type="number" id="cfgIborTradeRetryCount" value="' + configData.iborTrade.retryCount + '"></div>';
+            html += '<div class="form-group"><label>传输范围</label><input type="text" id="cfgIborTradeScope" value="' + configData.iborTrade.scope + '"></div>';
+            html += '</div>';
+            html += '<div class="form-group"><label>投资组合ID映射（交易按产品账套自动转换，用户无需填写）</label>';
+            html += '<table class="subject-list-table"><thead><tr><th>账套大类</th><th>E列账户名称（产品账套）</th><th>iBor投资组合ID</th></tr></thead><tbody>';
+            Object.keys(ACCOUNT_TREE).forEach(function(cat) {
+                (ACCOUNT_TREE[cat] || []).forEach(function(acc) {
+                    html += '<tr><td>' + cat + '</td><td>' + acc + '</td><td class="text-mono">' + (getPortfolioId(acc) || '-') + '</td></tr>';
+                });
+            });
+            html += '</tbody></table>';
+            html += '<div class="form-hint" style="margin-top:6px;">交易表单的投资组合字段按产品账套自动带出E列账户名称，传输iBor时自动转换为对应组合ID</div></div>';
+            html += '<div class="config-save-bar"><button class="btn btn-ghost" onclick="cancelConfig(\'configIborTrade\',\'iborTrade\')">取消</button><button class="btn btn-primary" onclick="saveIborTradeConfig()">保存</button></div>';
             html += '</div></div>';
 
             html += '<div class="config-card" id="configXML">';
@@ -477,6 +510,14 @@
             configData.nc.timeout = document.getElementById('cfgNcTimeout').value;
             configData.nc.retryCount = document.getElementById('cfgNcRetryCount').value;
             showToast('保存成功');
+            renderConfigCards();
+        }
+
+        function saveIborTradeConfig() {
+            configData.iborTrade.pushTime = document.getElementById('cfgIborTradePushTime').value;
+            configData.iborTrade.retryCount = document.getElementById('cfgIborTradeRetryCount').value;
+            configData.iborTrade.scope = document.getElementById('cfgIborTradeScope').value;
+            showToast('iBor每日交易信息传输配置已保存');
             renderConfigCards();
         }
 
@@ -622,7 +663,7 @@
         }
 
         function getLogTypeClass(type) {
-            var map = { '操作日志': 'log-type-operation', '系统运行日志': 'log-type-system', '邮件解析日志': 'log-type-email', 'NC推送日志': 'log-type-nc' };
+            var map = { '操作日志': 'log-type-operation', '系统运行日志': 'log-type-system', '邮件解析日志': 'log-type-email', 'NC推送日志': 'log-type-nc', 'iBor传输日志': 'log-type-ibor' };
             return map[type] || 'log-type-operation';
         }
 

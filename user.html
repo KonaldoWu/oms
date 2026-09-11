@@ -290,11 +290,11 @@
     <script src="js/script.js"></script>
     <script>
         initLayout('user.html', '用户管理');
-        if (getCurrentRoleKey() !== 'admin' && getCurrentRoleKey() !== 'demo') { alert('仅平台管理员可访问用户管理'); location.href = 'investment_manager.html'; }
+        if (getCurrentRoleKey() !== 'admin' && getCurrentRoleKey() !== 'demo') { alert('仅平台管理员可访问用户管理'); location.href = 'product.html'; }
 
         var _roleKey = getCurrentRoleKey();
         if (_roleKey !== 'admin' && _roleKey !== 'demo') {
-            location.replace('investment_manager.html');
+            location.replace('product.html');
         }
 
         var orgData = [
@@ -322,7 +322,6 @@
         var permissionGroups = [
             { name: '交易管理', perms: ['trade:view','trade:create','trade:submit','trade:cancel'] },
             { name: '产品管理', perms: ['product:view','product:create','product:edit','product:delete'] },
-            { name: '对手方管理', perms: ['counterparty:view','counterparty:create','counterparty:edit','counterparty:approve'] },
             { name: '合同管理', perms: ['contract:view','contract:create','contract:edit','contract:submit'] },
             { name: '审批中心', perms: ['approval:view','approval:approve','approval:reject'] },
             { name: '用户管理', perms: ['user:view','user:create','user:edit','user:delete','role:view','role:create','role:edit','org:view','org:manage'] },
@@ -331,12 +330,12 @@
 
         var roleData = [
             { id: 'ROLE001', name: '系统管理员', code: 'admin', desc: '拥有系统所有权限', perms: permissionGroups.reduce(function(a,g){return a.concat(g.perms);},[]) },
-            { id: 'ROLE002', name: '投资经理', code: 'investment_manager', desc: '投资决策、计划书上传、产品管理', perms: ['trade:view','trade:create','trade:submit','product:view','product:create','product:edit','counterparty:view','contract:view','contract:create','contract:edit','contract:submit','approval:view'] },
+            { id: 'ROLE002', name: '投资经理', code: 'investment_manager', desc: '投资决策、计划书上传、产品管理', perms: ['trade:view','trade:create','trade:submit','product:view','product:create','product:edit','contract:view','contract:create','contract:edit','contract:submit','approval:view'] },
             { id: 'ROLE003', name: '交易员', code: 'trader', desc: '执行交易操作、查看产品', perms: ['trade:view','trade:create','product:view','contract:view'] },
-            { id: 'ROLE004', name: '风控管理员', code: 'risk_manager', desc: '风险控制、审批、合规管理', perms: ['trade:view','product:view','counterparty:view','counterparty:approve','contract:view','approval:view','approval:approve','approval:reject'] },
+            { id: 'ROLE004', name: '风控管理员', code: 'risk_manager', desc: '风险控制、审批、合规管理', perms: ['trade:view','product:view','contract:view','approval:view','approval:approve','approval:reject'] },
             { id: 'ROLE005', name: '财务审核员', code: 'financial_staff', desc: '财务审核、凭证管理', perms: ['trade:view','product:view','contract:view','approval:view','approval:approve','approval:reject','fund:view','fund:operate'] },
-            { id: 'ROLE006', name: '部门负责人', code: 'department_leader', desc: '部门审批、对手方管理', perms: ['trade:view','product:view','counterparty:view','counterparty:create','counterparty:edit','counterparty:approve','contract:view','approval:view','approval:approve','approval:reject'] },
-            { id: 'ROLE007', name: '公司领导', code: 'company_leader', desc: '查看全公司所有业务数据，纯查看无操作权限', perms: ['trade:view','product:view','counterparty:view','contract:view','approval:view','fund:view'] },
+            { id: 'ROLE006', name: '部门负责人', code: 'department_leader', desc: '部门审批', perms: ['trade:view','product:view','contract:view','approval:view','approval:approve','approval:reject'] },
+            { id: 'ROLE007', name: '公司领导', code: 'company_leader', desc: '查看全公司所有业务数据，纯查看无操作权限', perms: ['trade:view','product:view','contract:view','approval:view','fund:view'] },
             { id: 'ROLE008', name: '演示账号', code: 'demo', desc: '拥有系统所有权限，用于演示和体验全部功能', perms: permissionGroups.reduce(function(a,g){return a.concat(g.perms);},[]) }
         ];
 

@@ -312,7 +312,7 @@
         var _isAdmin = _roleKey === 'admin';
         var _isDemo = _roleKey === 'demo';
         if (!_isFinancialStaff && !_isCompanyLeader && !_isAdmin && !_isDemo) {
-            location.replace('investment_manager.html');
+            location.replace('product.html');
         }
 
         var _canConfirmVoucher = hasPermission('confirmVoucher');
