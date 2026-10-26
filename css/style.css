@@ -772,6 +772,26 @@ table tr:hover td {
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
 }
 
+/* 输入框+单位切换组合（交易价格/交易金额：万元/元独立切换） */
+.input-unit-group {
+    display: flex;
+    gap: 6px;
+    align-items: stretch;
+}
+
+.input-unit-group input {
+    flex: 1;
+    min-width: 0;
+}
+
+.input-unit-group select {
+    width: 68px;
+    flex: none;
+    padding: 7px 4px;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
 .form-row {
     display: flex;
     gap: 10px;

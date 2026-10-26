@@ -1,4 +1,4 @@
-var ROLES = {
+﻿var ROLES = {
     investment_manager: { name: '投资经理', label: '张明', dept: '创新金融业务总部', group: '专户投资组', investGroups: ['专户投资组','xn账户'] },
     trader: { name: '交易员', label: '李华', dept: '创新金融业务总部', group: '专户投资组', investGroups: ['专户投资组','xn账户'] },
     risk_control: { name: '部门风控', label: '刘伟', dept: '创新金融业务总部', group: '', investGroups: [] },
@@ -24,10 +24,15 @@ var MENU_CONFIG = [
     { href: 'product.html', icon: '📦', label: '产品管理', roles: ['investment_manager','trader','risk_control','department_leader','company_leader','admin','demo'] },
     { href: 'trade.html', icon: '💹', label: '投资管理', roles: ['investment_manager','trader','risk_control','department_leader','company_leader','admin','demo'], children: [
         { href: 'trade.html', label: '计划书管理' },
-        { href: 'trade_list.html', label: '交易管理' }
+        { href: 'trade_list.html', label: '交易管理' },
+        { href: 'repay.html', label: '还款管理' }
     ]},
     { href: 'approval.html', icon: '✅', label: '审批中心', roles: ['investment_manager','trader','risk_control','department_leader','financial_staff','company_leader','admin','demo'] },
-    { href: 'finance.html', icon: '💰', label: '财务核算', roles: ['financial_staff','company_leader','admin','demo'] },
+    { href: 'finance.html', icon: '💰', label: '财务核算', roles: ['financial_staff','company_leader','admin','demo'], children: [
+        { href: 'finance.html', label: '凭证管理' },
+        { href: 'dividend.html', label: '兑息兑付' }
+    ]},
+    { href: 'flow.html', icon: '🔀', label: '流程图', roles: ['investment_manager','trader','risk_control','department_leader','financial_staff','company_leader','admin','demo'] },
     { href: 'user.html', icon: '👤', label: '权限管理', roles: ['admin','demo'] },
     { href: 'system.html', icon: '⚙', label: '系统管理', roles: ['admin','demo'] }
 ];
@@ -94,13 +99,24 @@ function canApprove() {
 }
 
 var PRODUCTS = [
-    { id: 'P001', name: '演示-在投-专户', shortName: '演示-在投-专户', assetType: '专户资管产品', productType: '混合型', accountType: 'XIR_创新金融部专户(固收类)', hengtaiCode: 'XT20260301001', externalCode: '', dept: '创新金融业务总部', group: '专户投资组', expireDate: '', redeemable: true, status: '在投', nav: 1.0234, navDate: '2026-05-17', holdAmount: 15000000, holdShares: 14654321, planAmount: 20000000, usedAmount: 15000000, counterparty: '', tradeLimit: 0, accountMapping: '', poolUser: '刘伟', poolTime: '2026-03-01', description: '场景：在投+专户+计划已通过', tradeMarket: '场外市场', currency: 'CNY', establishDate: '2026-01-15', manager: '中信证券资产管理有限公司', remark: '' },
-    { id: 'P002', name: '演示-在投-信托', shortName: '演示-在投-信托', assetType: '信托', productType: '固收类', accountType: 'XIR_创新金融部信托计划', hengtaiCode: 'XT20260420001', externalCode: '', dept: 'FICC固定收益业务总部', group: '理财投资组', expireDate: '2028-04-20', redeemable: true, status: '在投', nav: 1.0300, navDate: '2026-05-17', holdAmount: 6000000, holdShares: 5825242, planAmount: 8000000, usedAmount: 6000000, counterparty: 'CP007', tradeLimit: 0, accountMapping: '', poolUser: '刘伟', poolTime: '2026-04-20', description: '场景：在投+信托+计划已通过', tradeMarket: 'IB 银行间', currency: 'CNY', establishDate: '2026-04-20', startDate: '2026-04-20', faceValue: 100, totalScale: 50000000, financier: '盐城城投集团有限公司', manager: '华泰证券资产管理有限公司', guarantor: '江苏省信用再担保集团', remark: '' },
-    { id: 'P003', name: '演示-在投-ABS', shortName: '演示-在投-ABS', assetType: 'ABS(中保登)', productType: '固收类', accountType: 'XIR_创新金融部_中保登', hengtaiCode: 'ABS20260519001', externalCode: '1101010901', dept: '创新金融业务总部', group: 'fb账户', expireDate: '2027-06-30', redeemable: true, status: '在投', nav: 1.0512, navDate: '2026-05-17', holdAmount: 8000000, holdShares: 7610290, planAmount: 10000000, usedAmount: 8000000, counterparty: 'CP001', tradeLimit: 5000000, accountMapping: '{"debit":"1101-交易性金融资产","credit":"1002-银行存款"}', poolUser: '刘伟', poolTime: '2025-09-10', description: '场景：在投+ABS中保登', tradeMarket: '中保登', currency: 'CNY', establishDate: '2025-09-10', startDate: '2025-09-10', actualMaturityDate: '2027-06-30', faceValue: 100, totalScale: 80000000, concentration: '12.5%', creditRating: 'AAA', originator: '远东国际融资租赁有限公司', underlyingAssetType: '融资租赁债权', trancheLevel: '优先', annualYield: 3.85, remark: '' },
-    { id: 'P004', name: '演示-在投-碳金融', shortName: '演示-在投-碳金融', assetType: '碳金融业务', productType: '固收类', accountType: 'XIR_创新金融部碳金融', hengtaiCode: 'CF20260315001', externalCode: '', dept: '创新金融业务总部', group: 'fb账户', expireDate: '2027-03-15', redeemable: true, status: '在投', nav: 1.0000, navDate: '2026-05-20', holdAmount: 5000000, holdShares: 5000, planAmount: 8000000, usedAmount: 5000000, counterparty: 'CP006', tradeLimit: 0, accountMapping: '', poolUser: '刘伟', poolTime: '2026-03-15', description: '场景：在投+碳金融', currency: 'CNY', regionalMarket: 'IB 银行间', counterpartyIbor: '上海环境能源交易所', annualYield: 4.2, remark: '' },
-    { id: 'P005', name: '演示-无计划-专户', shortName: '演示-无计划-专户', assetType: '专户资管产品', productType: 'FOF', accountType: 'XIR_创新金融部FOF组合1', hengtaiCode: 'XT20250910002', externalCode: '', dept: '创新金融业务总部', group: 'xn账户', expireDate: '', redeemable: true, status: '无计划', nav: 1.0156, navDate: '2026-05-16', holdAmount: 0, holdShares: 0, planAmount: 0, usedAmount: 0, counterparty: '', tradeLimit: 0, accountMapping: '', poolUser: '刘伟', poolTime: '2025-09-10', description: '场景：无计划+可发起新计划', tradeMarket: 'FOF', currency: 'CNY', establishDate: '2025-09-10', manager: '国泰君安证券股份有限公司', remark: '' },
-    { id: 'P006', name: '演示-草稿-专户', shortName: '演示-草稿-专户', assetType: '专户资管产品', productType: '固收类', accountType: 'XIR_创新金融部专户(固收类)', hengtaiCode: 'XT20251105001', externalCode: '', dept: '创新金融业务总部', group: '专户投资组', expireDate: '', redeemable: true, status: '草稿', nav: 1.0000, navDate: '', holdAmount: 0, holdShares: 0, planAmount: 0, usedAmount: 0, counterparty: '', tradeLimit: 0, accountMapping: '', poolUser: '刘伟', poolTime: '2025-11-05', description: '场景：入池信息草稿' }
+    { id: 'P001', name: '演示-在投-专户', shortName: '演示-在投-专户', assetType: '专户资管产品', productType: '混合型', accountType: 'XIR_创新金融部专户(固收类)', hengtaiCode: 'XT20260301001', externalCode: '', dept: '创新金融业务总部', group: '专户投资组', expireDate: '', redeemable: true, status: '在投', nav: 1.0234, navDate: '2026-05-17', holdAmount: 15000000, planAmount: 20000000, usedAmount: 15000000, counterparty: '', tradeLimit: 0, accountMapping: '', poolUser: '刘伟', poolTime: '2026-03-01', description: '场景：在投+专户+计划已通过', tradeMarket: '场外市场', currency: 'CNY', establishDate: '2026-01-15', manager: '中信证券资产管理有限公司', remark: '', totalSubscribed: 25000000, totalRedeemed: 10000000, totalPrincipal: 0, totalInterest: 0 },
+    { id: 'P002', name: '演示-在投-信托', shortName: '演示-在投-信托', assetType: '信托', productType: '固收类', accountType: 'XIR_创新金融部信托计划', hengtaiCode: 'XT20260420001', externalCode: '', dept: 'FICC固定收益业务总部', group: '理财投资组', expireDate: '2028-04-20', redeemable: true, status: '在投', nav: 1.0300, navDate: '2026-05-17', holdAmount: 6000000, cleanPrice: 100.25, planAmount: 8000000, usedAmount: 6000000, counterparty: 'CP007', tradeLimit: 0, accountMapping: '', poolUser: '刘伟', poolTime: '2026-04-20', description: '场景：在投+信托+计划已通过', tradeMarket: 'IB 银行间', currency: 'CNY', establishDate: '2026-04-20', startDate: '2026-04-20', faceValue: 100, totalScale: 50000000, financier: '盐城城投集团有限公司', manager: '华泰证券资产管理有限公司', guarantor: '江苏省信用再担保集团', remark: '', totalSubscribed: 8000000, totalRedeemed: 2000000, totalPrincipal: 0, totalInterest: 700000 },
+    { id: 'P003', name: '演示-在投-ABS', shortName: '演示-在投-ABS', assetType: 'ABS(中保登)', productType: '固收类', accountType: 'XIR_创新金融部_中保登', hengtaiCode: 'ABS20260519001', externalCode: '1101010901', dept: '创新金融业务总部', group: 'fb账户', expireDate: '2027-06-30', redeemable: true, status: '在投', nav: 1.0512, navDate: '2026-05-17', holdAmount: 7639500, cleanPrice: 99.80, planAmount: 10000000, usedAmount: 7639500, counterparty: 'CP001', tradeLimit: 5000000, accountMapping: '{"debit":"1101-交易性金融资产","credit":"1002-银行存款"}', poolUser: '刘伟', poolTime: '2025-09-10', description: '场景：在投+ABS中保登', tradeMarket: '中保登', currency: 'CNY', establishDate: '2025-09-10', startDate: '2025-09-10', actualMaturityDate: '2027-06-30', faceValue: 100, totalScale: 80000000, concentration: '12.5%', creditRating: 'AAA', originator: '远东国际融资租赁有限公司', underlyingAssetType: '融资租赁债权', trancheLevel: '优先', annualYield: 3.85, remark: '', totalSubscribed: 10000000, totalRedeemed: 0, totalPrincipal: 2360500, totalInterest: 243300.68 },
+    { id: 'P004', name: '演示-在投-碳金融', shortName: '演示-在投-碳金融', assetType: '碳金融业务', productType: '固收类', accountType: 'XIR_创新金融部碳金融', hengtaiCode: 'CF20260315001', externalCode: '', dept: '创新金融业务总部', group: 'fb账户', expireDate: '2027-03-15', redeemable: true, status: '在投', nav: 1.0000, navDate: '2026-05-20', holdAmount: 5000000, planAmount: 8000000, usedAmount: 5000000, counterparty: 'CP006', tradeLimit: 0, accountMapping: '', poolUser: '刘伟', poolTime: '2026-03-15', description: '场景：在投+碳金融', currency: 'CNY', regionalMarket: 'IB 银行间', counterpartyIbor: '上海环境能源交易所', annualYield: 4.2, remark: '', totalSubscribed: 5000000, totalRedeemed: 0, totalPrincipal: 0, totalInterest: 0 },
+    { id: 'P005', name: '演示-无计划-专户', shortName: '演示-无计划-专户', assetType: '专户资管产品', productType: 'FOF', accountType: 'XIR_创新金融部FOF组合1', hengtaiCode: 'XT20250910002', externalCode: '', dept: '创新金融业务总部', group: 'xn账户', expireDate: '', redeemable: true, status: '无计划', nav: 1.0156, navDate: '2026-05-16', holdAmount: 0, planAmount: 0, usedAmount: 0, counterparty: '', tradeLimit: 0, accountMapping: '', poolUser: '刘伟', poolTime: '2025-09-10', description: '场景：无计划+可发起新计划', tradeMarket: 'FOF', currency: 'CNY', establishDate: '2025-09-10', manager: '国泰君安证券股份有限公司', remark: '', totalSubscribed: 0, totalRedeemed: 0, totalPrincipal: 0, totalInterest: 0 },
+    { id: 'P006', name: '演示-草稿-专户', shortName: '演示-草稿-专户', assetType: '专户资管产品', productType: '固收类', accountType: 'XIR_创新金融部专户(固收类)', hengtaiCode: 'XT20251105001', externalCode: '', dept: '创新金融业务总部', group: '专户投资组', expireDate: '', redeemable: true, status: '草稿', nav: 1.0000, navDate: '', holdAmount: 0, planAmount: 0, usedAmount: 0, counterparty: '', tradeLimit: 0, accountMapping: '', poolUser: '刘伟', poolTime: '2025-11-05', description: '场景：入池信息草稿', totalSubscribed: 0, totalRedeemed: 0, totalPrincipal: 0, totalInterest: 0 }
 ];
+
+// ===== 持仓批次（产品×买入批次×剩余金额；兑息兑付确认时按批次勾选，兑付本金按勾选行占比分摊扣减） =====
+var HOLD_LOTS = [
+    { id: 'LOT20260420001', productId: 'P002', buyDate: '2026-04-20', tranche: '信托1期', amount: 4000000 },
+    { id: 'LOT20260610001', productId: 'P002', buyDate: '2026-06-10', tranche: '信托2期', amount: 2000000 },
+    { id: 'LOT20250910001', productId: 'P003', buyDate: '2025-09-10', tranche: '优先A1', amount: 4750000 },
+    { id: 'LOT20260315001', productId: 'P003', buyDate: '2026-03-15', tranche: '优先A2', amount: 2889500 }
+];
+function getProductLots(productId) {
+    return HOLD_LOTS.filter(function(l) { return l.productId === productId && l.amount > 0; });
+}
 
 var COUNTERPARTIES = [
     { id: 'CP001', name: '国泰君安证券股份有限公司', shortName: '国泰君安', type: '证券公司', productCount: 1, status: '在池', contact: '张经理', phone: '021-3867-xxxx', email: 'zhang@gtja.com', planFile: '国泰君安用资计划书.pdf', poolUser: '刘伟', poolTime: '2025-09-08 10:00' },
@@ -147,7 +163,9 @@ var TRADES = [
     // 演示用：申购草稿，全部字段已预填（金额100万=价格1.0234×数量977135.04），详情直接点"提交审批"进入投资经理审批
     { id: 'TRX20260911001', planId: 'TP20260301001', productId: 'P001', productName: '演示-在投-专户', type: '买入', applyAmount: 1000000, shares: '977135.04', price: '1.0234', expectedDate: '2026-09-18', dealAmount: 0, status: '未提交', trader: '李华', createTime: '2026-09-11 09:30', remark: '演示用：全部字段已预填，直接点提交审批', counterpartyId: '', counterpartyName: '', priority: '优先级', cpCnaps: '123456789012', assetType: '专户资管产品', erpStep1Status: '待执行', erpStep1Type: '资金划拨(用款)', erpStep1Time: '', erpStep2Status: '待执行', erpStep2Type: '创新金融-资金划拨申请', erpStep2Time: '', traderConfirmStatus: '待确认', actualDealAmount: 0, traderConfirmTime: '', voucherStatus: '待生成' },
     // 演示用：赎回草稿，全部字段已预填（金额103万=净值1.0300×份额100万，是否清盘=否），详情直接点"提交审批"进入投资经理审批
-    { id: 'TRX20260911002', planId: 'TP20260425001', productId: 'P002', productName: '演示-在投-信托', type: '赎回', applyAmount: 1030000, shares: '1000000', price: '1.0300', expectedDate: '2026-09-18', dealAmount: 0, status: '未提交', trader: '李华', createTime: '2026-09-11 09:35', remark: '演示用：全部字段已预填，直接点提交审批', counterpartyId: 'CP007', counterpartyName: '华泰资管', priority: '', isClearing: '否', cpCnaps: '987654321098', assetType: '信托', erpStep1Status: '不适用', erpStep1Type: '', erpStep1Time: '', erpStep2Status: '不适用', erpStep2Type: '', erpStep2Time: '', traderConfirmStatus: '待确认', actualDealAmount: 0, traderConfirmTime: '', voucherStatus: '待生成', financeConfirmStatus: '待确认', financeConfirmUser: '', financeConfirmTime: '', statementFile: '', actualArrivalAmount: 0, actualArrivalShares: 0, actualArrivalDate: '', redeemFee: 0, diffRemark: '', traderSupplementStatus: '待补充', traderSupplementTime: '', supplementFile: '', supplementRemark: '', actualNav: 0 }
+    { id: 'TRX20260911002', planId: 'TP20260425001', productId: 'P002', productName: '演示-在投-信托', type: '赎回', applyAmount: 1030000, shares: '1000000', price: '1.0300', expectedDate: '2026-09-18', dealAmount: 0, status: '未提交', trader: '李华', createTime: '2026-09-11 09:35', remark: '演示用：全部字段已预填，直接点提交审批', counterpartyId: 'CP007', counterpartyName: '华泰资管', priority: '', isClearing: '否', cpCnaps: '987654321098', assetType: '信托', erpStep1Status: '不适用', erpStep1Type: '', erpStep1Time: '', erpStep2Status: '不适用', erpStep2Type: '', erpStep2Time: '', traderConfirmStatus: '待确认', actualDealAmount: 0, traderConfirmTime: '', voucherStatus: '待生成', financeConfirmStatus: '待确认', financeConfirmUser: '', financeConfirmTime: '', statementFile: '', actualArrivalAmount: 0, actualArrivalShares: 0, actualArrivalDate: '', redeemFee: 0, diffRemark: '', traderSupplementStatus: '待补充', traderSupplementTime: '', supplementFile: '', supplementRemark: '', actualNav: 0 },
+    // 买入-已结束（有差额）：申报500万、实际成交480万，差额20万已生成待还款记录（见还款管理）
+    { id: 'TRX20261008001', planId: 'TP20260301001', productId: 'P003', productName: '演示-在投-ABS', type: '买入', applyAmount: 5000000, shares: '', expectedDate: '', dealAmount: 4800000, status: '已结束', trader: '李华', createTime: '2026-10-08 10:00', remark: '差额20万已入待还款资金池', counterpartyId: 'CP001', counterpartyName: '远东租赁', priority: '优先级', assetType: 'ABS(中保登)', erpStep1Status: '已完成', erpStep1Type: '资金划拨(用款)', erpStep1Time: '2026-10-08 11:00', erpStep2Status: '已完成', erpStep2Type: '创新金融-资金划拨申请', erpStep2Time: '2026-10-08 12:00', traderConfirmStatus: '已确认', actualDealAmount: 4800000, traderConfirmTime: '2026-10-08 17:00', voucherStatus: '已生成' }
 ];
 
 var APPROVALS = [
@@ -180,8 +198,75 @@ var APPROVALS = [
     // 赎回-已通过（全流程结束）
     { id: 'APR20260602001', type: '交易审批', object: 'TRX20260602001', objectName: '演示-在投-信托-赎回', applicant: '李华', applyTime: '2026-06-02 10:00', status: '已通过', steps: [{title: '交易员发起', user: '李华', time: '2026-06-02 10:00', status: '已完成'}, {title: '投资经理审批', user: '张明', time: '2026-06-02 11:00', status: '已完成'}, {title: '风控审批', user: '刘伟', time: '2026-06-02 14:00', status: '已完成'}, {title: '部门经理审批', user: '孙磊', time: '2026-06-02 16:30', status: '已完成'}, {title: '交易执行中-财务对账确认', user: '赵静', time: '2026-06-05 09:40', status: '已完成'}, {title: '交易员补充信息', user: '李华', time: '2026-06-05 11:00', status: '已完成'}, {title: '流程结束', user: '系统', time: '2026-06-05 11:00', status: '已完成'}] },
     // 赎回-已终止（发起人主动终止）
-    { id: 'APR20260521001', type: '交易审批', object: 'TRX20260521001', objectName: '演示-在投-专户-赎回', applicant: '李华', applyTime: '2026-05-21 09:30', status: '已终止', steps: [{title: '交易员发起', user: '李华', time: '2026-05-21 09:30', status: '已完成', result: '发起人终止', reason: '发起人主动终止交易'}, {title: '投资经理审批', user: '张明', time: '', status: '待处理'}, {title: '风控审批', user: '刘伟', time: '', status: '待处理'}, {title: '部门经理审批', user: '孙磊', time: '', status: '待处理'}, {title: '交易执行中-财务对账确认', user: '赵静', time: '', status: '待处理'}, {title: '交易员补充信息', user: '李华', time: '', status: '待处理'}, {title: '流程结束', user: '系统', time: '', status: '待处理'}] }
+    { id: 'APR20260521001', type: '交易审批', object: 'TRX20260521001', objectName: '演示-在投-专户-赎回', applicant: '李华', applyTime: '2026-05-21 09:30', status: '已终止', steps: [{title: '交易员发起', user: '李华', time: '2026-05-21 09:30', status: '已完成', result: '发起人终止', reason: '发起人主动终止交易'}, {title: '投资经理审批', user: '张明', time: '', status: '待处理'}, {title: '风控审批', user: '刘伟', time: '', status: '待处理'}, {title: '部门经理审批', user: '孙磊', time: '', status: '待处理'}, {title: '交易执行中-财务对账确认', user: '赵静', time: '', status: '待处理'}, {title: '交易员补充信息', user: '李华', time: '', status: '待处理'}, {title: '流程结束', user: '系统', time: '', status: '待处理'}] },
+    // 买入-已通过（有差额，差额20万已生成待还款记录）
+    { id: 'APR20261008001', type: '交易审批', object: 'TRX20261008001', objectName: '演示-在投-ABS-买入', applicant: '李华', applyTime: '2026-10-08 10:00', status: '已通过', steps: [{title: '交易员发起', user: '李华', time: '2026-10-08 10:00', status: '已完成'}, {title: '投资经理审批', user: '张明', time: '2026-10-08 10:20', status: '已完成'}, {title: '风控审批', user: '刘伟', time: '2026-10-08 10:40', status: '已完成'}, {title: '部门经理审批', user: '孙磊', time: '2026-10-08 10:55', status: '已完成'}, {title: 'ERP流程-资金划拨（用款）', user: '系统', time: '2026-10-08 11:00', status: '已完成'}, {title: 'ERP流程-创新金融（资金划拨申请）', user: '系统', time: '2026-10-08 12:00', status: '已完成'}, {title: '交易员确认（金额修正+合同上传）', user: '李华', time: '2026-10-08 17:00', status: '已完成', opinion: '实际成交480万，差额20万生成待还款记录'}, {title: '流程结束', user: '系统', time: '2026-10-08 17:00', status: '已完成'}] }
 ];
+
+// ===== 待还款资金池（交易/兑付流程完结时自动生成；还款流程独立，由交易员勾选合并发起） =====
+// sourceType: 申购差额 / 赎回回款 / 兑息兑付；status: 待还款 / 还款中 / 已还款
+var REPAY_ITEMS = [
+    { id: 'RPI20261008001', sourceType: '申购差额', sourceId: 'TRX20261008001', productId: 'P003', productName: '演示-在投-ABS', amount: 200000, loanNo: 'YK20261008001', status: '待还款', batchId: '', createTime: '2026-10-08 17:00' },
+    { id: 'RPI20260605001', sourceType: '赎回回款', sourceId: 'TRX20260602001', productId: 'P002', productName: '演示-在投-信托', amount: 1975200, loanNo: 'YK20260425001', status: '待还款', batchId: '', createTime: '2026-06-05 11:05' },
+    { id: 'RPI20260505001', sourceType: '兑息兑付', sourceId: 'DV20260505001', productId: 'P003', productName: '演示-在投-ABS', amount: 315000.13, loanNo: 'YK20260519001', status: '待还款', batchId: '', createTime: '2026-05-05 15:05', payPrincipal: 250000, payInterest: 65000, arrivalAmount: 315000.13, diffAmount: 0.13, diffRemark: '差额并入利息入账' },
+    { id: 'RPI20260915001', sourceType: '申购差额', sourceId: 'TRX20260915001', productId: 'P001', productName: '演示-在投-专户', amount: 500000, loanNo: 'YK20260915001', status: '还款中', batchId: 'RPB20260928001', createTime: '2026-09-15 17:00' },
+    { id: 'RPI20260920001', sourceType: '赎回回款', sourceId: 'TRX20260918001', productId: 'P002', productName: '演示-在投-信托', amount: 860000, loanNo: 'YK20260918001', status: '已还款', batchId: 'RPB20260920001', createTime: '2026-09-18 16:30' },
+    { id: 'RPI20260922001', sourceType: '申购差额', sourceId: 'TRX20260922001', productId: 'P001', productName: '演示-在投-专户', amount: 120000, loanNo: 'YK20260922001', status: '已还款', batchId: 'RPB20260925001', createTime: '2026-09-22 17:00' },
+    { id: 'RPI20260922002', sourceType: '赎回回款', sourceId: 'TRX20260921001', productId: 'P002', productName: '演示-在投-信托', amount: 1350000, loanNo: 'YK20260921001', status: '已还款', batchId: 'RPB20260925001', createTime: '2026-09-21 15:30' },
+    { id: 'RPI20260922003', sourceType: '兑息兑付', sourceId: 'DV20260919001', productId: 'P003', productName: '演示-在投-ABS', amount: 450000.55, loanNo: 'YK20260919001', status: '已还款', batchId: 'RPB20260925001', createTime: '2026-09-19 16:10', payPrincipal: 360500, payInterest: 90125, arrivalAmount: 450000.55, diffAmount: -624.45, diffRemark: '差额并入利息入账' }
+];
+
+// ===== 还款批次（一次合并发起对应一条批次；ERP流程③按批次回传） =====
+// status: 还款中 / 已还款 / 已驳回
+var REPAY_BATCHES = [
+    { id: 'RPB20260928001', totalAmount: 500000, itemCount: 1, applicant: '李华', createTime: '2026-09-28 10:00', erpFlowId: 'ERP20260928001', status: '还款中',
+      erpForm: { offsite: '是', paper: '否', history: '否', bizType: '自有资金还款', productType: '', project: '', purpose: '申购差额退回', remark: '', loanNo: 'YK20260915001', fromDeposit: '否', repayDate: '2026-09-28', repayTime: '10:00', principal: '500,000.00', interest: '0.00', payAccount: '招行上海分行营业部 1219****0001（募集资金专户）', receiveAccount: '农行上海分行 0341****6666（公司主账户）', attachmentCount: 0 },
+      erpNodes: [
+          { name: '提交申请', user: '李华', status: '已通过', time: '2026-09-28 10:00' },
+          { name: '资金管理员审批', user: '王芳', status: '已通过', time: '2026-09-28 14:30' },
+          { name: '财务负责人审批', user: '张强', status: '审批中', time: '' },
+          { name: '出纳执行划款', user: '—', status: '待处理', time: '' }
+      ] },
+    { id: 'RPB20260920001', totalAmount: 860000, itemCount: 1, applicant: '李华', createTime: '2026-09-20 09:30', erpFlowId: 'ERP20260920001', status: '已还款',
+      erpForm: { offsite: '是', paper: '否', history: '否', bizType: '产品回款划回', productType: '信托', project: '', purpose: '赎回回款划回公司主账户', remark: '', loanNo: 'YK20260918001', fromDeposit: '否', repayDate: '2026-09-20', repayTime: '09:30', principal: '860,000.00', interest: '0.00', payAccount: '招行上海分行营业部 1219****0001（募集资金专户）', receiveAccount: '农行上海分行 0341****6666（公司主账户）', attachmentCount: 1 },
+      erpNodes: [
+          { name: '提交申请', user: '李华', status: '已通过', time: '2026-09-20 09:30' },
+          { name: '资金管理员审批', user: '王芳', status: '已通过', time: '2026-09-20 11:00' },
+          { name: '财务负责人审批', user: '张强', status: '已通过', time: '2026-09-20 15:20' },
+          { name: '出纳执行划款', user: '陈丽', status: '已通过', time: '2026-09-21 09:10' }
+      ] },
+    { id: 'RPB20260925001', totalAmount: 1920000.55, itemCount: 3, applicant: '李华', createTime: '2026-09-25 10:20', erpFlowId: 'ERP20260925001', status: '已还款',
+      erpForm: { offsite: '是', paper: '否', history: '否', bizType: '自有资金还款', productType: '', project: '', purpose: '申购差额退回；赎回回款划回公司主账户；兑息兑付款划回公司主账户', loanNo: 'YK20260922001、YK20260921001、YK20260919001', fromDeposit: '否', repayDate: '2026-09-25', repayTime: '10:20', principal: '1,920,000.55', interest: '0.00', payAccount: '招行上海分行营业部 1219****0001（募集资金专户）', receiveAccount: '农行上海分行 0341****6666（公司主账户）', attachmentCount: 2 },
+      erpNodes: [
+          { name: '提交申请', user: '李华', status: '已通过', time: '2026-09-25 10:20' },
+          { name: '资金管理员审批', user: '王芳', status: '已通过', time: '2026-09-25 14:00' },
+          { name: '财务负责人审批', user: '张强', status: '已通过', time: '2026-09-26 09:40' },
+          { name: '出纳执行划款', user: '陈丽', status: '已通过', time: '2026-09-26 11:15' }
+      ] }
+];
+
+// ===== 生成待还款记录（交易/兑付流程完结时全局调用，进入待还款资金池） =====
+// 兑息兑付记录金额=确认时的实际到账金额；extra 可挂载对账快照（勾选基数/应得合计/差额/差异原因）
+function createRepayItem(sourceType, sourceId, productId, productName, amount, extra) {
+    if (!amount || amount <= 0) return null;
+    var now = new Date();
+    var nowStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0') + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    var item = {
+        id: 'RPI' + nowStr.slice(0, 10).replace(/-/g, '') + String(Math.floor(Math.random() * 900) + 100),
+        sourceType: sourceType,
+        sourceId: sourceId,
+        productId: productId,
+        productName: productName,
+        amount: Math.round(amount * 1000000) / 1000000,
+        loanNo: 'YK' + String(sourceId || '').replace(/^[A-Z]+/, ''),
+        status: '待还款',
+        batchId: '',
+        createTime: nowStr
+    };
+    if (extra) { for (var k in extra) { if (extra[k] !== undefined && extra[k] !== null && extra[k] !== '') item[k] = extra[k]; } }
+    REPAY_ITEMS.push(item);
+    return item;
+}
 
 var FINANCES = [
     { id: 'FR20260517001', productId: 'P002', productName: '演示-在投-信托', changeType: '兑息兑付', changeDate: '2026-05-17', changeAmount: 500000, voucherStatus: '待确认', createMethod: '自动生成', source: '邮件解析', voucherId: 'VCH20260517001' },
@@ -194,17 +279,113 @@ var FINANCES = [
     { id: 'FR20260425001', productId: 'P001', productName: '演示-在投-专户', changeType: '赎回', changeDate: '2026-04-25', changeAmount: 10000000, voucherStatus: '已推送NC', createMethod: '自动生成', source: '交易确认', voucherId: 'VCH20260425001' }
 ];
 
-// 兑息兑付流程记录（财务发起→交易员确认→财务最终确认→生成凭证→推iBor）
-// status: 待交易员确认 / 交易员已确认 / 已完成 / 已驳回
-// pushIborStatus: 未推送 / 已推送 / 推送失败
+// 兑息兑付流程记录（财务上传材料/填表单发起→交易员在审批中心关联产品、填写兑付本金/兑付利息并勾选扣减批次→流程结束；确认后静默生成凭证+待还款资金池记录，界面不展示凭证/iBor推送环节）
+// status: 待交易员确认 / 已完成 / 已驳回；发起时不关联产品（productId=''），交易员确认时关联产品并填写兑付本金/兑付利息金额
+// source: 回单OCR / Excel导入；解析来源记录携带 receiptNo/payerName 或 bondCode/bondName 及到账金额信息
 var DIVIDENDS = [
-    { id: 'DV20260517001', productId: 'P002', productName: '演示-在投-信托', innerCode: 'XT20260420001', externalCode: '', initiator: '赵静', divDate: '2026-05-17', interestPer100: 0.85, principalPer100: 0, remark: '5月利息兑付', status: '已完成', traderConfirmUser: '李华', traderConfirmTime: '2026-05-17 14:30', traderModified: false, traderRemark: '确认无误', financeConfirmUser: '赵静', financeConfirmTime: '2026-05-17 16:00', voucherId: 'VCH20260517001', pushIborStatus: '已推送', pushIborTime: '2026-05-17 17:30', createTime: '2026-05-17 10:00', history: [{ user: '赵静', action: '发起兑息兑付', time: '2026-05-17 10:00', remark: '5月利息' }, { user: '李华', action: '交易员确认', time: '2026-05-17 14:30', remark: '确认无误' }, { user: '赵静', action: '财务最终确认', time: '2026-05-17 16:00', remark: '' }, { user: '系统', action: '生成凭证VCH20260517001', time: '2026-05-17 16:01', remark: '' }, { user: '系统', action: '推送iBor', time: '2026-05-17 17:30', remark: '推送成功' }] },
-    { id: 'DV20260515001', productId: 'P003', productName: '演示-在投-ABS', innerCode: 'ABS20260519001', externalCode: '1101010901', initiator: '赵静', divDate: '2026-05-15', interestPer100: 0.42, principalPer100: 0, remark: '5月利息', status: '已完成', traderConfirmUser: '李华', traderConfirmTime: '2026-05-15 11:00', traderModified: true, traderRemark: '每百元应付利息从0.38调整为0.42', financeConfirmUser: '赵静', financeConfirmTime: '2026-05-15 14:00', voucherId: 'VCH20260515001', pushIborStatus: '已推送', pushIborTime: '2026-05-15 17:30', createTime: '2026-05-15 09:00', history: [{ user: '赵静', action: '发起兑息兑付', time: '2026-05-15 09:00', remark: '' }, { user: '李华', action: '交易员确认（已修改字段）', time: '2026-05-15 11:00', remark: '每百元应付利息从0.38调整为0.42' }, { user: '赵静', action: '财务最终确认', time: '2026-05-15 14:00', remark: '' }, { user: '系统', action: '生成凭证VCH20260515001', time: '2026-05-15 14:01', remark: '' }, { user: '系统', action: '推送iBor', time: '2026-05-15 17:30', remark: '推送成功' }] },
-    { id: 'DV20260505001', productId: 'P003', productName: '演示-在投-ABS', innerCode: 'ABS20260519001', externalCode: '1101010901', initiator: '赵静', divDate: '2026-05-05', interestPer100: 0.65, principalPer100: 2.5, remark: '5月本息兑付', status: '已完成', traderConfirmUser: '李华', traderConfirmTime: '2026-05-05 10:30', traderModified: false, traderRemark: '确认', financeConfirmUser: '赵静', financeConfirmTime: '2026-05-05 15:00', voucherId: 'VCH20260505001', pushIborStatus: '已推送', pushIborTime: '2026-05-05 17:30', createTime: '2026-05-05 09:00', history: [{ user: '赵静', action: '发起兑息兑付', time: '2026-05-05 09:00', remark: '' }, { user: '李华', action: '交易员确认', time: '2026-05-05 10:30', remark: '' }, { user: '赵静', action: '财务最终确认', time: '2026-05-05 15:00', remark: '' }, { user: '系统', action: '生成凭证VCH20260505001', time: '2026-05-05 15:01', remark: '' }, { user: '系统', action: '推送iBor', time: '2026-05-05 17:30', remark: '推送成功' }] },
-    { id: 'DV20260803001', productId: 'P002', productName: '演示-在投-信托', innerCode: 'XT20260420001', externalCode: '', initiator: '赵静', divDate: '2026-08-03', interestPer100: 0.92, principalPer100: 0, remark: '8月利息兑付', status: '待交易员确认', traderConfirmUser: '', traderConfirmTime: '', traderModified: false, traderRemark: '', financeConfirmUser: '', financeConfirmTime: '', voucherId: '', pushIborStatus: '未推送', pushIborTime: '', createTime: '2026-08-03 10:00', history: [{ user: '赵静', action: '发起兑息兑付', time: '2026-08-03 10:00', remark: '8月利息' }] },
-    { id: 'DV20260802001', productId: 'P003', productName: '演示-在投-ABS', innerCode: 'ABS20260519001', externalCode: '1101010901', initiator: '赵静', divDate: '2026-08-02', interestPer100: 0.48, principalPer100: 1.2, remark: '8月部分本息兑付', status: '交易员已确认', traderConfirmUser: '李华', traderConfirmTime: '2026-08-02 14:00', traderModified: true, traderRemark: '每百元应付本金从1.0调整为1.2', financeConfirmUser: '', financeConfirmTime: '', voucherId: '', pushIborStatus: '未推送', pushIborTime: '', createTime: '2026-08-02 09:30', history: [{ user: '赵静', action: '发起兑息兑付', time: '2026-08-02 09:30', remark: '' }, { user: '李华', action: '交易员确认（已修改字段）', time: '2026-08-02 14:00', remark: '每百元应付本金从1.0调整为1.2' }] },
-    { id: 'DV20260728001', productId: 'P003', productName: '演示-在投-ABS', innerCode: 'ABS20260519001', externalCode: '1101010901', initiator: '赵静', divDate: '2026-07-28', interestPer100: 0, principalPer100: 3.5, remark: 'ABS本金兑付', status: '已驳回', traderConfirmUser: '李华', traderConfirmTime: '2026-07-28 11:00', traderModified: false, traderRemark: '', financeConfirmUser: '', financeConfirmTime: '', voucherId: '', pushIborStatus: '未推送', pushIborTime: '', createTime: '2026-07-28 09:00', history: [{ user: '赵静', action: '发起兑息兑付', time: '2026-07-28 09:00', remark: '' }, { user: '李华', action: '交易员驳回', time: '2026-07-28 11:00', remark: '该产品未到兑付日，请确认后再发起' }] }
+    { id: 'DV20260517001', productId: 'P002', productName: '演示-在投-信托', innerCode: 'XT20260420001', externalCode: '', initiator: '赵静', divDate: '2026-05-17', payPrincipal: 0, payInterest: 68000, remark: '5月利息兑付', status: '已完成', traderConfirmUser: '李华', traderConfirmTime: '2026-05-17 14:30', traderModified: false, traderRemark: '确认无误', financeConfirmUser: '', financeConfirmTime: '', voucherId: 'VCH20260517001', pushIborStatus: '已推送', pushIborTime: '2026-05-17 17:30', createTime: '2026-05-17 10:00', history: [{ user: '赵静', action: '发起兑息兑付', time: '2026-05-17 10:00', remark: '5月利息' }, { user: '李华', action: '交易员确认', time: '2026-05-17 14:30', remark: '确认无误' }] },
+    { id: 'DV20260515001', productId: 'P003', productName: '演示-在投-ABS', innerCode: 'ABS20260519001', externalCode: '1101010901', initiator: '赵静', divDate: '2026-05-15', payPrincipal: 0, payInterest: 42000, remark: '5月利息', status: '已完成', traderConfirmUser: '李华', traderConfirmTime: '2026-05-15 11:00', traderModified: true, traderRemark: '兑付利息从38,000元调整为42,000元', financeConfirmUser: '', financeConfirmTime: '', voucherId: 'VCH20260515001', pushIborStatus: '已推送', pushIborTime: '2026-05-15 17:30', createTime: '2026-05-15 09:00', history: [{ user: '赵静', action: '发起兑息兑付', time: '2026-05-15 09:00', remark: '' }, { user: '李华', action: '交易员确认（已修改字段）', time: '2026-05-15 11:00', remark: '兑付利息从38,000元调整为42,000元' }] },
+    { id: 'DV20260505001', productId: 'P003', productName: '演示-在投-ABS', innerCode: 'ABS20260519001', externalCode: '1101010901', initiator: '赵静', divDate: '2026-05-05', payPrincipal: 250000, payInterest: 65000, remark: '5月本息兑付', status: '已完成', traderConfirmUser: '李华', traderConfirmTime: '2026-05-05 10:30', traderModified: false, traderRemark: '确认', financeConfirmUser: '', financeConfirmTime: '', voucherId: 'VCH20260505001', pushIborStatus: '已推送', pushIborTime: '2026-05-05 17:30', createTime: '2026-05-05 09:00', arrivalAmount: 315000.13, diffAmount: 0.13, diffRemark: '差额并入利息入账', history: [{ user: '赵静', action: '发起兑息兑付', time: '2026-05-05 09:00', remark: '' }, { user: '李华', action: '交易员勾选持仓并确认', time: '2026-05-05 10:30', remark: '确认；兑付本金 250,000.00 元 + 兑付利息 65,000.00 元，实际到账 315,000.13 元，差额 0.13 元并入利息入账' }] },
+    { id: 'DV20260803001', productId: '', productName: '', innerCode: '', externalCode: '', initiator: '赵静', divDate: '2026-08-03', payPrincipal: 0, payInterest: 0, remark: '8月利息兑付', status: '待交易员确认', traderConfirmUser: '', traderConfirmTime: '', traderModified: false, traderRemark: '', financeConfirmUser: '', financeConfirmTime: '', voucherId: '', pushIborStatus: '未推送', pushIborTime: '', createTime: '2026-08-03 10:00', source: '回单OCR', sourceFile: '工行电子回单0921-1192-6717-1100.png', receiptNo: '0921-1192-6717-1100', serialNo: '17130375', timestamp: '2026-09-24-09.49.10.441445', payerName: '民生通惠资产管理有限公司民生通惠领惠3号资产支持计划第3期托管专户', payerAccount: '86031110002513413', payerBank: '宁波银行股份有限公司北京分行', payeeName: '国元证券股份有限公司', payeeAccount: '1302010109027315879', payeeBank: '合肥四牌楼支行', bondCode: '', bondName: '', arrivalAmount: 453698.63, history: [{ user: '赵静', action: '财务解析录入并发起（回单OCR）', time: '2026-08-03 10:00', remark: '工行电子回单0921-1192-6717-1100.png' }] },
+    { id: 'DV20260918001', productId: '', productName: '', innerCode: '', externalCode: '', initiator: '赵静', divDate: '2026-09-17', payPrincipal: 0, payInterest: 0, remark: '', status: '待交易员确认', traderConfirmUser: '', traderConfirmTime: '', traderModified: false, traderRemark: '', financeConfirmUser: '', financeConfirmTime: '', voucherId: '', pushIborStatus: '未推送', pushIborTime: '', createTime: '2026-09-18 09:20', source: 'Excel导入', sourceFile: '财务系统兑息导出_20260917.xlsx', receiptNo: '', payerName: '', bondCode: '500847', bondName: '蔚能绿创2026-1优先A2(SZ)', arrivalAmount: 76273.96, history: [{ user: '赵静', action: '财务解析录入并发起（Excel导入）', time: '2026-09-18 09:20', remark: '财务系统兑息导出_20260917.xlsx' }] },
+    { id: 'DV20260802001', productId: 'P003', productName: '演示-在投-ABS', innerCode: 'ABS20260519001', externalCode: '1101010901', initiator: '赵静', divDate: '2026-08-02', payPrincipal: 1750000, payInterest: 46800, remark: '8月部分本息兑付', status: '已完成', traderConfirmUser: '李华', traderConfirmTime: '2026-08-02 14:00', traderModified: true, traderRemark: '兑付本金调整为1,750,000元', financeConfirmUser: '', financeConfirmTime: '', voucherId: 'VCH20260802001', pushIborStatus: '未推送', pushIborTime: '', createTime: '2026-08-02 09:30', history: [{ user: '赵静', action: '发起兑息兑付', time: '2026-08-02 09:30', remark: '' }, { user: '李华', action: '交易员确认（已修改字段）', time: '2026-08-02 14:00', remark: '兑付本金调整为1,750,000元' }] },
+    { id: 'DV20260919001', productId: 'P003', productName: '演示-在投-ABS', innerCode: 'ABS20260519001', externalCode: '1101010901', initiator: '赵静', divDate: '2026-09-19', payPrincipal: 360500, payInterest: 90125, remark: '9月本息兑付', status: '已完成', traderConfirmUser: '李华', traderConfirmTime: '2026-09-19 16:10', traderModified: true, traderRemark: '勾选2个批次，托管行部分兑付', financeConfirmUser: '', financeConfirmTime: '', voucherId: 'VCH20260919001', pushIborStatus: '未推送', pushIborTime: '', createTime: '2026-09-19 09:10', arrivalAmount: 450000.55, diffAmount: -624.45, diffRemark: '差额并入利息入账', history: [{ user: '赵静', action: '发起兑息兑付', time: '2026-09-19 09:10', remark: '9月本息' }, { user: '李华', action: '交易员勾选持仓并确认', time: '2026-09-19 16:10', remark: '勾选2个批次，托管行部分兑付；兑付本金 360,500.00 元 + 兑付利息 90,125.00 元，实际到账 450,000.55 元，差额 -624.45 元并入利息入账' }] },
+    { id: 'DV20260728001', productId: 'P003', productName: '演示-在投-ABS', innerCode: 'ABS20260519001', externalCode: '1101010901', initiator: '赵静', divDate: '2026-07-28', payPrincipal: 341250, payInterest: 0, remark: 'ABS本金兑付', status: '已驳回', traderConfirmUser: '李华', traderConfirmTime: '2026-07-28 11:00', traderModified: false, traderRemark: '', financeConfirmUser: '', financeConfirmTime: '', voucherId: '', pushIborStatus: '未推送', pushIborTime: '', createTime: '2026-07-28 09:00', history: [{ user: '赵静', action: '发起兑息兑付', time: '2026-07-28 09:00', remark: '' }, { user: '李华', action: '交易员驳回', time: '2026-07-28 11:00', remark: '该产品未到兑付日，请确认后再发起' }] }
 ];
+
+// ===== 持仓变动流水 =====
+var HOLD_LOGS = [
+    { id: 'HL001', productId: 'P001', time: '2026-03-10 17:00', sourceType: '买入', sourceId: 'TRX20260310001', field: '持仓金额', before: '0元', after: '1,000万' },
+    { id: 'HL002', productId: 'P001', time: '2026-04-25 16:00', sourceType: '买入', sourceId: 'TRX20260425002', field: '持仓金额', before: '1,000万', after: '2,500万' },
+    { id: 'HL003', productId: 'P001', time: '2026-05-08 15:30', sourceType: '赎回', sourceId: 'TRX20260508001', field: '持仓金额', before: '2,500万', after: '1,500万（按金额扣减）' },
+    { id: 'HL004', productId: 'P002', time: '2026-04-20 16:00', sourceType: '买入', sourceId: 'TRX20260420001', field: '持仓金额', before: '0元', after: '800万' },
+    { id: 'HL005', productId: 'P002', time: '2026-06-05 11:00', sourceType: '赎回', sourceId: 'TRX20260602001', field: '持仓金额', before: '800万', after: '600万（按金额扣减）' },
+    { id: 'HL006', productId: 'P003', time: '2025-09-10 16:00', sourceType: '买入', sourceId: 'TRX20250910001', field: '持仓金额', before: '0元', after: '1,000万' },
+    { id: 'HL007', productId: 'P003', time: '2026-05-05 10:30', sourceType: '兑付', sourceId: 'DV20260505001', field: '持仓金额', before: '1,000万', after: '975万（兑付本金冲减250,000元）' },
+    { id: 'HL008', productId: 'P003', time: '2026-08-02 14:00', sourceType: '兑付', sourceId: 'DV20260802001', field: '持仓金额', before: '975万', after: '800万（兑付本金冲减1,750,000元）' },
+    { id: 'HL010', productId: 'P003', time: '2026-09-19 16:10', sourceType: '兑付', sourceId: 'DV20260919001', field: '持仓金额', before: '800万', after: '763.95万（兑付本金按批次分摊冲减360,500元）' },
+    { id: 'HL009', productId: 'P004', time: '2026-03-15 16:00', sourceType: '买入', sourceId: 'TRX20260315001', field: '持仓金额', before: '0元', after: '500万' }
+];
+
+// ===== 持仓联动函数 =====
+// 追加持仓变动流水
+function addHoldLog(productId, sourceType, sourceId, field, before, after) {
+    var now = new Date();
+    var ts = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0') + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+    HOLD_LOGS.unshift({
+        id: 'HL' + Date.now(),
+        productId: productId,
+        time: ts,
+        sourceType: sourceType,
+        sourceId: sourceId,
+        field: field,
+        before: before,
+        after: after
+    });
+}
+
+function _fmtWan(v) { return (v / 10000).toLocaleString('zh-CN', { maximumFractionDigits: 4 }) + '万'; }
+
+// 买入完结：增仓 + 累计申购 + 流水（持仓统一按金额）
+function applyBuyHolding(prod, amount, sourceId) {
+    if (!prod) return;
+    var beforeAmt = prod.holdAmount || 0;
+    prod.holdAmount = beforeAmt + (amount || 0);
+    prod.totalSubscribed = (prod.totalSubscribed || 0) + (amount || 0);
+    if (prod.status === '已退出' || prod.status === '无计划') prod.status = '在投';
+    addHoldLog(prod.id, '买入', sourceId, '持仓金额',
+        _fmtWan(beforeAmt),
+        _fmtWan(prod.holdAmount));
+}
+
+// 赎回完结：按金额扣减持仓 + 累计赎回 + 流水 + 已退出判定（OMS 只记金额台账，成本结转归 IBOR）
+function applyRedeemHolding(prod, amount, sourceId) {
+    if (!prod) return;
+    var beforeAmt = prod.holdAmount || 0;
+    prod.holdAmount = Math.max(0, Math.round((beforeAmt - (amount || 0)) * 100) / 100);
+    prod.totalRedeemed = (prod.totalRedeemed || 0) + (amount || 0);
+    addHoldLog(prod.id, '赎回', sourceId, '持仓金额',
+        _fmtWan(beforeAmt),
+        _fmtWan(prod.holdAmount) + '（按金额扣减，成本结转由IBOR完成）');
+    checkProductExit(prod);
+}
+
+// 兑付确认：按兑付本金金额冲减持仓 + 利息记累计（本金+利息=到账金额，由调用方校验后传入）
+function applyDividendHolding(prod, principalAmount, interestAmount, sourceId) {
+    if (!prod) return 0;
+    principalAmount = principalAmount || 0;
+    prod.totalPrincipal = (prod.totalPrincipal || 0) + principalAmount;
+    prod.totalInterest = (prod.totalInterest || 0) + (interestAmount || 0);
+    if (principalAmount > 0) {
+        var beforeAmt = prod.holdAmount || 0;
+        prod.holdAmount = Math.max(0, Math.round((beforeAmt - principalAmount) * 100) / 100);
+        addHoldLog(prod.id, '兑付', sourceId, '持仓金额',
+            _fmtWan(beforeAmt),
+            _fmtWan(prod.holdAmount) + '（兑付本金冲减' + principalAmount.toLocaleString('zh-CN', { maximumFractionDigits: 2 }) + '元）');
+        checkProductExit(prod);
+    }
+    return principalAmount;
+}
+
+// 释放计划书已用额度：找该产品 status==='已通过' 的计划
+function releasePlanQuota(productId, amount) {
+    var plan = PLANS.find(function (pl) { return (pl.products || []).indexOf(productId) >= 0 && pl.status === '已通过'; });
+    if (plan) plan.usedAmount = Math.max(0, (plan.usedAmount || 0) - (amount || 0));
+    return plan;
+}
+
+// 已退出判定：持仓=0 且无在途交易 → 已退出
+function checkProductExit(prod) {
+    if (!prod) return;
+    var noHold = (prod.holdAmount || 0) <= 0;
+    if (!noHold) return;
+    var OPEN_STATUS = ['未提交', '待审批', '交易审批中', '交易执行中', '待交易员补充信息', '投资经理审批中', '风控审批中', '部门经理审批中'];
+    var hasOpen = TRADES.some(function (t) { return t.productId === prod.id && OPEN_STATUS.indexOf(t.status) >= 0; });
+    if (!hasOpen && prod.status === '在投') {
+        prod.status = '已退出';
+        addHoldLog(prod.id, '系统', '-', '投资状态', '在投', '已退出（持仓已清零且无在途交易）');
+    }
+}
 
 var VOUCHERS = [
     { id: 'VCH20260517001', summary: '演示-在投-信托兑息兑付', debitAccount: '1122-应收利息', creditAccount: '6001-投资收益', amount: 500000, maker: '系统', makeTime: '2026-05-17 17:30' },
@@ -269,7 +450,7 @@ function getChangeTypeClass(type) {
 var NOTIFICATIONS = [
     { id: 'N005', type: '审批通知', level: 'normal', title: '新审批事项', content: '投资计划书ABS专项投资计划待审批', object: 'TP20260515001', page: 'approval.html', read: false, time: '1小时前' },
     { id: 'N009', type: '审批通知', level: 'normal', title: '新审批事项', content: '产品交易 演示-在投-信托-买入 待风控审批', object: 'TRX20260516001', page: 'approval.html', read: false, time: '30分钟前' },
-    { id: 'N010', type: '审批通知', level: 'normal', title: '新审批事项', content: '兑息兑付 演示-在投-信托 8月利息待交易员确认', object: 'DV20260803001', page: 'approval.html', read: false, time: '10分钟前' },
+    { id: 'N010', type: '审批通知', level: 'normal', title: '新审批事项', content: '兑息兑付 ¥453,698.63（回单OCR）待交易员关联产品并确认', object: 'DV20260803001', page: 'approval.html', read: false, time: '10分钟前' },
     { id: 'N006', type: '审批结果', level: 'normal', title: '审批已处理', content: '2026年Q1演示-在投-专户投资计划已通过', object: 'TP20260301001', page: 'approval.html', read: true, time: '昨天' }
 ];
 

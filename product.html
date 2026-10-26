@@ -171,6 +171,8 @@
                                         <th>账套类型</th>
                                         <th>投资状态</th>
                                         <th>单位净值</th>
+                                        <th>持仓金额(万元)</th>
+                                        <th>累计兑付本金(万元)</th>
                                         <th class="sortable" onclick="toggleSort('navDate')">最新净值日期<span class="sort-indicator" id="sort-navDate"></span></th>
                                         <th>投资组</th>
                                         <th class="sortable" onclick="toggleSort('poolTime')">入池日期<span class="sort-indicator" id="sort-poolTime"></span></th>
@@ -257,59 +259,6 @@
         </div>
     </div>
 
-    <!-- 兑息兑付弹窗（仅信托/ABS中保登产品展示，字段来自iBor兑息兑付数据主题） -->
-    <div id="dividendModal" class="modal" data-logic-id="modal_dividend">
-        <div class="modal-content" style="width:560px;">
-            <div class="modal-header">
-                <h3>兑息兑付登记</h3>
-                <button class="btn btn-ghost btn-sm" onclick="closeDividendModal()">✕</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>产品名称 <span class="required-star">*</span></label>
-                    <input type="text" id="divProductName" readonly style="background:var(--border-light);">
-                    <input type="hidden" id="divProductId">
-                </div>
-                <div class="grid-2" style="gap:10px;">
-                    <div class="form-group">
-                        <label>产品内部编码</label>
-                        <input type="text" id="divInnerCode" readonly style="background:var(--border-light);">
-                    </div>
-                    <div class="form-group">
-                        <label>产品外部编码</label>
-                        <input type="text" id="divExternalCode" readonly style="background:var(--border-light);">
-                    </div>
-                </div>
-                <div class="form-group" style="margin-top:6px;padding:8px 10px;background:var(--info-bg);border-radius:var(--radius);font-size:12px;color:var(--text-secondary);">
-                    <span id="divAssetTypeHint"></span>
-                </div>
-                <div class="grid-2" style="gap:10px;margin-top:10px;">
-                    <div class="form-group">
-                        <label>兑付日期 <span class="required-star">*</span></label>
-                        <input type="date" id="divDate">
-                    </div>
-                    <div class="form-group">
-                        <label>每百元应付利息(元) <span class="required-star">*</span></label>
-                        <input type="number" id="divInterestPer100" step="0.0001" placeholder="iBor字段，需转换为每百元">
-                    </div>
-                </div>
-                <div class="grid-2" style="gap:10px;">
-                    <div class="form-group">
-                        <label>每百元应付本金(元) <span class="required-star">*</span></label>
-                        <input type="number" id="divPrincipalPer100" step="0.0001" placeholder="iBor字段，需转换为每百元">
-                    </div>
-                    <div class="form-group">
-                        <label>备注</label>
-                        <input type="text" id="divRemark" placeholder="选填">
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-ghost" onclick="closeDividendModal()">取消</button>
-                <button class="btn btn-primary" onclick="saveDividend()">保存</button>
-            </div>
-        </div>
-    </div>
 
     <script src="js/script.js"></script>
     <script>
@@ -407,7 +356,7 @@
             var pageData = list.slice(start, start + _page.size);
             var tbody = document.getElementById('productTableBody');
             if (pageData.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--text-muted);padding:30px;">暂无匹配产品</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--text-muted);padding:30px;">暂无匹配产品</td></tr>';
                 renderPagination(total, totalPages);
                 return;
             }
@@ -429,9 +378,6 @@
                     if ((_perm.canCreateTrade || _perm.isDemo) && (p.status === '在投' || p.status === '无计划')) {
                         actionHtml += '<button class="btn btn-primary btn-sm" onclick="initiateTradeFromProduct(\'' + p.id + '\')">发起交易</button>';
                     }
-                    if ((_perm.isFinance || _perm.isDemo) && p.status === '在投' && (p.assetType === '信托' || p.assetType === 'ABS(中保登)')) {
-                        actionHtml += ' <button class="btn btn-info btn-sm" onclick="openDividendModal(\'' + p.id + '\')">兑息兑付</button>';
-                    }
                 }
                 html += '<tr>' +
                     '<td>' + nameLink + '</td>' +
@@ -441,6 +387,8 @@
                     '<td><span class="type-badge type-plan-notice">' + (p.accountType || '-') + '</span></td>' +
                     '<td>' + statusBadge + '</td>' +
                     navCell +
+                    '<td class="text-mono">' + (p.status === '在投' && p.holdAmount ? (p.holdAmount / 10000).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : '-') + '</td>' +
+                    '<td class="text-mono">' + ((p.totalPrincipal || 0) > 0 ? (p.totalPrincipal / 10000).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) : '-') + '</td>' +
                     '<td>' + (p.navDate || '-') + '</td>' +
                     '<td>' + (p.group || '-') + '</td>' +
                     '<td>' + (p.poolTime || '-') + '</td>' +
@@ -568,98 +516,6 @@
             window.location.href = 'trade.html?productId=' + encodeURIComponent(productId);
         }
 
-        // ============ 兑息兑付登记（仅信托/ABS中保登，字段来自iBor兑息兑付数据主题） ============
-        function openDividendModal(productId) {
-            var p = PRODUCTS.find(function(x) { return x.id === productId; });
-            if (!p) { alert('未找到产品'); return; }
-            document.getElementById('divProductId').value = productId;
-            document.getElementById('divProductName').value = p.name;
-            document.getElementById('divInnerCode').value = p.hengtaiCode || '';
-            document.getElementById('divExternalCode').value = p.externalCode || '';
-            document.getElementById('divAssetTypeHint').textContent = '资产类型：' + p.assetType + '（iBor兑息兑付字段：兑付日期、每百元应付利息、每百元应付本金）';
-            // 默认值：今天日期
-            var today = new Date();
-            var yyyy = today.getFullYear();
-            var mm = String(today.getMonth() + 1).padStart(2, '0');
-            var dd = String(today.getDate()).padStart(2, '0');
-            document.getElementById('divDate').value = yyyy + '-' + mm + '-' + dd;
-            document.getElementById('divInterestPer100').value = '';
-            document.getElementById('divPrincipalPer100').value = '';
-            document.getElementById('divRemark').value = '';
-            document.getElementById('dividendModal').style.display = 'block';
-        }
-
-        function closeDividendModal() {
-            document.getElementById('dividendModal').style.display = 'none';
-        }
-
-        function saveDividend() {
-            var productId = document.getElementById('divProductId').value;
-            var productName = document.getElementById('divProductName').value;
-            var innerCode = document.getElementById('divInnerCode').value;
-            var externalCode = document.getElementById('divExternalCode').value;
-            var divDate = document.getElementById('divDate').value;
-            var interestPer100 = document.getElementById('divInterestPer100').value;
-            var principalPer100 = document.getElementById('divPrincipalPer100').value;
-            var divRemark = document.getElementById('divRemark').value;
-
-            if (!productId) { alert('产品信息缺失'); return; }
-            if (!divDate) { alert('请选择兑付日期'); return; }
-            if (interestPer100 === '' || parseFloat(interestPer100) < 0) { alert('请输入有效的每百元应付利息'); return; }
-            if (principalPer100 === '' || parseFloat(principalPer100) < 0) { alert('请输入有效的每百元应付本金'); return; }
-
-            // 生成流程编号：DV + 日期 + 三位序号
-            var dateStr = divDate.replace(/-/g, '');
-            var seq = 1;
-            DIVIDENDS.forEach(function(d) {
-                if (d.id && d.id.indexOf('DV' + dateStr) === 0) seq++;
-            });
-            var seqStr = String(seq).padStart(3, '0');
-            var recordId = 'DV' + dateStr + seqStr;
-
-            var role = getCurrentRole();
-            var now = new Date();
-            var nowStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
-
-            // 新增兑息兑付流程记录到 DIVIDENDS 数组（状态=待交易员确认）
-            var newRecord = {
-                id: recordId,
-                productId: productId,
-                productName: productName,
-                innerCode: innerCode,
-                externalCode: externalCode,
-                initiator: role.label,
-                divDate: divDate,
-                interestPer100: parseFloat(interestPer100),
-                principalPer100: parseFloat(principalPer100),
-                remark: divRemark,
-                status: '待交易员确认',
-                traderConfirmUser: '',
-                traderConfirmTime: '',
-                traderModified: false,
-                traderRemark: '',
-                financeConfirmUser: '',
-                financeConfirmTime: '',
-                voucherId: '',
-                pushIborStatus: '未推送',
-                pushIborTime: '',
-                createTime: nowStr,
-                history: [{ user: role.label, action: '发起兑息兑付', time: nowStr, remark: divRemark }]
-            };
-            DIVIDENDS.push(newRecord);
-
-            closeDividendModal();
-            var msg = '兑息兑付流程已发起！\n\n' +
-                      '流程编号：' + recordId + '\n' +
-                      '产品：' + productName + '\n' +
-                      '兑付日期：' + divDate + '\n' +
-                      '每百元应付利息：' + parseFloat(interestPer100).toFixed(4) + ' 元\n' +
-                      '每百元应付本金：' + parseFloat(principalPer100).toFixed(4) + ' 元\n' +
-                      '当前状态：待交易员确认\n\n' +
-                      '流程：财务发起 → 交易员确认 → 财务最终确认 → 生成凭证 → 推送iBor\n' +
-                      '交易员可在【审批中心】处理，财务可在【财务核算-兑息兑付流程】查看进度。';
-            alert(msg);
-        }
 
         function openEditModal(pid) {
             var p = PRODUCTS.find(function(x) { return x.id === pid; });
@@ -693,8 +549,8 @@
             if (tradeMarketEl) tradeMarketEl.value = p.tradeMarket || tradeMarketEl.value;
             var currencyEl = document.getElementById('fCurrency');
             if (currencyEl) currencyEl.value = p.currency || 'CNY';
-            var managerEl = document.getElementById('fManager');
-            if (managerEl) managerEl.value = p.manager || '';
+            // 管理人：多行组件回填（存储为顿号分隔字符串，拆分成行）
+            initManagerRows(p.manager, p.managerCode);
             var faceValueEl = document.getElementById('fFaceValue');
             if (faceValueEl) faceValueEl.value = p.faceValue || '';
             var totalScaleEl = document.getElementById('fTotalScale');
@@ -703,8 +559,6 @@
             if (financierEl) financierEl.value = p.financier || '';
             var financierCodeEl = document.getElementById('fFinancierCode');
             if (financierCodeEl) financierCodeEl.value = p.financierCode || '';
-            var managerCodeEl = document.getElementById('fManagerCode');
-            if (managerCodeEl) managerCodeEl.value = p.managerCode || '';
             var guarantorEl = document.getElementById('fGuarantor');
             if (guarantorEl) guarantorEl.value = p.guarantor || '';
             var guarantorCodeEl = document.getElementById('fGuarantorCode');
@@ -780,8 +634,11 @@
             var establishDate = getElVal('fEstablishDate');
             var startDate = getElVal('fStartDate');
             var expireDate = getElVal('fExpireDate');
-            var manager = getElVal('fManager');
-            var managerCode = getElVal('fManagerCode');
+            // 管理人：多行组件收集（合并为顿号分隔字符串存储）
+            var mc = collectManagers();
+            if (mc === null) return;
+            var manager = mc.manager;
+            var managerCode = mc.managerCode;
             var faceValue = getElNum('fFaceValue');
             var totalScale = getElNum('fTotalScale');
             var financier = getElVal('fFinancier');
@@ -811,7 +668,7 @@
                 if (!faceValue) { alert('请填写【面值】（必填）'); return; }
                 if (!totalScale) { alert('请填写【产品总规模】（必填）'); return; }
                 if (!financier) { alert('请填写【融资人】（必填，多个使用逗号分隔）'); return; }
-                if (!manager) { alert('请填写【管理人】（必填，多个使用逗号分隔）'); return; }
+                if (!manager) { alert('请填写【管理人】（必填，至少一行）'); return; }
                 if (!guarantor) { alert('请填写【担保人】（必填，多个使用逗号分隔）'); return; }
             } else if (category === '结构化（保交所）') {
                 if (!startDate) { alert('请填写【开始日期】（必填）'); return; }
@@ -902,7 +759,6 @@
                     nav: 1.0000,
                     navDate: '',
                     holdAmount: 0,
-                    holdShares: 0,
                     planAmount: 0,
                     usedAmount: 0,
                     counterparty: '',
@@ -1243,9 +1099,10 @@
                     '<div class="form-group"><label>币种</label><select id="fCurrency"><option value="CNY" selected>人民币</option></select><div class="form-hint">当前仅人民币，默认选中；同步iBor使用CNY</div></div>' +
                     '<div class="form-group"><label>成立/发行日 <span class="required-star">*</span></label><input type="date" id="fEstablishDate" required></div>' +
                     '<div class="form-group"><label>预计到期日</label><input type="date" id="fExpireDate"></div>' +
-                    '<div class="form-group"><label>管理人 <span class="required-star">*</span></label><input type="text" id="fManager" placeholder="管理机构标准名称" required></div>' +
-                    '<div class="form-group"><label>管理人代码</label><input type="text" id="fManagerCode" placeholder="选填"></div>' +
-                    '</div></div>';
+                    '</div>' +
+                    // 管理人：支持添加多行，每行=管理人+管理人代码
+                    '<div class="form-group" style="grid-column:1/-1;"><label>管理人 <span class="required-star">*</span> <span style="font-weight:400;font-size:11px;color:var(--text-muted);">（可添加多个，每行=管理人+管理人代码）</span></label><div id="fManagerRows"></div><button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="addManagerRow()">+ 添加管理人</button></div>' +
+                    '</div>';
             } else if (accountType === '信托计划') {
                 html = '<div class="account-type-fields"><div class="account-type-fields-title">信托计划专属信息</div><div class="grid-3">' +
                     buildTradeMarketSelect('银行间', 'IB') +
@@ -1255,11 +1112,12 @@
                     '<div class="form-group"><label>产品总规模 <span class="required-star">*</span></label><input type="number" id="fTotalScale" step="10000" placeholder="信托规模(万元)" required></div>' +
                     '<div class="form-group"><label>融资人 <span class="required-star">*</span></label><input type="text" id="fFinancier" placeholder="填写多个时，使用逗号分隔" required></div>' +
                     '<div class="form-group"><label>融资人代码</label><input type="text" id="fFinancierCode" placeholder="填写多个时，使用逗号分隔"></div>' +
-                    '<div class="form-group"><label>管理人 <span class="required-star">*</span></label><input type="text" id="fManager" placeholder="填写多个时，使用逗号分隔" required></div>' +
-                    '<div class="form-group"><label>管理人代码</label><input type="text" id="fManagerCode" placeholder="填写多个时，使用逗号分隔"></div>' +
                     '<div class="form-group"><label>担保人 <span class="required-star">*</span></label><input type="text" id="fGuarantor" placeholder="填写多个时，使用逗号分隔" required></div>' +
                     '<div class="form-group"><label>担保人代码</label><input type="text" id="fGuarantorCode" placeholder="填写多个时，使用逗号分隔"></div>' +
-                    '</div></div>';
+                    '</div>' +
+                    // 管理人：支持添加多行，每行=管理人+管理人代码
+                    '<div class="form-group" style="grid-column:1/-1;"><label>管理人 <span class="required-star">*</span> <span style="font-weight:400;font-size:11px;color:var(--text-muted);">（可添加多个，每行=管理人+管理人代码）</span></label><div id="fManagerRows"></div><button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="addManagerRow()">+ 添加管理人</button></div>' +
+                    '</div>';
             } else if (accountType === '结构化（保交所）') {
                 html = '<div class="account-type-fields"><div class="account-type-fields-title">结构化（保交所资产支持证券）专属信息</div><div class="grid-3">' +
                     buildTradeMarketSelect('场外市场', 'OF') +
@@ -1286,6 +1144,49 @@
                     '</div></div>';
             }
             fieldsEl.innerHTML = html;
+            initManagerRows(); // 管理人信息初始化为 1 行空行（专户/信托表单含该组件）
+        }
+
+        // ===== 管理人信息：支持添加多行，每行=管理人（必填）+管理人代码（选填） =====
+        function addManagerRow(name, code) {
+            var container = document.getElementById('fManagerRows');
+            if (!container) return;
+            var row = document.createElement('div');
+            row.style.cssText = 'display:grid;grid-template-columns:1.2fr 1fr 30px;gap:10px;margin-bottom:8px;align-items:center;';
+            row.innerHTML = '<input type="text" class="f-manager-name" placeholder="管理机构标准名称（必填）" value="' + String(name || '').replace(/"/g, '&quot;') + '">' +
+                '<input type="text" class="f-manager-code" placeholder="管理人代码（选填）" value="' + String(code || '').replace(/"/g, '&quot;') + '">' +
+                '<button type="button" class="btn btn-ghost btn-sm" style="padding:4px 8px;" onclick="removeManagerRow(this)" title="删除该行">×</button>';
+            container.appendChild(row);
+        }
+        function removeManagerRow(btn) {
+            var container = document.getElementById('fManagerRows');
+            if (container && container.children.length <= 1) { alert('至少保留一行管理人'); return; }
+            btn.parentElement.remove();
+        }
+        // 初始化/回填管理人行：nameStr/codeStr 为存储的合并字符串（顿号或逗号分隔）
+        function initManagerRows(nameStr, codeStr) {
+            var container = document.getElementById('fManagerRows');
+            if (!container) return;
+            container.innerHTML = '';
+            var names = nameStr ? String(nameStr).split(/[、,，]/).map(function(s) { return s.trim(); }).filter(Boolean) : [];
+            var codes = codeStr ? String(codeStr).split(/[、,，]/).map(function(s) { return s.trim(); }) : [];
+            if (names.length === 0) names = [''];
+            names.forEach(function(n, i) { addManagerRow(n, codes[i] || ''); });
+        }
+        // 收集管理人信息：行级校验（有代码无名称→拦截），返回合并字符串；非法返回 null（已提示）
+        function collectManagers() {
+            var container = document.getElementById('fManagerRows');
+            if (!container) return { manager: '', managerCode: '' };
+            var nameEls = container.querySelectorAll('.f-manager-name');
+            var names = [], codes = [];
+            for (var i = 0; i < nameEls.length; i++) {
+                var name = nameEls[i].value.trim();
+                var code = nameEls[i].parentElement.querySelector('.f-manager-code').value.trim();
+                if (!name && code) { alert('第 ' + (i + 1) + ' 行填写了管理人代码但未填写管理人，请补充或删除该行'); return null; }
+                if (name) { names.push(name); codes.push(code); }
+            }
+            while (codes.length && !codes[codes.length - 1]) codes.pop(); // 去掉尾部空代码，保持名称↔代码位置对应
+            return { manager: names.join('、'), managerCode: codes.join('、') };
         }
 
         // ===== PRD（五）830问题优化-1：账套类型树形选择（大类 → E列账户名称） =====

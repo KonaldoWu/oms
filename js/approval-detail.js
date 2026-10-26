@@ -25,7 +25,15 @@ if (!document.getElementById('approval-detail-style')) {
         + '.detail-object-link { color: var(--primary); cursor: pointer; text-decoration: underline; }'
         + '.detail-object-link:hover { color: var(--primary-dark, #2563eb); }'
         + '.opinion-input { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius); font-size: var(--font-size-sm); resize: vertical; min-height: 60px; margin-top: 8px; }'
-        + '.opinion-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }';
+        + '.opinion-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(59,130,246,0.1); }'
+        + '.suggest-panel { border: 1px dashed var(--border); border-radius: var(--radius); background: var(--border-light); padding: 8px 10px; margin-bottom: 10px; }'
+        + '.suggest-panel-title { font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 6px; }'
+        + '.suggest-item { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 7px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 6px; cursor: pointer; font-size: var(--font-size-xs); transition: border-color 0.15s; }'
+        + '.suggest-item:last-child { margin-bottom: 0; }'
+        + '.suggest-item:hover { border-color: var(--primary); }'
+        + '.suggest-item .suggest-name { font-weight: 600; color: var(--text-primary); }'
+        + '.suggest-item .suggest-meta { color: var(--text-muted); }'
+        + '.suggest-item .suggest-reason { color: var(--text-secondary); flex: 1; min-width: 160px; text-align: right; }';
     document.head.appendChild(_adStyle);
 }
 
@@ -213,28 +221,40 @@ function _adRenderApprovalDetail(a) {
 
 // ============ 构建兑息兑付审批对象 ============
 function _adBuildDividendApproval(d) {
+    // 流程：财务发起 → 交易员关联产品并确认（确认即结束；后台静默生成凭证+待还款，界面不展示）
     var steps = [];
     steps.push({ title: '财务发起', user: d.initiator, time: d.createTime, status: '已完成' });
     if (d.status === '待交易员确认') {
-        steps.push({ title: '交易员确认', user: d.traderConfirmUser || '待分配', time: '', status: '当前' });
-        steps.push({ title: '财务最终确认', user: d.initiator, time: '', status: '待处理' });
-    } else if (d.status === '交易员已确认') {
+        steps.push({ title: '交易员确认', user: '待分配', time: '', status: '当前' });
+    } else if (d.status === '已完成') {
         steps.push({ title: '交易员确认', user: d.traderConfirmUser, time: d.traderConfirmTime, status: '已完成', result: d.traderModified ? '已修改' : '确认', reason: d.traderRemark });
-        steps.push({ title: '财务最终确认', user: d.initiator, time: '', status: '当前' });
+    } else if (d.status === '已驳回') {
+        steps.push({ title: '交易员确认', user: d.traderConfirmUser, time: d.traderConfirmTime, status: '已完成', result: '驳回', reason: d.traderRemark });
     }
-    steps.push({ title: '生成凭证', user: '系统', time: '', status: '待处理' });
-    steps.push({ title: '推送iBor', user: '系统', time: '', status: '待处理' });
     return {
         id: d.id,
         type: '兑息兑付确认',
         object: d.id,
-        objectName: d.productName + ' - 利息' + d.interestPer100 + '/本金' + d.principalPer100 + '(每百元)',
+        objectName: d.productName
+            ? d.productName + ' - 本金 ¥' + _adFmtPM(d.payPrincipal) + ' / 利息 ¥' + _adFmtPM(d.payInterest)
+            : (d.source || '兑息兑付') + ' ¥' + _adFmtPM(d.arrivalAmount) + '（待关联产品）',
         applicant: d.initiator,
         applyTime: d.createTime,
-        status: '审批中',
+        status: d.status === '待交易员确认' ? '审批中' : d.status === '已完成' ? '已通过' : '已驳回',
         steps: steps,
         _dividendData: d
     };
+}
+
+// ===== 兑息兑付辅助函数（自包含，供通知中心使用） =====
+function _adFmtPM(n) {
+    if (n === undefined || n === null || n === '' || isNaN(Number(n))) return '-';
+    return Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function _adDvEligibleProducts() {
+    return PRODUCTS.filter(function(p) {
+        return p.status === '在投' && (p.assetType === '信托' || p.assetType === 'ABS(中保登)') && (p.holdAmount || 0) > 0;
+    });
 }
 
 // ============ 渲染兑息兑付详情 ============
@@ -245,46 +265,107 @@ function _adRenderDividendDetail(a) {
     var roleKey = getCurrentRoleKey();
     var canEdit = !_adIsReadOnly();
     var isTraderStep = (d.status === '待交易员确认' && (roleKey === 'trader' || roleKey === 'demo'));
-    var isFinanceStep = (d.status === '交易员已确认' && (roleKey === 'financial_staff' || roleKey === 'demo'));
 
+    // ===== 申请信息 =====
     var body = '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:14px;">';
     body += '<div class="detail-info-item"><div class="info-label">审批编号</div><div class="info-value">' + a.id + '</div></div>';
     body += '<div class="detail-info-item"><div class="info-label">审批类型</div><div class="info-value">' + a.type + '</div></div>';
     body += '<div class="detail-info-item"><div class="info-label">发起人</div><div class="info-value">' + d.initiator + '</div></div>';
     body += '<div class="detail-info-item"><div class="info-label">发起时间</div><div class="info-value">' + d.createTime + '</div></div>';
+    if (d.productName) {
+        body += '<div class="detail-info-item"><div class="info-label">关联产品</div><div class="info-value">' + d.productName + ' (' + d.productId + ')</div></div>';
+        body += '<div class="detail-info-item"><div class="info-label">产品内部编码</div><div class="info-value">' + (d.innerCode || '-') + '</div></div>';
+        body += '<div class="detail-info-item"><div class="info-label">产品外部编码</div><div class="info-value">' + (d.externalCode || '-') + '</div></div>';
+    } else {
+        body += '<div class="detail-info-item"><div class="info-label">关联产品</div><div class="info-value" style="color:var(--text-muted);">待交易员关联</div></div>';
+    }
+    body += '<div class="detail-info-item"><div class="info-label">数据来源</div><div class="info-value">' + (d.source || '-') + '</div></div>';
     body += '<div class="detail-info-item"><div class="info-label">当前状态</div><div class="info-value"><span class="status-badge ' + getStatusClass(d.status) + '">' + d.status + '</span></div></div>';
-    body += '<div class="detail-info-item"><div class="info-label">关联产品</div><div class="info-value">' + d.productName + ' (' + d.productId + ')</div></div>';
-    body += '<div class="detail-info-item"><div class="info-label">产品内部编码</div><div class="info-value">' + (d.innerCode || '-') + '</div></div>';
-    body += '<div class="detail-info-item"><div class="info-label">产品外部编码</div><div class="info-value">' + (d.externalCode || '-') + '</div></div>';
     body += '</div>';
 
+    // ===== 来源信息（按来源类型展示关键字段） =====
+    if (d.source === '回单OCR') {
+        body += '<div class="detail-section-title">来源信息（银行回单OCR）</div>';
+        body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px;">';
+        body += '<div class="detail-info-item"><div class="info-label">来源文件</div><div class="info-value">' + (d.sourceFile || '-') + '</div></div>';
+        body += '<div class="detail-info-item"><div class="info-label">电子回单号码</div><div class="info-value text-mono">' + (d.receiptNo || '-') + '</div></div>';
+        body += '<div class="detail-info-item" style="grid-column:1/3;"><div class="info-label">付款人户名</div><div class="info-value">' + (d.payerName || '-') + '</div></div>';
+        body += '</div>';
+    } else if (d.source === 'Excel导入') {
+        body += '<div class="detail-section-title">来源信息（Excel表格解析）</div>';
+        body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px;">';
+        body += '<div class="detail-info-item"><div class="info-label">来源文件</div><div class="info-value">' + (d.sourceFile || '-') + '</div></div>';
+        body += '<div class="detail-info-item"><div class="info-label">债券代码</div><div class="info-value text-mono">' + (d.bondCode || '-') + '</div></div>';
+        body += '<div class="detail-info-item"><div class="info-label">债券名称</div><div class="info-value">' + (d.bondName || '-') + '</div></div>';
+        body += '</div>';
+    }
+
+    // ===== 到账信息（交易员可修正；无到账数据的历史记录不展示） =====
+    var _inputStyle = 'width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);';
+    var _labelStyle = 'font-size:var(--font-size-xs);color:var(--text-muted);';
+    var _hasArrival = (d.arrivalAmount !== undefined && d.arrivalAmount !== null && d.arrivalAmount !== '');
+    if ((isTraderStep && canEdit) || _hasArrival) {
+        body += '<div class="detail-section-title">到账信息</div>';
+    }
+    if (isTraderStep && canEdit) {
+        body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:4px;">';
+        body += '<div class="detail-info-item"><div class="info-label">到账金额</div><div class="info-value">' + _adFmtPM(d.arrivalAmount) + ' 元</div></div>';
+        body += '</div>';
+        body += '<div style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:10px;">兑付本金/兑付利息由交易员按兑付公告填写；应付合计（本金+利息）须等于到账金额，否则不可提交。</div>';
+    } else if (_hasArrival) {
+        body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:10px;">';
+        body += '<div class="detail-info-item"><div class="info-label">到账金额</div><div class="info-value">' + _adFmtPM(d.arrivalAmount) + ' 元</div></div>';
+        body += '</div>';
+    }
+
+    // ===== 兑息兑付信息（iBor兑息兑付字段） =====
     body += '<div class="detail-section-title">兑息兑付信息（iBor兑息兑付字段）</div>';
     if (isTraderStep && canEdit) {
+        // --- 关联产品（直接选定，一步完成，确认即流程结束） ---
+        body += '<div class="form-group" style="margin-bottom:6px;"><label style="' + _labelStyle + '">关联产品 <span style="color:var(--danger);">*</span>（在投信托/ABS产品，兑付本金按持仓金额口径冲减）</label>';
+        body += '<select id="adDivMatchProduct" onchange="onAdDvProductChange()" style="' + _inputStyle + '">';
+        body += '<option value="">请选择关联产品</option>';
+        _adDvEligibleProducts().forEach(function(p) {
+            body += '<option value="' + p.id + '">' + p.name + '（' + p.assetType + '，持仓金额 ' + _adFmtPM(p.holdAmount) + ' 元）</option>';
+        });
+        body += '</select></div>';
+        body += '<div id="adDivMatchHoldTip" style="font-size:var(--font-size-xs);color:var(--text-muted);margin-bottom:10px;"></div>';
+
+        // --- 兑付数据（只填本金与利息；系统校验本金+利息=到账金额；支持万元/元单位切换，默认万元） ---
+        body += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
+            + '<span style="font-size:var(--font-size-xs);color:var(--text-muted);">金额单位</span>'
+            + '<div style="display:inline-flex;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">'
+            + '<button id="adDvUnitWan" onclick="setAdDvUnit(\'wan\')" style="padding:4px 14px;font-size:var(--font-size-xs);border:none;cursor:pointer;">万元</button>'
+            + '<button id="adDvUnitYuan" onclick="setAdDvUnit(\'yuan\')" style="padding:4px 14px;font-size:var(--font-size-xs);border:none;cursor:pointer;">元</button>'
+            + '</div>'
+            + '<span style="font-size:var(--font-size-xs);color:var(--text-muted);">默认万元（2 位小数）；切换为元后保留 6 位小数</span></div>';
         body += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;">';
-        body += '<div class="form-group"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">兑付日期</label><input type="date" id="adDivEditDate" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);" value="' + d.divDate + '"></div>';
-        body += '<div class="form-group"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">每百元应付利息(元)</label><input type="number" step="0.0001" id="adDivEditInterest" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);" value="' + d.interestPer100 + '"></div>';
-        body += '<div class="form-group"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">每百元应付本金(元)</label><input type="number" step="0.0001" id="adDivEditPrincipal" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);" value="' + d.principalPer100 + '"></div>';
-        body += '<div class="form-group"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">备注</label><input type="text" id="adDivEditRemark" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);" value="' + (d.remark || '') + '"></div>';
-        body += '<div class="form-group" style="grid-column:1/3;"><label style="font-size:var(--font-size-xs);color:var(--text-muted);">确认备注 / 驳回原因</label><textarea id="adDivTraderRemark" rows="2" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);resize:vertical;" placeholder="选填；确认时作为备注，驳回时作为驳回原因"></textarea></div>';
+        body += '<div class="form-group"><label style="' + _labelStyle + '">兑付日期</label><div style="padding:6px 8px;font-size:var(--font-size-sm);">' + d.divDate + '</div></div>';
+        body += '<div class="form-group"><label style="' + _labelStyle + '">兑付本金(<span class="adDvUnitLabel">万元</span>)</label><input type="number" step="0.01" id="adDivEditPrincipal" style="' + _inputStyle + '" value="' + (d.payPrincipal ? (d.payPrincipal / 10000).toFixed(2) : '') + '" placeholder="纯付息填 0；按持仓金额口径冲减持仓" oninput="updateAdDvCheckTip()"></div>';
+        body += '<div class="form-group"><label style="' + _labelStyle + '">兑付利息(<span class="adDvUnitLabel">万元</span>) <span style="color:var(--danger);">*</span></label><input type="number" step="0.01" id="adDivEditInterest" style="' + _inputStyle + '" value="' + (d.payInterest ? (d.payInterest / 10000).toFixed(2) : '') + '" placeholder="按兑付公告填写" oninput="updateAdDvCheckTip()"></div>';
+        body += '<div class="form-group"><label style="' + _labelStyle + '">备注</label><input type="text" id="adDivEditRemark" style="' + _inputStyle + '" value="' + (d.remark || '') + '"></div>';
+        // 对账结果（系统实时提示）：本金+利息 须等于到账金额
+        body += '<div id="adDvReconTip" style="grid-column:1/-1;display:none;font-size:var(--font-size-xs);"></div>';
+        // 参考条（系统算，只读）：当前持仓本金 + 每百元应计本金/利息
+        body += '<div style="grid-column:1/-1;background:var(--info-bg);border:1px solid #BFDBFE;border-radius:var(--radius);padding:8px 12px;font-size:var(--font-size-xs);color:var(--primary-active);line-height:1.9;">'
+            + '当前持仓本金：<b id="adDvHoldPrincipalShow">-</b> 元　｜　每百元应计本金：<b id="adDvPer100Principal">-</b> 元　｜　每百元应计利息：<b id="adDvPer100Interest">-</b> 元'
+            + '<br><span style="color:var(--text-muted);">每百元应计 = 兑付金额 ÷ 当前持仓本金 × 100（随填写实时计算，供核对兑付公告）</span></div>';
         body += '</div>';
+        body += '<div class="form-group"><label style="' + _labelStyle + '">确认备注 / 驳回原因</label><textarea id="adDivTraderRemark" rows="2" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);resize:vertical;" placeholder="选填；确认时作为备注，驳回时作为驳回原因"></textarea></div>';
         body += '<input type="hidden" id="adDivRejectReason" value="">';
     } else {
         body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:6px;">';
         body += '<div class="detail-info-item"><div class="info-label">兑付日期</div><div class="info-value">' + d.divDate + '</div></div>';
-        body += '<div class="detail-info-item"><div class="info-label">每百元应付利息</div><div class="info-value">' + d.interestPer100.toFixed(4) + ' 元</div></div>';
-        body += '<div class="detail-info-item"><div class="info-label">每百元应付本金</div><div class="info-value">' + d.principalPer100.toFixed(4) + ' 元</div></div>';
+        body += '<div class="detail-info-item"><div class="info-label">兑付本金</div><div class="info-value">' + _adFmtPM(d.payPrincipal) + ' 元</div></div>';
+        body += '<div class="detail-info-item"><div class="info-label">兑付利息</div><div class="info-value">' + _adFmtPM(d.payInterest) + ' 元</div></div>';
         body += '<div class="detail-info-item" style="grid-column:1/3;"><div class="info-label">备注</div><div class="info-value">' + (d.remark || '-') + '</div></div>';
         body += '</div>';
         if (d.traderConfirmUser) {
             body += '<div class="detail-info-grid" style="grid-template-columns:1fr 1fr;margin-bottom:6px;">';
             body += '<div class="detail-info-item"><div class="info-label">交易员确认</div><div class="info-value">' + d.traderConfirmUser + ' ' + d.traderConfirmTime + (d.traderModified ? '（已修改字段）' : '') + '</div></div>';
             body += '<div class="detail-info-item" style="grid-column:1/3;"><div class="info-label">交易员备注</div><div class="info-value">' + (d.traderRemark || '-') + '</div></div>';
+            if (d.diffRemark) body += '<div class="detail-info-item" style="grid-column:1/3;"><div class="info-label">差异说明</div><div class="info-value">' + d.diffRemark + '</div></div>';
             body += '</div>';
-        }
-        if (isFinanceStep && canEdit) {
-            body += '<div class="detail-section-title">驳回原因</div>';
-            body += '<textarea id="adDivRejectReason" rows="3" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:var(--font-size-sm);resize:vertical;" placeholder="如需驳回请填写原因..."></textarea>';
-            body += '<input type="hidden" id="adDivTraderRemark" value="">';
         }
     }
 
@@ -302,88 +383,213 @@ function _adRenderDividendDetail(a) {
     body += '</div>';
 
     document.getElementById('adDetailModalBody').innerHTML = body;
+    if (isTraderStep && canEdit) { _adDvCurArrival = d.arrivalAmount || 0; _adDvUnit = 'wan'; _applyAdDvUnitUI(); updateAdDvCheckTip(); }
     var footer = document.getElementById('adDetailModalFooter');
     var footerHtml = '<button class="btn btn-ghost" onclick="closeAdDetailModal()">关闭</button>';
     if (canEdit) {
         if (isTraderStep) {
             footerHtml += '<button class="btn btn-danger" onclick="rejectAdDividend(\'' + d.id + '\')">驳回</button>';
-            footerHtml += '<button class="btn btn-primary" onclick="confirmAdDividend(\'' + d.id + '\', false)">确认</button>';
-        } else if (isFinanceStep) {
-            footerHtml += '<button class="btn btn-danger" onclick="rejectAdDividend(\'' + d.id + '\')">驳回</button>';
-            footerHtml += '<button class="btn btn-success" onclick="confirmAdDividend(\'' + d.id + '\', true)">最终确认</button>';
+            footerHtml += '<button class="btn btn-primary" onclick="confirmAdDividend(\'' + d.id + '\')">关联产品并确认（流程结束）</button>';
         }
     }
     footer.innerHTML = footerHtml;
     document.getElementById('adDetailModal').style.display = 'block';
 }
 
+// ===== 下拉选择产品：展示持仓金额 =====
+function onAdDvProductChange() {
+    var pid = document.getElementById('adDivMatchProduct').value;
+    var prod = PRODUCTS.find(function(p) { return p.id === pid; });
+    var tip = document.getElementById('adDivMatchHoldTip');
+    if (!prod) { if (tip) tip.innerHTML = ''; updateAdDvCheckTip(); return; }
+    if (tip) tip.innerHTML = '已选产品持仓金额：<b>' + _adFmtPM(prod.holdAmount) + ' 元</b>，内部编码 ' + (prod.hengtaiCode || '-') + ' / 外部编码 ' + (prod.externalCode || '-') + '；兑付本金按持仓金额口径冲减，兑付本金不可超过持仓金额。';
+    updateAdDvCheckTip();
+}
+// ===== 金额单位切换（万元/元，默认万元；元 6 位小数、万元 2 位小数） =====
+var _adDvUnit = 'wan';
+var _adDvCurArrival = 0; // 当前单据到账金额（元），供对账结果实时提示
+function setAdDvUnit(unit) {
+    if (unit !== 'wan' && unit !== 'yuan') return;
+    if (unit === _adDvUnit) { _applyAdDvUnitUI(); return; }
+    // 切换前把已填数值按旧单位换算为元，再按新单位回填
+    ['adDivEditPrincipal', 'adDivEditInterest'].forEach(function(id) {
+        var el = document.getElementById(id);
+        if (!el || el.value === '') return;
+        var v = parseFloat(el.value);
+        if (isNaN(v)) return;
+        var yuan = _adDvUnit === 'wan' ? v * 10000 : v;
+        el.value = unit === 'wan' ? (yuan / 10000).toFixed(2) : (Math.round(yuan * 1000000) / 1000000).toFixed(6);
+    });
+    _adDvUnit = unit;
+    _applyAdDvUnitUI();
+    updateAdDvCheckTip();
+}
+function _applyAdDvUnitUI() {
+    var onStyle = 'padding:4px 14px;font-size:var(--font-size-xs);border:none;cursor:pointer;background:var(--primary);color:#fff;';
+    var offStyle = 'padding:4px 14px;font-size:var(--font-size-xs);border:none;cursor:pointer;background:var(--surface);color:var(--text-secondary);';
+    var wanBtn = document.getElementById('adDvUnitWan');
+    var yuanBtn = document.getElementById('adDvUnitYuan');
+    if (wanBtn) wanBtn.style.cssText = _adDvUnit === 'wan' ? onStyle : offStyle;
+    if (yuanBtn) yuanBtn.style.cssText = _adDvUnit === 'yuan' ? onStyle : offStyle;
+    var label = _adDvUnit === 'wan' ? '万元' : '元';
+    document.querySelectorAll('#adDetailModalBody .adDvUnitLabel').forEach(function(s) { s.textContent = label; });
+    var step = _adDvUnit === 'wan' ? '0.01' : '0.000001';
+    var pEl = document.getElementById('adDivEditPrincipal');
+    var iEl = document.getElementById('adDivEditInterest');
+    if (pEl) pEl.step = step;
+    if (iEl) iEl.step = step;
+}
+// 输入值按当前单位换算为元（6 位小数）
+function _adDvInputToYuan(id) {
+    var el = document.getElementById(id);
+    var v = parseFloat(el && el.value);
+    if (isNaN(v)) return 0;
+    var yuan = _adDvUnit === 'wan' ? v * 10000 : v;
+    return Math.round(yuan * 1000000) / 1000000;
+}
+// 参考条刷新：当前持仓本金 + 每百元应计本金/利息（系统算，只读，随填写实时计算）；对账结果实时提示
+function updateAdDvCheckTip() {
+    var pid = (document.getElementById('adDivMatchProduct') || {}).value;
+    var prod = PRODUCTS.find(function(p) { return p.id === pid; });
+    var holdEl = document.getElementById('adDvHoldPrincipalShow');
+    var p100P = document.getElementById('adDvPer100Principal');
+    var p100I = document.getElementById('adDvPer100Interest');
+    var payP = _adDvInputToYuan('adDivEditPrincipal');
+    var payI = _adDvInputToYuan('adDivEditInterest');
+    if (!prod) {
+        if (holdEl) holdEl.textContent = '-';
+        if (p100P) p100P.textContent = '-';
+        if (p100I) p100I.textContent = '-';
+    } else {
+        var holdAmount = prod.holdAmount || 0;
+        if (holdEl) holdEl.textContent = _adFmtPM(holdAmount);
+        if (p100P) p100P.textContent = holdAmount > 0 ? _adFmtPM(Math.round(payP / holdAmount * 100 * 10000) / 10000) : '-';
+        if (p100I) p100I.textContent = holdAmount > 0 ? _adFmtPM(Math.round(payI / holdAmount * 100 * 10000) / 10000) : '-';
+    }
+    // 对账结果：本息合计须等于到账金额，不等则实时提示（未选产品也照常提示）
+    var tip = document.getElementById('adDvReconTip');
+    if (tip) {
+        var payable = Math.round((payP + payI) * 1000000) / 1000000;
+        if ((payP > 0 || payI > 0) && Math.abs(_adDvCurArrival - payable) >= 0.000001) {
+            tip.style.display = '';
+            tip.style.color = 'var(--danger)';
+            tip.innerHTML = '对账结果：本息合计 <b>' + _adFmtPM(payable) + '</b> 元，本金 + 利息 须等于到账金额（' + _adFmtPM(_adDvCurArrival) + ' 元），请核对后修改';
+        } else if (payP > 0 || payI > 0) {
+            tip.style.display = '';
+            tip.style.color = 'var(--success, #0B975C)';
+            tip.innerHTML = '对账结果：本息合计 <b>' + _adFmtPM(payable) + '</b> 元，与到账金额一致';
+        } else {
+            tip.style.display = 'none';
+            tip.innerHTML = '';
+        }
+    }
+}
+
 // ============ 兑息兑付确认/驳回 ============
-function confirmAdDividend(dividendId, isFinal) {
+// 交易员关联产品并确认：确认即流程结束，自动生成凭证 + 待还款资金池记录
+function confirmAdDividend(dividendId) {
     var d = DIVIDENDS.find(function(x) { return x.id === dividendId; });
     if (!d) return;
     var role = getCurrentRole();
     var now = new Date();
     var nowStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
 
-    if (!isFinal) {
-        var modified = false;
-        var modifyRemark = [];
-        var newDate = document.getElementById('adDivEditDate').value;
-        var newInterest = parseFloat(document.getElementById('adDivEditInterest').value);
-        var newPrincipal = parseFloat(document.getElementById('adDivEditPrincipal').value);
-        var newRemark = document.getElementById('adDivEditRemark').value;
-        var traderRemark = document.getElementById('adDivTraderRemark').value;
+    // 1. 校验关联产品
+    var prodId = document.getElementById('adDivMatchProduct').value;
+    if (!prodId) { alert('请选择关联产品'); return; }
+    var prod = PRODUCTS.find(function(p) { return p.id === prodId; });
+    if (!prod) { alert('关联产品无效，请重新选择'); return; }
 
-        if (newDate !== d.divDate) { modifyRemark.push('兑付日期从' + d.divDate + '改为' + newDate); d.divDate = newDate; modified = true; }
-        if (newInterest !== d.interestPer100) { modifyRemark.push('每百元应付利息从' + d.interestPer100 + '调整为' + newInterest); d.interestPer100 = newInterest; modified = true; }
-        if (newPrincipal !== d.principalPer100) { modifyRemark.push('每百元应付本金从' + d.principalPer100 + '调整为' + newPrincipal); d.principalPer100 = newPrincipal; modified = true; }
-        if (newRemark !== d.remark) { d.remark = newRemark; modified = true; }
+    // 2. 到账金额与兑付日期由财务发起时确定，交易员不可修改
+    var arrA = d.arrivalAmount || 0;
+    if (arrA <= 0) { alert('该单据无到账金额，请联系财务核对'); return; }
 
-        d.traderConfirmUser = role.label;
-        d.traderConfirmTime = nowStr;
-        d.traderModified = modified;
-        d.traderRemark = traderRemark || (modified ? modifyRemark.join('，') : '确认无误');
-        d.status = '交易员已确认';
-        d.history.push({ user: role.label, action: '交易员确认' + (modified ? '（已修改字段）' : ''), time: nowStr, remark: d.traderRemark });
-    } else {
-        d.financeConfirmUser = role.label;
-        d.financeConfirmTime = nowStr;
-        d.status = '已完成';
-        d.history.push({ user: role.label, action: '财务最终确认', time: nowStr, remark: '' });
+    // 3. 校验兑付数据（兑付本金非必填、兑付利息必填；本金+利息须等于到账金额）
+    var newDate = d.divDate;
+    var payI = _adDvInputToYuan('adDivEditInterest');
+    var payP = _adDvInputToYuan('adDivEditPrincipal');
+    var newRemark = document.getElementById('adDivEditRemark').value;
+    var traderRemark = document.getElementById('adDivTraderRemark').value;
+    if (payP < 0 || payI < 0) { alert('兑付本金/兑付利息不能为负数'); return; }
+    if (payI <= 0) { alert('兑付利息必填，请填写兑付利息'); return; }
+    if (payP > (prod.holdAmount || 0) + 0.000001) { alert('兑付本金不能大于当前持仓金额（¥' + _adFmtPM(prod.holdAmount) + '）'); return; }
 
-        var voucherSeq = 1;
-        VOUCHERS.forEach(function(v) { if (v.id && v.id.indexOf('VCH' + d.divDate.replace(/-/g,'')) === 0) voucherSeq++; });
-        var voucherId = 'VCH' + d.divDate.replace(/-/g,'') + String(voucherSeq).padStart(3,'0');
-        VOUCHERS.push({
-            id: voucherId,
-            summary: d.productName + '兑息兑付(利息' + d.interestPer100 + '/本金' + d.principalPer100 + '每百元)',
-            debitAccount: '1122-应收利息',
-            creditAccount: '6001-投资收益',
-            amount: d.interestPer100 + d.principalPer100,
-            maker: role.label,
-            makeTime: nowStr
-        });
-        d.voucherId = voucherId;
-        d.history.push({ user: '系统', action: '生成凭证' + voucherId, time: nowStr, remark: '' });
+    // 4. 系统校验：兑付本金 + 兑付利息 必须等于到账金额（不等则拦截）
+    var payable = Math.round((payI + payP) * 1000000) / 1000000;
+    if (Math.abs(arrA - payable) >= 0.000001) { alert('兑付本金 + 兑付利息（¥' + _adFmtPM(payable) + '）须等于到账金额（¥' + _adFmtPM(arrA) + '），请核对后修改'); return; }
+    var arrI = payI;
 
-        var frSeq = 1;
-        FINANCES.forEach(function(f) { if (f.id && f.id.indexOf('FR' + d.divDate.replace(/-/g,'')) === 0) frSeq++; });
-        FINANCES.push({
-            id: 'FR' + d.divDate.replace(/-/g,'') + String(frSeq).padStart(3,'0'),
-            productId: d.productId,
-            productName: d.productName,
-            changeType: '兑息兑付',
-            changeDate: d.divDate,
-            changeAmount: d.interestPer100 + d.principalPer100,
-            voucherStatus: '待确认',
-            createMethod: '系统自动生成',
-            source: '兑息兑付流程',
-            voucherId: voucherId
-        });
-    }
+    // 5. 回写：关联产品 + 兑付数据留痕
+    var modified = false;
+    var modifyRemark = ['关联产品：' + prod.name];
+    d.productId = prod.id;
+    d.productName = prod.name;
+    d.innerCode = prod.hengtaiCode || '';
+    d.externalCode = prod.externalCode || '';
+    d.divDate = newDate;
+    d.payPrincipal = payP;
+    d.payInterest = payI;
+    d.remark = newRemark;
+    d.arrivalAmount = arrA;
+    d.diffAmount = 0;
+    d.diffRemark = '';
+
+    d.traderConfirmUser = role.label;
+    d.traderConfirmTime = nowStr;
+    d.traderModified = modified;
+    d.traderRemark = traderRemark || (modified ? modifyRemark.join('，') : '确认无误');
+    d.status = '已完成';
+    d.history.push({ user: role.label, action: '交易员关联产品并确认', time: nowStr, remark: d.traderRemark + '；兑付本金 ' + _adFmtPM(payP) + ' 元 + 兑付利息 ' + _adFmtPM(payI) + ' 元 = 实际到账 ' + _adFmtPM(arrA) + ' 元，对账一致' });
+
+    // 兑付本金按持仓金额口径冲减持仓；持仓金额/本息累计/留痕/退出判定由 applyDividendHolding 统一处理
+    var principalAmount = applyDividendHolding(prod, payP, arrI, d.id);
+    if (principalAmount > 0) releasePlanQuota(prod.id, principalAmount);
+
+    // 后台静默生成凭证 + 财务变动记录 + 待还款资金池记录；金额=实际到账金额（与审批中心口径一致，6 位小数）
+    var _dvAmount = (d.arrivalAmount !== undefined && d.arrivalAmount !== null && d.arrivalAmount !== '' && !isNaN(Number(d.arrivalAmount)))
+        ? Number(d.arrivalAmount)
+        : Math.round(((d.payPrincipal || 0) + (d.payInterest || 0)) * 1000000) / 1000000;
+    var voucherSeq = 1;
+    VOUCHERS.forEach(function(v) { if (v.id && v.id.indexOf('VCH' + d.divDate.replace(/-/g,'')) === 0) voucherSeq++; });
+    var voucherId = 'VCH' + d.divDate.replace(/-/g,'') + String(voucherSeq).padStart(3,'0');
+    VOUCHERS.push({
+        id: voucherId,
+        summary: d.productName + '兑息兑付(本金' + _adFmtPM(d.payPrincipal) + '元/利息' + _adFmtPM(d.payInterest) + '元)',
+        debitAccount: '1122-应收利息',
+        creditAccount: '6001-投资收益',
+        amount: _dvAmount,
+        maker: role.label,
+        makeTime: nowStr
+    });
+    d.voucherId = voucherId;
+
+    var frSeq = 1;
+    FINANCES.forEach(function(f) { if (f.id && f.id.indexOf('FR' + d.divDate.replace(/-/g,'')) === 0) frSeq++; });
+    FINANCES.push({
+        id: 'FR' + d.divDate.replace(/-/g,'') + String(frSeq).padStart(3,'0'),
+        productId: d.productId,
+        productName: d.productName,
+        changeType: '兑息兑付',
+        changeDate: d.divDate,
+        changeAmount: _dvAmount,
+        voucherStatus: '待确认',
+        createMethod: '系统自动生成',
+        source: '兑息兑付流程',
+        voucherId: voucherId
+    });
+
+    // 兑息兑付款划回公司：生成待还款记录（进入待还款资金池）；入池挂载对账快照：兑付本金/兑付利息/实际到账/差额/差额备注（后续不受兑付单变更影响）
+    createRepayItem('兑息兑付', d.id, d.productId, d.productName, _dvAmount, {
+        payPrincipal: d.payPrincipal,
+        payInterest: d.payInterest,
+        arrivalAmount: (d.arrivalAmount !== undefined && d.arrivalAmount !== '') ? Number(d.arrivalAmount) : undefined,
+        diffAmount: d.diffAmount,
+        diffRemark: d.diffRemark
+    });
+
     closeAdDetailModal();
     _adSafeRenderList();
-    alert(isFinal ? '财务最终确认成功！已自动生成凭证' + d.voucherId + '。\n可在【财务核算】模块查看并推送到iBor。' : '交易员确认成功！已转交财务最终确认。');
+    alert('确认成功，已进入待还款资金池，可在「投资管理-还款管理」发起还款。');
 }
 
 function rejectAdDividend(dividendId) {
@@ -397,6 +603,9 @@ function rejectAdDividend(dividendId) {
     var now = new Date();
     var nowStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0') + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
     d.status = '已驳回';
+    d.traderConfirmUser = d.traderConfirmUser || role.label;
+    d.traderConfirmTime = d.traderConfirmTime || nowStr;
+    d.traderRemark = reason;
     d.history.push({ user: role.label, action: '驳回', time: nowStr, remark: reason });
     closeAdDetailModal();
     _adSafeRenderList();

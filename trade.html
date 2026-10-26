@@ -1284,9 +1284,9 @@
             html += '<div class="grid-2"><div class="form-group"><label>交易方向 <span style="font-size:11px;color:var(--text-muted);">（映射上方交易类型）</span></label><input type="text" value="认购/申购/赎回" readonly style="background:var(--border-light);"><div class="form-hint">OMS确定</div></div>';
             // 交易数量
             html += '<div class="form-group"><label>交易数量 *</label><input type="number" id="iborTradeShares" placeholder="' + (isZg ? '资管计划份额' : '份额/张数或面值数量，需配单位') + '" oninput="onIborTradeSharesInput()"></div></div>';
-            html += '<div class="grid-2"><div class="form-group"><label>交易价格' + (isZg ? '/净值' : '') + ' *</label><input type="number" step="0.01" id="iborTradePrice" placeholder="' + (isZg ? '成交单位净值或单位价格' : '成交的交易价格') + '" oninput="onIborTradePriceInput()"></div>';
+            html += '<div class="grid-2"><div class="form-group"><label>交易价格' + (isZg ? '/净值' : '') + ' *</label><div class="input-unit-group"><input type="number" step="0.01" id="iborTradePrice" placeholder="' + (isZg ? '成交单位净值或单位价格' : '成交的交易价格') + '" oninput="onIborTradePriceInput()"><select id="iborPriceUnit" onchange="_iborOnUnitChange(\'price\')"><option value="万元" selected>万元</option><option value="元">元</option></select></div></div>';
             // 交易金额
-            html += '<div class="form-group"><label>交易金额 *</label><input type="number" id="iborTradeAmount" placeholder="' + (isZg ? '不含费用成交金额' : '不含费用金额') + '" oninput="onIborTradeAmountInput()"></div></div>';
+            html += '<div class="form-group"><label>交易金额 *</label><div class="input-unit-group"><input type="number" id="iborTradeAmount" placeholder="' + (isZg ? '不含费用成交金额' : '不含费用金额') + '" oninput="onIborTradeAmountInput()"><select id="iborAmountUnit" onchange="_iborOnUnitChange(\'amount\')"><option value="万元" selected>万元</option><option value="元">元</option></select></div></div></div>';
 
             // 交易费用（资管计划/信托计划/保交所ABS为选填，碳金融为必填）
             var feeRequired = (iborType === '碳金融');
@@ -1303,18 +1303,26 @@
         // 规则：任意填写其中两个字段，系统自动计算并回填第三个字段；
         //      修改已填字段时，以"用户最近编辑的两个字段"为基准重算第三个（覆盖原计算值）；
         //      计算值以灰斜体展示（可修改，修改后转为用户手输值）；除数为0/空时不计算。
+        // 单位：交易价格/交易金额默认万元，可独立切换为元；计算统一换算为元基准再回填目标字段单位，
+        //      支持混合单位（如价格1.0234元 × 金额100万元 → 数量≈977,135.04份）。
         var _iborIds = { amount: 'iborTradeAmount', price: 'iborTradePrice', shares: 'iborTradeShares' };
-        var _iborPrec = { amount: 2, price: 2, shares: 2 };  // 精度（PRD（五）830问题优化-3）：统一保留2位小数，四舍五入
+        var _iborUnitIds = { amount: 'iborAmountUnit', price: 'iborPriceUnit' };
+        var _iborUnits = { amount: '万元', price: '万元' };  // 当前单位（默认万元，随切换更新）
         var _iborSeq = { amount: 0, price: 0, shares: 0 };   // 用户编辑序号（全局递增）
         var _iborSeqCounter = 0;
 
         function _iborNum(id) { var el = document.getElementById(id); if (!el) return 0; var v = parseFloat(el.value); return isNaN(v) || v < 0 ? 0 : v; }
         function _iborVal(key) { return _iborNum(_iborIds[key]); }
+        function _iborUnitFactor(key) { return _iborUnits[key] === '万元' ? 10000 : 1; }
+        // 精度：元→2位小数；万元→4位小数（0.0001万=1元，保证元级精度）；数量→2位
+        function _iborPrecOf(key) { if (key === 'shares') return 2; return _iborUnits[key] === '万元' ? 4 : 2; }
+        // 换算为元基准的值（数量无单位，原样返回）
+        function _iborValYuan(key) { if (key === 'shares') return _iborVal('shares'); return _iborVal(key) * _iborUnitFactor(key); }
 
         // 回填计算值：灰斜体标识 + title提示"系统计算值"
         function _iborSet(key, val) {
             var el = document.getElementById(_iborIds[key]); if (!el) return;
-            var f = Math.pow(10, _iborPrec[key]);
+            var f = Math.pow(10, _iborPrecOf(key));
             el.value = Math.round(val * f) / f;
             el.style.color = '#888';
             el.style.fontStyle = 'italic';
@@ -1331,6 +1339,25 @@
         function _iborResetCalcState() {
             _iborSeqCounter = 0;
             _iborSeq = { amount: 0, price: 0, shares: 0 };
+            _iborUnits = { amount: '万元', price: '万元' }; // 单位复位为默认万元（下拉框重渲染后同为万元）
+        }
+
+        // 单位切换（万元⇄元）：当前值按新单位换算显示，并以该字段为基准重算第三字段
+        function _iborOnUnitChange(key) {
+            var sel = document.getElementById(_iborUnitIds[key]);
+            if (!sel) return;
+            var oldUnit = _iborUnits[key];
+            var newUnit = sel.value;
+            if (oldUnit === newUnit) return;
+            _iborUnits[key] = newUnit;
+            var el = document.getElementById(_iborIds[key]);
+            var v = parseFloat(el.value);
+            if (!isNaN(v) && v > 0) {
+                var conv = (oldUnit === '万元' ? 10000 : 1) / (newUnit === '万元' ? 10000 : 1);
+                var f = Math.pow(10, _iborPrecOf(key));
+                el.value = Math.round(v * conv * f) / f;
+            }
+            _iborOnInput(key);
         }
 
         function _iborOnInput(changedKey) {
@@ -1350,19 +1377,20 @@
             });
             if (!partnerKey) return; // 只填了一项，等待第二项
             var targetKey = keys.filter(function(k) { return k !== changedKey && k !== partnerKey; })[0];
-            // 计算目标字段：总价=单价×数量；单价=总价÷数量；数量=总价÷单价（除零保护）
-            var result = null;
-            if (targetKey === 'amount') { result = _iborVal('price') * _iborVal('shares'); }
-            else if (targetKey === 'price') { if (_iborVal('shares') > 0) result = _iborVal('amount') / _iborVal('shares'); }
-            else { if (_iborVal('price') > 0) result = _iborVal('amount') / _iborVal('price'); }
-            if (result === null || !isFinite(result)) return;
-            _iborSet(targetKey, result);
+            // 计算目标字段（元基准）：总价=单价×数量；单价=总价÷数量；数量=总价÷单价（除零保护）
+            var resultBase = null;
+            if (targetKey === 'amount') { resultBase = _iborValYuan('price') * _iborValYuan('shares'); }
+            else if (targetKey === 'price') { if (_iborValYuan('shares') > 0) resultBase = _iborValYuan('amount') / _iborValYuan('shares'); }
+            else { if (_iborValYuan('price') > 0) resultBase = _iborValYuan('amount') / _iborValYuan('price'); }
+            if (resultBase === null || !isFinite(resultBase)) return;
+            // 回填时换算为目标字段当前单位（数量无单位）
+            _iborSet(targetKey, targetKey === 'shares' ? resultBase : resultBase / _iborUnitFactor(targetKey));
         }
 
         function onIborTradeAmountInput() { _iborOnInput('amount'); validateTradeForm(); }
         function onIborTradePriceInput() { _iborOnInput('price'); validateTradeForm(); }
         function onIborTradeSharesInput() { _iborOnInput('shares'); validateTradeForm(); }
-        function getTradeAmount() { return _iborNum('iborTradeAmount'); }
+        function getTradeAmount() { return _iborValYuan('amount'); } // 统一返回元
         function getTradeSharesVal() { var v = _iborNum('iborTradeShares'); return v > 0 ? v : ''; }
 
         // 产品优先级（多选checkbox）：取值为'、'拼接；回填按拆分勾选
@@ -1377,13 +1405,15 @@
             });
         }
 
-        // 提交时校验恒等关系：交易金额 ≈ 单价 × 数量（容差±0.01，允许精度舍入误差）
+        // 提交时校验恒等关系：交易金额 ≈ 单价 × 数量（统一换算为元基准，容差随单位缩放）
         function _iborCheckConsistency() {
-            var amt = _iborVal('amount'), price = _iborVal('price'), shares = _iborVal('shares');
+            var amt = _iborValYuan('amount'), price = _iborValYuan('price'), shares = _iborVal('shares');
             if (amt > 0 && price > 0 && shares > 0) {
                 var diff = Math.abs(price * shares - amt);
-                if (diff > 0.01) {
-                    return confirm('检测到交易金额与 单价×数量 不一致（相差 ' + diff.toFixed(4) + ' 元，容差 ±0.01）。\n\n是否仍按当前填写值提交？');
+                // 容差：金额字段0.01个当前单位 + 价格舍入误差（0.005个价格当前单位×数量），均换算为元
+                var tol = 0.01 * _iborUnitFactor('amount') + 0.005 * _iborUnitFactor('price') * shares;
+                if (diff > tol) {
+                    return confirm('检测到交易金额与 单价×数量 不一致（相差 ' + diff.toFixed(2) + ' 元，容差 ±' + tol.toFixed(2) + ' 元，已按当前单位换算）。\n\n是否仍按当前填写值提交？');
                 }
             }
             return true;
@@ -1438,6 +1468,9 @@
                 type: type,
                 applyAmount: amount,
                 shares: getTradeSharesVal(),
+                price: _iborValYuan('price') > 0 ? String(_iborValYuan('price')) : '',
+                amountUnit: _iborUnits.amount,
+                priceUnit: _iborUnits.price,
                 priority: _getTradePriority(),
                 expectedDate: document.getElementById('tradeExpectedDate').value,
                 dealAmount: 0,
@@ -1479,10 +1512,11 @@
             if (product && type === '买入(开仓)') {
                 if (product.status !== '在投' && product.status !== '无计划') { alert('产品当前状态为"' + product.status + '"，不在池中，无法发起买入交易'); return; }
             }
-            // 赎回校验：赎回金额不可超过持仓金额
+            // 赎回校验：赎回金额不可超过当前持仓金额（OMS 唯一硬校验：扣减 ≤ 当前持仓，为 0 不可再卖）
             if (product && type === '赎回') {
-                if (!product.holdAmount || product.holdAmount <= 0) { alert('该产品当前无持仓，无法发起赎回交易'); return; }
-                if (amount > product.holdAmount) { alert('赎回金额不可超过持仓金额（' + formatMoney(product.holdAmount) + '），请调整'); return; }
+                var holdQty = product.holdAmount || 0;
+                if (holdQty <= 0) { alert('该产品当前无持仓，无法发起赎回交易'); return; }
+                if (amount > 0 && amount > holdQty) { alert('赎回金额不可超过当前持仓金额（' + formatMoney(holdQty) + '），请调整'); return; }
             }
             // 二次确认
             var isRedeem = type === '赎回';
@@ -1505,6 +1539,9 @@
                 type: type,
                 applyAmount: amount,
                 shares: getTradeSharesVal(),
+                price: _iborValYuan('price') > 0 ? String(_iborValYuan('price')) : '',
+                amountUnit: _iborUnits.amount,
+                priceUnit: _iborUnits.price,
                 priority: _getTradePriority(),
                 expectedDate: document.getElementById('tradeExpectedDate').value,
                 dealAmount: 0,
@@ -2010,7 +2047,14 @@
                 document.getElementById('tradeType').value = trade.type;
                 onTradeTypeChange(); // 联动是否清盘/产品优先级显隐及流程说明
                 var amtEl = document.getElementById('iborTradeAmount');
-                if (amtEl) { amtEl.value = trade.applyAmount; _iborMarkManual('amount'); }
+                if (amtEl) {
+                    // 存储值统一为元：回填时单位切到“元”再填原始值，避免万元单位下数值级数错误
+                    document.getElementById('iborAmountUnit').value = '元'; _iborOnUnitChange('amount');
+                    document.getElementById('iborPriceUnit').value = '元'; _iborOnUnitChange('price');
+                    amtEl.value = trade.applyAmount; _iborMarkManual('amount');
+                    if (trade.price) { document.getElementById('iborTradePrice').value = trade.price; _iborMarkManual('price'); }
+                    if (trade.shares) { document.getElementById('iborTradeShares').value = trade.shares; _iborMarkManual('shares'); }
+                }
                 if (trade.priority) _setTradePriorityValues(String(trade.priority).split('、'));
                 if (trade.expectedDate) document.getElementById('tradeExpectedDate').value = trade.expectedDate;
                 if (trade.remark) document.getElementById('tradeRemark').value = trade.remark.replace(' [草稿]', '');
@@ -2099,10 +2143,16 @@
                 });
                 approval.status = '已通过';
             }
-            // 更新计划书已用额度
+            // 更新计划书已用额度 + 买入完结持仓联动（增仓+累计申购+流水）
             var plan = PLANS.find(function(p) { return p.id === trade.planId; });
             if (plan && trade.type !== '赎回') {
                 plan.usedAmount = (plan.usedAmount || 0) + amount;
+            }
+            if (trade.type !== '赎回') {
+                var buyProd = PRODUCTS.find(function(p) { return p.id === trade.productId; });
+                if (buyProd) {
+                    applyBuyHolding(buyProd, amount, trade.id);
+                }
             }
             alert('交易已确认结束，状态变更为"已成交"。财务人员可基于此交易生成凭证。');
             renderTradeDetail(trade);
@@ -2153,15 +2203,14 @@
                 if (approval.steps.every(function(s) { return s.status === '已完成'; })) approval.status = '已通过';
             }
 
-            // 持仓核销：扣减产品持仓金额/份额
+            // 持仓核销：按金额扣减持仓 + 释放计划书额度 + 流水 + 已退出判定（成本结转归 IBOR）
             var product = PRODUCTS.find(function(p) { return p.id === trade.productId; });
             if (product) {
-                if (product.holdAmount) product.holdAmount = Math.max(0, product.holdAmount - amount);
-                if (product.holdShares && trade.actualArrivalShares > 0) product.holdShares = Math.max(0, product.holdShares - trade.actualArrivalShares);
-                if (product.holdAmount <= 0) { product.holdShares = 0; }
+                applyRedeemHolding(product, amount, trade.id);
+                releasePlanQuota(product.id, amount);
             }
 
-            alert('补充信息已确认，赎回流程结束。\n最终实际到账金额：' + formatMoney(amount) + '\n持仓已核销，凭证待生成（财务核算模块）。');
+            alert('补充信息已确认，赎回流程结束。\n最终实际到账金额：' + formatMoney(amount) + '\n持仓已按金额扣减核销（成本结转由IBOR完成）' + (product && product.status === '已退出' ? '，产品持仓清零已置为「已退出」' : '') + '，计划书额度已释放，凭证待生成（财务核算模块）。');
             renderTradeDetail(trade);
             renderTable();
         }

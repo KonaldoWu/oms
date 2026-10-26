@@ -57,6 +57,37 @@
         .timeline-status-badge { margin-left: 6px; }
         .product-name-link { font-weight: 500; color: var(--primary); cursor: pointer; text-decoration: none; }
         .product-name-link:hover { text-decoration: underline; }
+
+        /* ===== 打印：转置产品卡片（屏幕隐藏，打印显示） ===== */
+        .print-products { display: none; }
+        .print-product-card { border: 1px solid #94A3B8; border-radius: 4px; margin-bottom: 12px; overflow: hidden; page-break-inside: avoid; }
+        .print-product-title { background: #F1F5F9; padding: 7px 12px; font-size: 12px; font-weight: 600; color: #1E293B; border-bottom: 1px solid #94A3B8; }
+        .print-kv-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .print-kv-table td { border: 1px solid #CBD5E1; padding: 6px 10px; color: #1E293B; }
+        .print-kv-table td.pk-label { background: #F8FAFC; color: #64748B; width: 92px; white-space: nowrap; }
+        .print-kv-table td.pk-value { min-width: 120px; }
+
+        @media print {
+            /* 重置应用布局，解除 100vh/overflow 裁剪 */
+            .app-layout { display: block !important; height: auto !important; overflow: visible !important; }
+            .main-area { display: block !important; overflow: visible !important; }
+            .content { overflow: visible !important; padding: 0 !important; background: #fff !important; }
+            body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+            /* 屏幕元素隐藏 */
+            .sidebar, .topbar, .back-btn, .header-right, .attach-download { display: none !important; }
+            .detail-page-header { border: none; padding: 0 0 8px; margin-bottom: 10px; }
+            .card, .detail-section { box-shadow: none !important; }
+
+            /* 宽表隐藏，转置卡片显示 */
+            #productTableWrap { display: none !important; }
+            .print-products { display: block !important; }
+
+            /* 分区防截断 */
+            .detail-section { page-break-inside: avoid; }
+            .timeline-item { page-break-inside: avoid; }
+        }
+        @page { margin: 12mm; }
     </style>
 </head>
 <body>
@@ -73,6 +104,9 @@
                             <div class="header-subtitle" id="pageSubtitle"></div>
                         </div>
                         <span id="statusBadge"></span>
+                    </div>
+                    <div class="header-right">
+                        <button class="btn btn-primary" onclick="window.print()">🖨 打印</button>
                     </div>
                 </div>
 
@@ -94,7 +128,7 @@
 
                 <div class="detail-section" data-logic-id="page_plan_detail">
                     <div class="detail-section-title">关联产品</div>
-                    <div class="table-container">
+                    <div class="table-container" id="productTableWrap">
                         <table class="data-table">
                             <thead>
                                 <tr>
@@ -114,6 +148,7 @@
                             <tbody id="productTableBody"></tbody>
                         </table>
                     </div>
+                    <div class="print-products" id="printProducts"></div>
                 </div>
 
                 <div class="detail-section" data-logic-id="page_plan_detail">
@@ -234,6 +269,36 @@
                 html += '</tr>';
             });
             tbody.innerHTML = html;
+            renderPrintProducts(details);
+        }
+
+        // 打印用转置卡片：每个产品一张键值卡（3组标签/值 每行），纵向A4不受列数限制
+        function renderPrintProducts(details) {
+            var box = document.getElementById('printProducts');
+            var html = '';
+            var idx = 0;
+            details.forEach(function(d) {
+                var p = getProductById(d.id);
+                if (!p) return;
+                idx++;
+                var rows = [
+                    [{ l: '外部编码', v: p.externalCode }, { l: '产品类型', v: p.productType }, { l: '账套类型', v: p.accountType }],
+                    [{ l: '计划额度(元)', v: d.amount != null ? formatNum(d.amount) : formatNum(p.planAmount) }, { l: '已用额度(元)', v: formatNum(p.usedAmount) }, { l: '投资方向', v: d.direction }],
+                    [{ l: '运作方式', v: d.operationMode }, { l: '投资方式', v: d.investMode }, { l: '持有期限', v: d.holdPeriod }]
+                ];
+                html += '<div class="print-product-card">';
+                html += '<div class="print-product-title">' + idx + '. ' + escapeText(p.name) + '（' + escapeText(p.hengtaiCode || p.id) + '）</div>';
+                html += '<table class="print-kv-table">';
+                rows.forEach(function(row) {
+                    html += '<tr>';
+                    row.forEach(function(cell) {
+                        html += '<td class="pk-label">' + cell.l + '</td><td class="pk-value">' + escapeText(cell.v) + '</td>';
+                    });
+                    html += '</tr>';
+                });
+                html += '</table></div>';
+            });
+            box.innerHTML = html || '<div style="color:#64748B;font-size:11px;padding:8px 0;">暂无关联产品</div>';
         }
 
         // 附件

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>委外投资业务一体化订单管理平台 - 流程图</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .tab-nav { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 14px; flex-wrap: wrap; }
+        .tab-btn { padding: 8px 18px; font-size: var(--font-size-sm); font-weight: 500; color: var(--text-muted); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.15s; }
+        .tab-btn:hover { color: var(--text-primary); }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .flow-panel { display: none; }
+        .flow-panel.active { display: block; }
+
+        /* 图例 */
+        .flow-legend { display: flex; gap: 16px; flex-wrap: wrap; padding: 7px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; font-size: var(--font-size-xs); color: var(--text-secondary); }
+        .legend-item { display: flex; align-items: center; gap: 6px; }
+        .legend-box { width: 18px; height: 12px; border-radius: 2px; border: 1px solid var(--border); background: var(--surface); }
+        .legend-box.lb-start { border-color: var(--primary); background: var(--info-bg); }
+        .legend-box.lb-system { border-style: dashed; background: #F8FAFC; }
+        .legend-box.lb-offline { border: 1px dashed #D97706; background: #FFFBEB; }
+        .legend-box.lb-end { border-color: var(--success); background: var(--success-bg); }
+        .legend-box.lb-follow { border-radius: 999px; }
+
+        .flow-intro { font-size: var(--font-size-xs); color: var(--text-muted); margin-bottom: 16px; line-height: 1.6; }
+
+        /* 横向流程图 */
+        .flow-h { display: flex; flex-wrap: wrap; align-items: flex-start; row-gap: 22px; }
+        .f-step { display: flex; align-items: flex-start; }
+        .f-col { display: flex; flex-direction: column; align-items: center; width: 126px; flex: none; }
+        .f-node { width: 126px; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); text-align: center; }
+        .f-node .t { font-size: 12.5px; font-weight: 600; color: var(--text-primary); line-height: 1.35; }
+        .f-node.start { border-color: var(--primary); background: var(--info-bg); }
+        .f-node.approve { border-left: 3px solid var(--primary); }
+        .f-node.system { border-style: dashed; background: #F8FAFC; }
+        .f-node.offline { border: 1px dashed #D97706; background: #FFFBEB; }
+        .f-node.end { border-color: var(--success); background: var(--success-bg); }
+        .f-role-tag { font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 600; white-space: nowrap; }
+        .role-manager { background: #DBEAFE; color: #2563EB; }
+        .role-trader { background: #CFFAFE; color: #0891B2; }
+        .role-risk { background: #FFEDD5; color: #EA580C; }
+        .role-leader { background: #EDE9FE; color: #7C3AED; }
+        .role-finance { background: #D1FAE5; color: #059669; }
+        .role-system { background: #F1F5F9; color: #64748B; }
+        .role-offline { background: #FEF3C7; color: #B45309; }
+        .f-branch { margin-top: 5px; font-size: 10px; color: var(--danger); white-space: nowrap; line-height: 1.4; text-align: center; }
+        .f-branch.blue { color: #2563EB; }
+        .f-branch.gray { color: #94A3B8; }
+        .f-arr { flex: none; width: 22px; height: 2px; background: #C3CEDA; margin: 27px 4px 0; position: relative; }
+        .f-arr::after { content: ''; position: absolute; right: -1px; top: -3px; border-left: 6px solid #C3CEDA; border-top: 4px solid transparent; border-bottom: 4px solid transparent; }
+
+        /* 流程完结后的独立操作（扇出） */
+        .f-followups { display: flex; flex-direction: column; gap: 9px; position: relative; padding-left: 22px; }
+        .f-followups::before { content: ''; position: absolute; left: 8px; top: 28px; bottom: 13px; width: 2px; background: #C3CEDA; }
+        .follow-title { font-size: 10px; color: var(--text-muted); font-weight: 600; white-space: nowrap; }
+        .follow-item { position: relative; font-size: 11px; color: var(--text-secondary); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px 14px; white-space: nowrap; align-self: flex-start; }
+        .follow-item::before { content: ''; position: absolute; left: -14px; top: 50%; width: 14px; height: 2px; background: #C3CEDA; }
+        .follow-item.box { border-radius: 6px; white-space: normal; max-width: 220px; line-height: 1.5; }
+        .follow-item.offline { border: 1px dashed #D97706; background: #FFFBEB; }
+
+        /* 并列分组（ERP 已接入 / 未接入） */
+        .flow-group + .flow-group { margin-top: 22px; padding-top: 18px; border-top: 1px dashed var(--border); }
+        .flow-group-title { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px; }
+        .flow-group-title .group-note { font-size: var(--font-size-xs); font-weight: 400; color: #92400E; margin-left: 10px; }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <nav class="sidebar"></nav>
+        <div class="main-area">
+            <div class="topbar"></div>
+            <div class="content">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <span class="page-title">业务流程图</span>
+                        <span class="page-subtitle">Process Flow</span>
+                    </div>
+                </div>
+
+                <div class="tab-nav" id="flowTabs"></div>
+
+                <div class="flow-legend">
+                    <span style="font-weight:600;">图例</span>
+                    <span class="legend-item"><span class="legend-box lb-start"></span>流程发起</span>
+                    <span class="legend-item"><span class="legend-box"></span>系统内人工节点</span>
+                    <span class="legend-item"><span class="legend-box lb-system"></span>系统自动节点</span>
+                    <span class="legend-item"><span class="legend-box lb-offline"></span>线下人工办理（系统外）</span>
+                    <span class="legend-item"><span class="legend-box lb-end"></span>流程结束/生效</span>
+                    <span class="legend-item"><span class="legend-box lb-follow"></span>流程完结后的独立操作</span>
+                </div>
+
+                <div id="flowPanels"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script>
+        initLayout('flow.html', '流程图');
+
+        var FLOW_ROLES = {
+            manager: { label: '投资经理', cls: 'role-manager' },
+            trader: { label: '交易员', cls: 'role-trader' },
+            risk: { label: '部门风控', cls: 'role-risk' },
+            leader: { label: '部门负责人', cls: 'role-leader' },
+            finance: { label: '财务人员', cls: 'role-finance' },
+            system: { label: '系统', cls: 'role-system' },
+            offline: { label: '线下人工', cls: 'role-offline' }
+        };
+
+        // step: { t:节点名, r:角色, type:start/approve/system/offline/end, branch:节点下小字, bcls:branch颜色(blue/gray) }
+        // followUps: 流程完结后的独立操作 [{ t:文字, box:长文本用方框, offline:线下样式 }]
+        var FLOWS = [
+            {
+                key: 'pool',
+                tab: '产品入池',
+                title: '产品入池流程',
+                intro: '发起方式：单个新增（产品入池按钮）或批量上传（模板按产品类型分 Sheet）；仅部门风控（刘伟）可操作。',
+                steps: [
+                    { t: '发起入池', r: 'risk', type: 'start' },
+                    { t: '填写入池信息', r: 'risk' },
+                    { t: '提交入池', r: 'risk', type: 'approve', branch: '草稿可继续编辑', bcls: 'gray' },
+                    { t: '入池生效（无计划）', r: 'system', type: 'end' }
+                ],
+                followUps: [
+                    { t: '发起投资计划书' },
+                    { t: '产品信息变更维护（产品详情页）' }
+                ]
+            },
+            {
+                key: 'plan',
+                tab: '计划书审批',
+                title: '投资计划书审批流程',
+                intro: '一个产品同一时间只能关联一个投资计划；与交易审批为独立流程，审批中心并列展示。',
+                steps: [
+                    { t: '创建计划书', r: 'manager', type: 'start' },
+                    { t: '提交审批', r: 'manager', branch: '主动终止 → 已终止' },
+                    { t: '风控审批', r: 'risk', type: 'approve', branch: '驳回 → 已驳回' },
+                    { t: '部门负责人审批', r: 'leader', type: 'approve', branch: '驳回 → 已驳回' },
+                    { t: '已通过', r: 'system', type: 'end' }
+                ],
+                followUps: [
+                    { t: '基于剩余额度发起申购 / 赎回交易' }
+                ]
+            },
+            {
+                key: 'subscribe',
+                tab: '申购交易',
+                title: '申购（买入）交易流程',
+                intro: '发起需关联已通过且剩余额度充足的投资计划；三级审批在交易详情弹窗内直接处理。',
+                groups: [
+                    {
+                        label: 'ERP 已接入',
+                        steps: [
+                            { t: '发起申购', r: 'trader', type: 'start', branch: '撤回 → 已撤回' },
+                            { t: '投资经理审批', r: 'manager', type: 'approve', branch: '驳回 → 已驳回' },
+                            { t: '风控审批', r: 'risk', type: 'approve', branch: '驳回 → 已驳回' },
+                            { t: '部门经理审批', r: 'leader', type: 'approve', branch: '驳回 → 已驳回' },
+                            { t: 'ERP资金划拨（用款）', r: 'system', type: 'system' },
+                            { t: 'ERP创新金融资金划拨', r: 'system', type: 'system' },
+                            { t: '交易员确认（成交+合同）', r: 'trader', type: 'approve', branch: '差额 → 待还款', bcls: 'blue' },
+                            { t: '流程完结', r: 'system', type: 'end' }
+                        ],
+                        followUps: [
+                            { t: 'iBor 日终取数' },
+                            { t: '上传最终合同并推送合同系统' },
+                            { t: '生成财务凭证并推送财务系统' },
+                            { t: '差额还款：单笔或合并多笔发起 ERP 资金划拨（还款）', box: true }
+                        ]
+                    },
+                    {
+                        label: 'ERP 未接入（当前现状）',
+                        note: 'ERP 节点改为「OMS 状态标记 + 线下人工办理」，流程不断点、全程留痕，接入后可平滑切换。',
+                        steps: [
+                            { t: '发起申购', r: 'trader', type: 'start', branch: '撤回 → 已撤回' },
+                            { t: '投资经理审批', r: 'manager', type: 'approve', branch: '驳回 → 已驳回' },
+                            { t: '风控审批', r: 'risk', type: 'approve', branch: '驳回 → 已驳回' },
+                            { t: '部门经理审批', r: 'leader', type: 'approve', branch: '驳回 → 已驳回' },
+                            { t: '标记「交易执行中」', r: 'system', type: 'system' },
+                            { t: '线下资金划拨', r: 'offline', type: 'offline' },
+                            { t: '交易员确认（成交+合同）', r: 'trader', type: 'approve', branch: '差额 → 待还款', bcls: 'blue' },
+                            { t: '流程完结', r: 'system', type: 'end' }
+                        ],
+                        followUps: [
+                            { t: 'iBor 日终取数' },
+                            { t: '上传最终合同并推送合同系统' },
+                            { t: '生成财务凭证 / 推送NC（OMS 内手动）', offline: true },
+                            { t: '差额还款登记：待还款池登记，线下归还后核销', box: true, offline: true }
+                        ]
+                    }
+                ]
+            },
+            {
+                key: 'redeem',
+                tab: '赎回交易',
+                title: '赎回交易流程',
+                intro: 'ERP 步骤：不适用。财务对账确认在审批中心处理，提交即视为交易执行成功；赎回金额不得超过持仓金额。',
+                steps: [
+                    { t: '发起赎回', r: 'trader', type: 'start', branch: '撤回/终止', bcls: 'gray' },
+                    { t: '投资经理审批', r: 'manager', type: 'approve', branch: '驳回 → 已驳回' },
+                    { t: '风控审批', r: 'risk', type: 'approve', branch: '驳回 → 已驳回' },
+                    { t: '部门经理审批', r: 'leader', type: 'approve', branch: '驳回 → 已驳回' },
+                    { t: '财务对账确认', r: 'finance', type: 'approve' },
+                    { t: '交易员补充信息', r: 'trader', type: 'approve' },
+                    { t: '流程完结（核销持仓·释放额度）', r: 'system', type: 'end' }
+                ],
+                followUps: [
+                    { t: 'iBor 日终取数' },
+                    { t: '生成财务凭证并推送财务系统' },
+                    { t: '合同归档' },
+                    { t: '赎回回款进待还款池，还款流程独立发起', box: true }
+                ]
+            },
+            {
+                key: 'dividend',
+                tab: '兑息兑付',
+                title: '兑息兑付流程',
+                intro: '财务在【财务核算-兑息兑付】通过解析录入发起流程（银行回单OCR / Excel表格解析）；发起时无需关联产品，由交易员在审批中心关联产品并确认字段，确认即流程结束。',
+                steps: [
+                    { t: '财务发起（上传材料/填写表单）', r: 'finance', type: 'start' },
+                    { t: '交易员关联产品并确认', r: 'trader', type: 'approve', branch: '驳回 → 已驳回' },
+                    { t: '流程完结', r: 'system', type: 'end' }
+                ],
+                followUps: [
+                    { t: '凭证审批（财务核算模块，流程结束后自动生成）' },
+                    { t: 'iBor 日终取数（每日18:00批量传输）' },
+                    { t: '兑付资金进待还款池，还款流程独立发起', box: true }
+                ]
+            }
+        ];
+
+        function renderFollowUps(followUps) {
+            if (!followUps || !followUps.length) return '';
+            var html = '<div class="f-arr"></div><div class="f-followups">';
+            html += '<div class="follow-title">流程完结后 · 独立操作</div>';
+            followUps.forEach(function(f) {
+                html += '<div class="follow-item' + (f.box ? ' box' : '') + (f.offline ? ' offline' : '') + '">' + f.t + '</div>';
+            });
+            html += '</div>';
+            return html;
+        }
+
+        function renderSteps(steps, followUps) {
+            var html = '<div class="flow-h">';
+            steps.forEach(function(s, i) {
+                var role = FLOW_ROLES[s.r];
+                var isLast = i === steps.length - 1;
+                html += '<div class="f-step"><div class="f-col">';
+                html += '<div class="f-node ' + (s.type || '') + '"><span class="t">' + s.t + '</span><span class="f-role-tag ' + role.cls + '">' + role.label + '</span></div>';
+                if (s.branch) html += '<div class="f-branch ' + (s.bcls || '') + '">' + s.branch + '</div>';
+                html += '</div>';
+                if (!isLast) html += '<div class="f-arr"></div>';
+                if (isLast) html += renderFollowUps(followUps);
+                html += '</div>';
+            });
+            html += '</div>';
+            return html;
+        }
+
+        function renderFlow(flow) {
+            var html = '<div class="card"><div class="card-header"><span class="card-title">' + flow.title + '</span></div>';
+            html += '<div class="card-body">';
+            if (flow.intro) html += '<div class="flow-intro">' + flow.intro + '</div>';
+            if (flow.groups) {
+                flow.groups.forEach(function(g) {
+                    html += '<div class="flow-group">';
+                    html += '<div class="flow-group-title">' + g.label + (g.note ? '<span class="group-note">' + g.note + '</span>' : '') + '</div>';
+                    html += renderSteps(g.steps, g.followUps);
+                    html += '</div>';
+                });
+            } else {
+                html += renderSteps(flow.steps, flow.followUps);
+            }
+            html += '</div></div>';
+            return html;
+        }
+
+        var tabsEl = document.getElementById('flowTabs');
+        var panelsEl = document.getElementById('flowPanels');
+        FLOWS.forEach(function(f, i) {
+            tabsEl.innerHTML += '<button class="tab-btn' + (i === 0 ? ' active' : '') + '" data-key="' + f.key + '" onclick="switchFlow(\'' + f.key + '\')">' + f.tab + '</button>';
+            panelsEl.innerHTML += '<div class="flow-panel' + (i === 0 ? ' active' : '') + '" id="panel-' + f.key + '">' + renderFlow(f) + '</div>';
+        });
+
+        function switchFlow(key) {
+            document.querySelectorAll('#flowTabs .tab-btn').forEach(function(b) { b.classList.toggle('active', b.getAttribute('data-key') === key); });
+            document.querySelectorAll('.flow-panel').forEach(function(p) { p.classList.toggle('active', p.id === 'panel-' + key); });
+        }
+    </script>
+</body>
+</html>

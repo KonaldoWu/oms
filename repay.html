@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>投资管理 - 还款管理</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .page-subtitle { font-size: var(--font-size-xs); color: var(--text-muted); }
+        .type-tag { font-size: var(--font-size-xs); font-weight: 600; padding: 1px 8px; border-radius: 3px; display: inline-block; }
+        .type-tag.diff { background: var(--info-bg); color: var(--primary); }
+        .type-tag.redeem { background: var(--warning-bg); color: var(--warning); }
+        .type-tag.dividend { background: var(--success-bg); color: var(--success); }
+        .link-btn { color: var(--primary); cursor: pointer; text-decoration: none; font-size: var(--font-size-xs); margin-right: 8px; }
+        .link-btn:hover { text-decoration: underline; }
+        .flow-tip { margin-bottom: 10px; padding: 8px 12px; background: var(--info-bg); border: 1px solid var(--info); border-radius: 6px; font-size: 12px; color: var(--text-secondary); }
+        .batch-detail-row { display: grid; grid-template-columns: 1.15fr 0.75fr 1.1fr 1.05fr 0.95fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border-light); font-size: var(--font-size-xs); }
+        .batch-detail-row.head { color: var(--text-muted); font-weight: 600; }
+        /* Tab 切换 */
+        .tab-nav { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+        .tab-btn { padding: 8px 18px; font-size: var(--font-size-sm); font-weight: 500; color: var(--text-muted); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.15s; }
+        .tab-btn:hover { color: var(--text-primary); }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .tab-count { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 5px; border-radius: 9px; background: var(--border-light); color: var(--text-secondary); font-size: 11px; font-weight: 600; text-align: center; line-height: 18px; }
+        .tab-btn.active .tab-count { background: var(--info-bg); color: var(--primary); }
+        /* 底部勾选操作栏 */
+        .repay-action-bar { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between; gap: 14px; background: var(--surface); border: 1px solid var(--primary); border-radius: var(--radius); padding: 10px 16px; margin-top: 12px; box-shadow: 0 -2px 10px rgba(0,0,0,0.06); }
+        .repay-action-bar .sel-info { font-size: var(--font-size-sm); color: var(--text-secondary); }
+        .repay-action-bar .sel-info b { color: var(--primary); font-family: var(--font-mono); }
+        .repay-action-bar .sel-amount { font-size: var(--font-size-md); font-weight: 700; color: var(--danger); font-family: var(--font-mono); }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <nav class="sidebar"></nav>
+        <div class="main-area">
+            <div class="topbar"></div>
+            <div class="content">
+                <div class="page-header">
+                    <div class="page-header-left">
+                        <span class="page-title">还款管理</span>
+                        <span class="page-subtitle">「待还款池」勾选记录发起ERP还款流程；「还款流程」跟踪各批次ERP审批状态并查看历史还款明细</span>
+                    </div>
+                </div>
+
+                <div class="tab-nav">
+                    <button class="tab-btn active" id="tabPool" onclick="switchTab('pool')">待还款池<span class="tab-count" id="poolCount">0</span></button>
+                    <button class="tab-btn" id="tabFlow" onclick="switchTab('flow')">还款流程<span class="tab-count" id="flowCount">0</span></button>
+                </div>
+
+                <!-- Tab1：待还款池 -->
+                <div class="card" id="panelPool">
+                    <div class="card-body">
+                        <div class="flow-tip">待还池只显示「待还款（未提交）」记录，即尚未发起还款的资金：交易/兑付流程完结自动入池 → 勾选发起还款后记录离开本池，转「还款流程」Tab 跟踪（还款中）→ ERP<b>驳回</b>：回到本池可再次发起；ERP<b>审批通过（流程终止）</b>：核销为「已还款」，对应资金退回公司资金池（仅从批次明细追溯）。一笔钱同一时刻只出现在一个池。<br>「兑息兑付」记录按审批中心确认的<b>【实际到账金额】</b>入池：以勾选持仓批次为基数计算应得，差额（实际到账-应得合计）全额并入利息入账。</div>
+                        <div class="search-bar">
+                            <select class="search-input" id="filterSource" style="flex:none;width:130px;">
+                                <option value="">全部来源</option>
+                                <option value="申购差额">申购差额</option>
+                                <option value="赎回回款">赎回回款</option>
+                                <option value="兑息兑付">兑息兑付</option>
+                            </select>
+                            <input type="text" placeholder="搜索来源单号/产品名称/用款单号" class="search-input" id="filterKeyword">
+                            <button class="btn btn-primary btn-sm" onclick="renderItems()">搜索</button>
+                            <button class="btn btn-ghost btn-sm" onclick="resetFilters()">重置</button>
+                        </div>
+                    </div>
+                    <div class="card-body-p0">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:36px;"><input type="checkbox" id="checkAll" onclick="toggleAll(this)"></th>
+                                        <th>来源类型</th>
+                                        <th>来源单号</th>
+                                        <th>产品名称</th>
+                                        <th style="text-align:right;">应还金额（元）</th>
+                                        <th>原用款单号</th>
+                                        <th>生成时间</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="itemTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="repay-action-bar" id="repayActionBar">
+                            <span class="sel-info">已选 <b id="selCount">0</b> 笔（任意合并，无维度限制）</span>
+                            <span>合计还款金额（全额，不可修改）：<span class="sel-amount" id="selAmount">0.00</span> 元</span>
+                            <button class="btn btn-primary" id="btnRepay" onclick="openRepayConfirm()" disabled>发起还款</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab2：还款流程 -->
+                <div class="card" id="panelFlow" style="display:none;">
+                    <div class="card-header">
+                        <span class="card-title">还款批次（含历史还款）</span>
+                        <span class="page-subtitle" id="batchCount"></span>
+                    </div>
+                    <div class="card-body-p0">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>还款批次号</th>
+                                        <th style="text-align:right;">笔数</th>
+                                        <th style="text-align:right;">还款总金额（元）</th>
+                                        <th>发起人</th>
+                                        <th>发起时间</th>
+                                        <th>ERP流程号</th>
+                                        <th>ERP审批状态</th>
+                                        <th>状态</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="batchTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 发起还款确认弹窗（确认明细 + ERP还款流程表单） -->
+    <div class="modal" id="repayConfirmModal">
+        <div class="modal-content" style="max-width:820px;">
+            <div class="modal-header">
+                <span class="modal-title">发起还款（合并调用ERP资金划拨-还款流程）</span>
+                <span class="modal-close" onclick="closeRepayConfirm()">×</span>
+            </div>
+            <div class="modal-body">
+                <div class="flow-tip">还款金额按所选记录应还金额合计默认带出，<b>不可修改（全额还款）</b>；ERP表单「还款信息-用款单号」<b>从 ERP 用款单号清单手选（单选）</b>；其余ERP流程字段已预填，<b>交易员可再次修改后提交</b>。</div>
+                <div class="batch-detail-row head"><span>来源单号</span><span>来源类型</span><span>产品名称</span><span>用款单号</span><span style="text-align:right;">应还金额（元）</span></div>
+                <div id="repayConfirmList"></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">
+                    <span style="font-size:var(--font-size-sm);color:var(--text-secondary);">申请人（ERP工号）：<b id="repayApplicant"></b></span>
+                    <span style="font-size:var(--font-size-md);font-weight:700;color:var(--danger);font-family:var(--font-mono);" id="repayConfirmTotal"></span>
+                </div>
+
+                <div style="font-size:var(--font-size-sm);font-weight:600;color:var(--text-primary);margin:16px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border);">ERP还款流程表单（资金划拨-还款）</div>
+                <div class="form-row">
+                    <div class="form-item"><label>是否场外还款 <span style="color:var(--danger);">*</span></label>
+                        <select id="erpOffsite"><option value="是" selected>是</option><option value="否">否</option></select></div>
+                    <div class="form-item"><label>是否纸签 <span style="color:var(--danger);">*</span></label>
+                        <select id="erpPaper"><option value="否" selected>否</option><option value="是">是</option></select></div>
+                    <div class="form-item"><label>是否历史数据补录（暂） <span style="color:var(--danger);">*</span></label>
+                        <select id="erpHistory"><option value="否" selected>否</option><option value="是">是</option></select></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-item"><label>业务类型 <span style="color:var(--danger);">*</span></label>
+                        <select id="erpBizType"><option value="自有资金还款" selected>自有资金还款</option><option value="产品回款划回">产品回款划回</option><option value="投资收益划回">投资收益划回</option><option value="其他">其他</option></select></div>
+                    <div class="form-item"><label>产品类型</label>
+                        <select id="erpProductType"><option value="">（选填）</option><option>信托</option><option>ABS(中保登)</option><option>专户资管</option><option>碳金融</option></select></div>
+                    <div class="form-item"><label>项目</label>
+                        <select id="erpProject"><option value="">（选填）</option><option>创新金融FOF项目</option><option>固收增强项目</option><option>现金管理项目</option></select></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-item" style="flex:1 1 100%;"><label>资金用途 <span style="color:var(--danger);">*</span></label>
+                        <input type="text" id="erpPurpose" placeholder="必填，说明还款资金用途"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-item" style="flex:1 1 100%;"><label>备注</label>
+                        <input type="text" id="erpRemark" placeholder="选填"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-item" style="flex:1 1 100%;"><label>还款信息-用款单号 <span style="color:var(--danger);">*</span>（从 ERP 用款单号清单手选，单选）</label>
+                        <select id="erpLoanNo"><option value="">请选择用款单号（ERP 清单）</option></select></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-item"><label>还款资金是否来源于上存提取资金 <span style="color:var(--danger);">*</span></label>
+                        <select id="erpFromDeposit"><option value="否" selected>否</option><option value="是">是</option></select></div>
+                    <div class="form-item"><label>还款日期 <span style="color:var(--danger);">*</span></label>
+                        <input type="date" id="erpRepayDate"></div>
+                    <div class="form-item"><label>还款时间 <span style="color:var(--danger);">*</span></label>
+                        <input type="time" id="erpRepayTime"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-item"><label>还款金额（本金） <span style="color:var(--danger);">*</span>（全额带出，不可修改）</label>
+                        <input type="text" id="erpPrincipal" readonly style="background:var(--bg);color:var(--text-muted);font-family:var(--font-mono);"></div>
+                    <div class="form-item"><label>还款金额（利息） <span style="color:var(--danger);">*</span>（全额带出，不可修改）</label>
+                        <input type="text" id="erpInterest" readonly style="background:var(--bg);color:var(--text-muted);font-family:var(--font-mono);"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-item"><label>付款账号 <span style="color:var(--danger);">*</span></label>
+                        <select id="erpPayAccount"><option>招行上海分行营业部 1219****0001（募集资金专户）</option><option>工行上海分行 6222****0888（自有资金户）</option></select></div>
+                    <div class="form-item"><label>收款账号 <span style="color:var(--danger);">*</span></label>
+                        <select id="erpReceiveAccount"><option>农行上海分行 0341****6666（公司主账户）</option><option>中行上海分行 4550****2333（公司主账户-备用）</option></select></div>
+                </div>
+                <div class="form-row" style="margin-bottom:0;">
+                    <div class="form-item" style="flex:1 1 100%;"><label>附件（选填，可多份，与后续流程共用）</label>
+                        <input type="file" id="erpAttachments" multiple style="padding:5px 10px;"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeRepayConfirm()">取消</button>
+                <button class="btn btn-primary" onclick="confirmRepay()">确认发起（调用ERP流程触发接口）</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 批次明细弹窗 -->
+    <div class="modal" id="batchDetailModal">
+        <div class="modal-content" style="max-width:640px;">
+            <div class="modal-header">
+                <span class="modal-title">还款批次明细</span>
+                <span class="modal-close" onclick="closeBatchDetail()">×</span>
+            </div>
+            <div class="modal-body" id="batchDetailBody"></div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeBatchDetail()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script>
+        initLayout('repay.html', '投资管理 / 还款管理');
+
+        var _selected = {};
+
+        function fmtMoney(n) {
+            if (n === null || n === undefined || n === '' || isNaN(Number(n))) return '-';
+            return Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+        }
+        function sourceTag(t) {
+            var map = { '申购差额': 'diff', '赎回回款': 'redeem', '兑息兑付': 'dividend' };
+            return '<span class="type-tag ' + (map[t] || '') + '">' + t + '</span>';
+        }
+
+        // ============ Tab 切换 ============
+        function switchTab(tab) {
+            document.getElementById('panelPool').style.display = tab === 'pool' ? '' : 'none';
+            document.getElementById('panelFlow').style.display = tab === 'flow' ? '' : 'none';
+            document.getElementById('tabPool').className = 'tab-btn' + (tab === 'pool' ? ' active' : '');
+            document.getElementById('tabFlow').className = 'tab-btn' + (tab === 'flow' ? ' active' : '');
+        }
+        function updateTabCounts() {
+            document.getElementById('poolCount').textContent = REPAY_ITEMS.filter(function(i) { return i.status === '待还款'; }).length;
+            document.getElementById('flowCount').textContent = REPAY_BATCHES.filter(function(b) { return b.status === '还款中'; }).length;
+        }
+
+        // ============ Tab1：待还款池（只显示「待还款」记录，一笔钱同一时刻只在一个池） ============
+        function getFilteredItems() {
+            var src = document.getElementById('filterSource').value;
+            var kw = document.getElementById('filterKeyword').value.trim().toLowerCase();
+            return REPAY_ITEMS.filter(function(i) {
+                if (i.status !== '待还款') return false; // 还款中→流程池跟踪；已还款→批次明细追溯；本池只放未提交
+                if (src && i.sourceType !== src) return false;
+                if (kw && (i.sourceId + i.productName + i.loanNo).toLowerCase().indexOf(kw) < 0) return false;
+                return true;
+            });
+        }
+
+        function renderItems() {
+            var list = getFilteredItems();
+            var tbody = document.getElementById('itemTableBody');
+            if (list.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px;">暂无待还款记录</td></tr>';
+            } else {
+                tbody.innerHTML = list.map(function(i) {
+                    return '<tr>' +
+                        '<td><input type="checkbox" ' + (_selected[i.id] ? 'checked' : '') + ' onclick="toggleOne(\'' + i.id + '\', this)"></td>' +
+                        '<td>' + sourceTag(i.sourceType) + '</td>' +
+                        '<td style="font-family:var(--font-mono);font-size:var(--font-size-xs);">' + i.sourceId + '</td>' +
+                        '<td>' + i.productName + '</td>' +
+                        '<td style="text-align:right;font-family:var(--font-mono);">' + fmtMoney(i.amount) + '</td>' +
+                        '<td style="font-family:var(--font-mono);font-size:var(--font-size-xs);">' + i.loanNo + '</td>' +
+                        '<td style="font-size:var(--font-size-xs);color:var(--text-muted);">' + i.createTime + '</td>' +
+                    '</tr>';
+                }).join('');
+            }
+            updateSelectionBar();
+            updateTabCounts();
+        }
+
+        function toggleOne(id, cb) {
+            if (cb.checked) _selected[id] = true; else delete _selected[id];
+            updateSelectionBar();
+        }
+        function toggleAll(cb) {
+            getFilteredItems().forEach(function(i) {
+                if (cb.checked) _selected[i.id] = true; else delete _selected[i.id];
+            });
+            renderItems();
+        }
+        function getSelectedItems() {
+            return REPAY_ITEMS.filter(function(i) { return _selected[i.id] && i.status === '待还款'; });
+        }
+        function updateSelectionBar() {
+            var sel = getSelectedItems();
+            var total = sel.reduce(function(a, b) { return a + b.amount; }, 0);
+            document.getElementById('selCount').textContent = sel.length;
+            document.getElementById('selAmount').textContent = fmtMoney(total);
+            document.getElementById('btnRepay').disabled = sel.length === 0;
+        }
+
+        function resetFilters() {
+            document.getElementById('filterSource').value = '';
+            document.getElementById('filterKeyword').value = '';
+            renderItems();
+        }
+
+        // ============ 发起还款确认弹窗（单步：确认明细 + ERP表单） ============
+        function openRepayConfirm() {
+            var sel = getSelectedItems();
+            if (sel.length === 0) return;
+            var total = sel.reduce(function(a, b) { return a + b.amount; }, 0);
+            document.getElementById('repayConfirmList').innerHTML = sel.map(function(i) {
+                return '<div class="batch-detail-row"><span style="font-family:var(--font-mono);">' + i.sourceId + '</span><span>' + i.sourceType + '</span><span>' + i.productName + '</span><span style="font-family:var(--font-mono);">' + i.loanNo + '</span><span style="text-align:right;font-family:var(--font-mono);">' + fmtMoney(i.amount) + '</span></div>';
+            }).join('');
+            document.getElementById('repayApplicant').textContent = getCurrentRole().label + '（ERP工号映射）';
+            document.getElementById('repayConfirmTotal').textContent = '合计：' + fmtMoney(total) + ' 元';
+            // 预填ERP还款流程表单（可再次修改）
+            var now = new Date();
+            var dateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+            var timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+            var purposeMap = { '申购差额': '申购差额退回', '赎回回款': '赎回回款划回公司主账户', '兑息兑付': '兑息兑付款划回公司主账户' };
+            var purposes = [];
+            sel.forEach(function(i) { if (purposes.indexOf(purposeMap[i.sourceType]) < 0) purposes.push(purposeMap[i.sourceType]); });
+            // 用款单号：模拟从 ERP 接口拉取的用款单号清单，交易员手选（单选，业务上还款与用款无严格对应关系）
+            var loanList = [];
+            REPAY_ITEMS.forEach(function(i) { if (i.loanNo && loanList.indexOf(i.loanNo) < 0) loanList.push(i.loanNo); });
+            document.getElementById('erpLoanNo').innerHTML = '<option value="">请选择用款单号（ERP 清单）</option>' + loanList.map(function(n) { return '<option value="' + n + '">' + n + '</option>'; }).join('');
+            document.getElementById('erpPurpose').value = purposes.join('；');
+            document.getElementById('erpRepayDate').value = dateStr;
+            document.getElementById('erpRepayTime').value = timeStr;
+            document.getElementById('erpPrincipal').value = fmtMoney(total);
+            document.getElementById('erpInterest').value = '0.00';
+            document.getElementById('repayConfirmModal').style.display = 'flex';
+        }
+        function closeRepayConfirm() { document.getElementById('repayConfirmModal').style.display = 'none'; }
+
+        function confirmRepay() {
+            var sel = getSelectedItems();
+            if (sel.length === 0) return;
+            // 读取并校验ERP流程表单
+            var erpForm = {
+                offsite: document.getElementById('erpOffsite').value,
+                paper: document.getElementById('erpPaper').value,
+                history: document.getElementById('erpHistory').value,
+                bizType: document.getElementById('erpBizType').value,
+                productType: document.getElementById('erpProductType').value,
+                project: document.getElementById('erpProject').value,
+                purpose: document.getElementById('erpPurpose').value.trim(),
+                remark: document.getElementById('erpRemark').value.trim(),
+                loanNo: document.getElementById('erpLoanNo').value,
+                fromDeposit: document.getElementById('erpFromDeposit').value,
+                repayDate: document.getElementById('erpRepayDate').value,
+                repayTime: document.getElementById('erpRepayTime').value,
+                principal: document.getElementById('erpPrincipal').value,
+                interest: document.getElementById('erpInterest').value,
+                payAccount: document.getElementById('erpPayAccount').value,
+                receiveAccount: document.getElementById('erpReceiveAccount').value,
+                attachmentCount: document.getElementById('erpAttachments').files.length
+            };
+            if (!erpForm.purpose) { alert('请填写「资金用途」'); return; }
+            if (!erpForm.loanNo) { alert('请选择「还款信息-用款单号」'); return; }
+            if (!erpForm.repayDate) { alert('请选择「还款日期」'); return; }
+            if (!erpForm.repayTime) { alert('请选择「还款时间」'); return; }
+            var total = sel.reduce(function(a, b) { return a + b.amount; }, 0);
+            var now = new Date();
+            var nowStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0') + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+            var batchId = 'RPB' + nowStr.slice(0, 10).replace(/-/g, '') + String(Math.floor(Math.random() * 900) + 100);
+            REPAY_BATCHES.push({
+                id: batchId,
+                totalAmount: Math.round(total * 100) / 100,
+                itemCount: sel.length,
+                applicant: getCurrentRole().label,
+                createTime: nowStr,
+                erpFlowId: 'ERP' + batchId.slice(3),
+                status: '还款中',
+                erpForm: erpForm,
+                erpNodes: [
+                    { name: '提交申请', user: getCurrentRole().label, status: '已通过', time: nowStr },
+                    { name: '资金管理员审批', user: '王芳', status: '审批中', time: '' },
+                    { name: '财务负责人审批', user: '—', status: '待处理', time: '' },
+                    { name: '出纳执行划款', user: '—', status: '待处理', time: '' }
+                ]
+            });
+            sel.forEach(function(i) { i.status = '还款中'; i.batchId = batchId; });
+            _selected = {};
+            closeRepayConfirm();
+            renderItems();
+            renderBatches();
+            alert('还款批次 ' + batchId + ' 已发起！\n合并 ' + sel.length + ' 笔，合计 ' + fmtMoney(total) + ' 元。\n已调用ERP「资金划拨（还款）」流程触发接口，批次内记录状态置为「还款中」，可在「还款流程」Tab 跟踪。');
+        }
+
+        // ============ Tab2：还款流程（批次列表） ============
+        // 由 erpNodes 推导批次在ERP侧的审批状态：驳回节点→ERP已驳回；审批中→当前节点；全部通过→ERP审批通过
+        function erpStatusOf(b) {
+            if (b.status === '已还款') return { text: 'ERP审批通过', cls: 'badge-success' };
+            if (b.status === '已驳回') return { text: 'ERP已驳回', cls: 'badge-danger' };
+            if (!b.erpNodes) return { text: 'ERP审批中', cls: 'badge-info' };
+            var cur = b.erpNodes.find(function(n) { return n.status === '审批中'; });
+            return cur ? { text: cur.name, cls: 'badge-info' } : { text: 'ERP审批中', cls: 'badge-info' };
+        }
+
+        function renderBatches() {
+            var tbody = document.getElementById('batchTableBody');
+            if (REPAY_BATCHES.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-muted);padding:20px;">暂无批次</td></tr>';
+            } else {
+                tbody.innerHTML = REPAY_BATCHES.slice().reverse().map(function(b) {
+                    var ops = '<a class="link-btn" onclick="viewBatch(\'' + b.id + '\')">明细</a>';
+                    if (b.status === '还款中') {
+                        ops += '<a class="link-btn" onclick="mockErpResult(\'' + b.id + '\', true)">模拟ERP完成</a>';
+                        ops += '<a class="link-btn" style="color:var(--danger);" onclick="mockErpResult(\'' + b.id + '\', false)">模拟ERP驳回</a>';
+                    }
+                    var badge = b.status === '已还款' ? 'badge-success' : (b.status === '还款中' ? 'badge-info' : 'badge-danger');
+                    var es = erpStatusOf(b);
+                    return '<tr>' +
+                        '<td style="font-family:var(--font-mono);font-size:var(--font-size-xs);">' + b.id + '</td>' +
+                        '<td style="text-align:right;">' + b.itemCount + '</td>' +
+                        '<td style="text-align:right;font-family:var(--font-mono);">' + fmtMoney(b.totalAmount) + '</td>' +
+                        '<td>' + b.applicant + '</td>' +
+                        '<td style="font-size:var(--font-size-xs);color:var(--text-muted);">' + b.createTime + '</td>' +
+                        '<td style="font-family:var(--font-mono);font-size:var(--font-size-xs);">' + b.erpFlowId + '</td>' +
+                        '<td><span class="badge ' + es.cls + '">' + es.text + '</span></td>' +
+                        '<td><span class="badge ' + badge + '">' + b.status + '</span></td>' +
+                        '<td>' + ops + '</td>' +
+                    '</tr>';
+                }).join('');
+            }
+            document.getElementById('batchCount').textContent = '共 ' + REPAY_BATCHES.length + ' 条';
+            updateTabCounts();
+        }
+
+        function viewBatch(id) {
+            var b = REPAY_BATCHES.find(function(x) { return x.id === id; });
+            if (!b) return;
+            var items = REPAY_ITEMS.filter(function(i) { return i.batchId === id; });
+            var html =
+                '<div class="flow-tip">批次号：<b>' + b.id + '</b> ｜ ERP流程号：' + b.erpFlowId + ' ｜ 状态：' + b.status + ' ｜ 发起人：' + b.applicant + ' ｜ 发起时间：' + b.createTime + ' ｜ 合并 <b>' + (items.length || b.itemCount) + '</b> 笔</div>';
+            if (items.length === 0) {
+                // 批次内记录已退回待还款资金池（驳回后回到未提交状态）
+                html += '<div style="padding:14px;text-align:center;color:var(--text-muted);font-size:var(--font-size-sm);background:var(--bg);border-radius:6px;">该批次已被ERP驳回，批次内 ' + b.itemCount + ' 笔记录（合计 ' + fmtMoney(b.totalAmount) + ' 元）已回到未提交状态，退回待还款资金池，可再次勾选发起。</div>';
+            } else {
+                html += '<div class="batch-detail-row head"><span>来源单号</span><span>来源类型</span><span>产品名称</span><span>用款单号</span><span style="text-align:right;">应还金额（元）</span></div>' +
+                items.map(function(i) {
+                    return '<div class="batch-detail-row"><span style="font-family:var(--font-mono);">' + i.sourceId + '</span><span>' + i.sourceType + '</span><span>' + i.productName + '</span><span style="font-family:var(--font-mono);">' + i.loanNo + '</span><span style="text-align:right;font-family:var(--font-mono);">' + fmtMoney(i.amount) + '</span></div>';
+                }).join('');
+            }
+            html += '<div style="text-align:right;margin-top:10px;font-weight:700;font-family:var(--font-mono);">合计：' + fmtMoney(b.totalAmount) + ' 元</div>';
+            if (b.erpForm) {
+                var f = b.erpForm;
+                var row = function(k, v) { return '<div style="display:flex;padding:5px 0;border-bottom:1px solid var(--border-light);font-size:var(--font-size-xs);"><span style="width:190px;color:var(--text-muted);">' + k + '</span><span style="flex:1;color:var(--text-primary);">' + (v || '—') + '</span></div>'; };
+                html += '<div style="font-size:var(--font-size-sm);font-weight:600;color:var(--text-primary);margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border);">ERP还款流程表单（已提交）</div>'
+                    + row('是否场外还款', f.offsite) + row('是否纸签', f.paper) + row('是否历史数据补录', f.history)
+                    + row('业务类型', f.bizType) + row('产品类型', f.productType) + row('项目', f.project)
+                    + row('资金用途', f.purpose) + row('备注', f.remark) + row('还款信息-用款单号', f.loanNo)
+                    + row('还款资金来源于上存提取资金', f.fromDeposit) + row('还款日期/时间', f.repayDate + ' ' + f.repayTime)
+                    + row('还款金额（本金/利息）', f.principal + ' / ' + f.interest)
+                    + row('付款账号', f.payAccount) + row('收款账号', f.receiveAccount)
+                    + row('附件', f.attachmentCount > 0 ? f.attachmentCount + ' 份' : '无');
+            }
+            if (b.erpNodes) {
+                var nodeBadge = function(s) {
+                    var cls = s === '已通过' ? 'badge-success' : (s === '审批中' ? 'badge-info' : (s === '已驳回' ? 'badge-danger' : 'badge-ghost'));
+                    return '<span class="badge ' + cls + '">' + s + '</span>';
+                };
+                html += '<div style="font-size:var(--font-size-sm);font-weight:600;color:var(--text-primary);margin:14px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border);">ERP审批进度</div>'
+                    + '<table class="data-table" style="font-size:var(--font-size-xs);"><thead><tr><th>节点</th><th>处理人</th><th>状态</th><th>处理时间</th></tr></thead><tbody>'
+                    + b.erpNodes.map(function(n) {
+                        return '<tr><td>' + n.name + '</td><td>' + n.user + '</td><td>' + nodeBadge(n.status) + '</td><td style="color:var(--text-muted);">' + (n.time || '—') + '</td></tr>';
+                    }).join('')
+                    + '</tbody></table>';
+            }
+            document.getElementById('batchDetailBody').innerHTML = html;
+            document.getElementById('batchDetailModal').style.display = 'flex';
+        }
+        function closeBatchDetail() { document.getElementById('batchDetailModal').style.display = 'none'; }
+
+        // 模拟ERP状态回传（演示用）：流程终止→核销已还款出池、资金退回公司资金池；驳回→记录回到未提交（待还款）退回资金池可再次发起，批次留痕为已驳回
+        function mockErpResult(batchId, success) {
+            var b = REPAY_BATCHES.find(function(x) { return x.id === batchId; });
+            if (!b || b.status !== '还款中') return;
+            var items = REPAY_ITEMS.filter(function(i) { return i.batchId === batchId; });
+            var now = new Date();
+            var nowStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0') + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+            if (success) {
+                b.status = '已还款';
+                if (b.erpNodes) b.erpNodes.forEach(function(n) { if (n.status !== '已通过') { n.status = '已通过'; n.time = nowStr; if (n.user === '—') n.user = '系统'; } });
+                items.forEach(function(i) { i.status = '已还款'; });
+                alert('ERP回传：还款流程终止（审批通过）。\n批次 ' + batchId + ' 内 ' + items.length + ' 笔记录已核销为「已还款」并退出待还款池，对应资金退回公司资金池。');
+            } else {
+                b.status = '已驳回';
+                if (b.erpNodes) {
+                    var cur = b.erpNodes.find(function(n) { return n.status === '审批中'; });
+                    if (cur) { cur.status = '已驳回'; cur.time = nowStr; }
+                }
+                items.forEach(function(i) { i.status = '待还款'; i.batchId = ''; });
+                alert('ERP回传：流程③已驳回。\n批次 ' + batchId + ' 留痕为「已驳回」；批次内 ' + items.length + ' 笔记录回到未提交状态（待还款），已退回待还款资金池，可再次勾选发起。');
+            }
+            renderItems();
+            renderBatches();
+        }
+
+        // 发起权限：交易员/投资经理/Demo（无权限只读）
+        if (!hasPermission('createTrade') || isReadOnly()) {
+            document.getElementById('repayActionBar').style.display = 'none';
+        }
+
+        renderItems();
+        renderBatches();
+
+        window.addEventListener('click', function(event) {
+            if (event.target === document.getElementById('repayConfirmModal')) closeRepayConfirm();
+            if (event.target === document.getElementById('batchDetailModal')) closeBatchDetail();
+        });
+    </script>
+</body>
+</html>
